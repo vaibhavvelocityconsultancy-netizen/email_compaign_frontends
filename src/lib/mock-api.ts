@@ -86,16 +86,16 @@ function makeLeads(): Lead[] {
   const statuses: LeadStatus[] = ["new", "contacted", "replied", "completed", "unsubscribed"];
   const leads: Lead[] = [];
   for (let i = 0; i < 42; i++) {
-    const fn = FIRST[i % FIRST.length];
-    const ln = LAST[(i * 3) % LAST.length];
+    const fn = FIRST[i % FIRST.length]!;
+    const ln = LAST[(i * 3) % LAST.length]!;
     leads.push({
       id: `lead-${i + 1}`,
       name: `${fn} ${ln}`,
       email: `${fn.toLowerCase()}.${ln.toLowerCase()}${i}@example.com`,
-      company: COMPANIES[i % COMPANIES.length],
+      company: COMPANIES[i % COMPANIES.length]!,
       phone: `+1 555-01${String(10 + i)}`,
-      source: SOURCES[i % SOURCES.length],
-      status: statuses[i % statuses.length],
+      source: SOURCES[i % SOURCES.length]!,
+      status: statuses[i % statuses.length]!,
       createdAt: daysAgo(i * 2 + 1),
     });
   }
@@ -173,7 +173,7 @@ for (const c of campaigns) {
   campaignLeads[c.id] = c.leadIds.map((leadId, i) => ({
     leadId,
     currentStep: (i % 3) + 1,
-    lastEmailStatus: (["sent", "pending", "completed", "failed"] as const)[i % 4],
+    lastEmailStatus: (["sent", "pending", "completed", "failed"] as const)[i % 4]!,
     replied: i % 5 === 0,
     unsubscribed: i % 11 === 0,
     completed: i % 4 === 2,
@@ -184,9 +184,9 @@ let logs: EmailLog[] = [];
 {
   const statuses: LogStatus[] = ["sent", "sent", "sent", "replied", "failed"];
   for (let i = 0; i < 60; i++) {
-    const lead = leads[i % leads.length];
-    const tpl = templates[i % templates.length];
-    const st = statuses[i % statuses.length];
+    const lead = leads[i % leads.length]!;
+    const tpl = templates[i % templates.length]!;
+    const st = statuses[i % statuses.length]!;
     logs.push({
       id: `log-${i + 1}`,
       leadId: lead.id,
