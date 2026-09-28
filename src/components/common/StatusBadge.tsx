@@ -13,7 +13,7 @@ const STYLES: Record<string, { bg: string; dot: string; text: string }> = {
 };
 
 export function StatusBadge({ status }: { status: string }) {
-  const s = STYLES[status] ?? STYLES.draft;
+  const s = STYLES[status] ?? STYLES["draft"]!;
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium ${s.bg} ${s.text}`}>
       <span className={`size-1.5 rounded-full ${s.dot}`} />
