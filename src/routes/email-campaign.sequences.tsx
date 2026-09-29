@@ -26,7 +26,7 @@ import {
   type EmailTemplate,
 } from "@/lib/api";
 
-export const Route = createFileRoute("/sequences")({
+export const Route = createFileRoute("/email-campaign/sequences")({
   head: () => ({
     meta: [
       { title: "Sequences — Vantage CRM" },
@@ -118,7 +118,7 @@ function SequenceStepsEditor({ templates, disabled }: { templates: EmailTemplate
                   <FormItem className="space-y-2">
                     <FormLabel>Delay days</FormLabel>
                     <FormControl>
-                      <Input type="number" min={0} step={1} disabled={disabled} value={field.value} onChange={(event) => field.onChange(Number(event.target.value))} />
+                      <Input type="number" min={0} step={1} disabled={disabled} value={field.value as number} onChange={(event) => field.onChange(Number(event.target.value))} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -131,7 +131,7 @@ function SequenceStepsEditor({ templates, disabled }: { templates: EmailTemplate
                   <FormItem className="space-y-2">
                     <FormLabel>Minutes</FormLabel>
                     <FormControl>
-                      <Input type="number" min={0} step={1} disabled={disabled} value={field.value} onChange={(event) => field.onChange(Number(event.target.value))} />
+                      <Input type="number" min={0} step={1} disabled={disabled} value={field.value as number} onChange={(event) => field.onChange(Number(event.target.value))} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -153,7 +153,6 @@ function SequenceStepsEditor({ templates, disabled }: { templates: EmailTemplate
               <input type="hidden" {...control.register(`steps.${index}.delayDays`)} />
               <input type="hidden" {...control.register(`steps.${index}.delayMinutes`)} />
               <span className="sr-only" aria-live="polite">Step template: {chosenTemplate?.name ?? "not selected"}</span>
-              <span className="sr-only">{setValue ? "" : ""}</span>
             </div>
           );
         })}
@@ -351,7 +350,7 @@ function SequencesPage() {
         isLoading={saveMutation.isPending}
         submitLabel="Save sequence"
         size="lg"
-        onSubmit={(values) => saveMutation.mutateAsync(values)}
+        onSubmit={async (values) => { await saveMutation.mutateAsync(values); }}
       >
         <SequenceStepsEditor templates={templates} disabled={saveMutation.isPending} />
       </EntityForm>

@@ -13,7 +13,6 @@ const STYLES: Record<string, { bg: string; dot: string; text: string }> = {
   failed: { bg: "bg-bad/10", dot: "bg-bad", text: "text-bad" },
   new: { bg: "bg-brand-soft", dot: "bg-brand", text: "text-brand" },
   contacted: { bg: "bg-warn/10", dot: "bg-warn", text: "text-warn" },
-  unsubscribed: { bg: "bg-ink/5", dot: "bg-ink/40", text: "text-ink/70" },
   draft: { bg: "bg-ink/5", dot: "bg-ink/40", text: "text-ink/70" },
 };
 

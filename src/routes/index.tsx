@@ -28,7 +28,7 @@ function Dashboard() {
   const sentTotal = logs.data?.filter((log) => log.status === "delivered").length ?? 0;
   const failedTotal = logs.data?.filter((l) => l.status === "failed").length ?? 0;
   const replyTotal = logs.data?.filter((log) => log.status === "replied").length ?? 0;
-  const completedTotal = leads.data?.filter((l) => l.status === "completed").length ?? 0;
+  const completedTotal = leads.data?.filter((l) => (l.status as string) === "completed").length ?? 0;
 
   return (
     <div className="space-y-6">
@@ -55,7 +55,8 @@ function Dashboard() {
             <span className="font-mono text-[11px] text-muted-foreground">{campaigns.data?.length ?? 0} total</span>
           </div>
           <Link
-            to="/campaigns"
+            to="/email-campaign/campaigns"
+            search={{ create: false }}
             className="h-8 rounded-md border border-line px-3 py-1.5 text-xs transition-colors hover:bg-background"
           >
             View all
@@ -100,8 +101,8 @@ function Dashboard() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Link
-                        to="/campaigns/$campaignId"
-                        params={{ campaignId: c.id }}
+                        to="/email-campaign/campaigns"
+                        search={{ create: false }}
                         className="text-xs font-medium text-brand hover:underline"
                       >
                         View

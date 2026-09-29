@@ -20,7 +20,7 @@ import { EntityForm, fieldPresets, type FormFieldConfig } from "../components/co
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export const Route = createFileRoute("/templates")({
+export const Route = createFileRoute("/email-campaign/templates")({
   head: () => ({
     meta: [
       { title: "Message Templates — Vantage CRM" },
