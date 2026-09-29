@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Users, Mail, ListOrdered, Megaphone, ScrollText, Search, Plus } from "lucide-react";
+import { LayoutDashboard, Users, Mail, ListOrdered, Megaphone, Search, Plus } from "lucide-react";
 import { Toaster } from "sonner";
 
 const NAV = [
@@ -8,7 +8,6 @@ const NAV = [
   { to: "/templates", label: "Email Templates", icon: Mail },
   { to: "/sequences", label: "Sequences", icon: ListOrdered },
   { to: "/campaigns", label: "Campaigns", icon: Megaphone },
-  { to: "/email-logs", label: "Email Logs", icon: ScrollText },
 ] as const;
 
 export function AppLayout() {
@@ -38,13 +37,6 @@ export function AppLayout() {
             </Link>
           ))}
         </nav>
-        <div className="mt-auto p-3">
-          <div className="rounded-xl bg-white/5 p-3">
-            <div className="font-mono text-[10px] text-white/40">MONTH TO DATE</div>
-            <div className="mt-1 font-display text-xl font-bold text-white">48,210</div>
-            <div className="mt-0.5 font-mono text-[11px] text-good">+12.4% vs last</div>
-          </div>
-        </div>
       </aside>
 
       <div className="ml-60 flex min-w-0 flex-1 flex-col">
@@ -58,16 +50,12 @@ export function AppLayout() {
               />
             </div>
           </div>
-          <div className="hidden items-center gap-2 font-mono text-[11px] text-muted-foreground md:flex">
-            <span className="size-2 rounded-full bg-good" /> All systems normal
-          </div>
           <button
             onClick={() => navigate({ to: "/campaigns", search: { create: true } })}
             className="flex h-9 items-center gap-1.5 rounded-lg bg-brand px-4 text-sm font-medium text-white transition-colors hover:bg-brand/90"
           >
             <Plus className="size-4" /> New campaign
           </button>
-          <div className="grid size-9 place-items-center rounded-full bg-brand-soft font-display text-sm font-bold text-brand">AR</div>
         </header>
         <main className="flex-1 p-6">
           <Outlet />

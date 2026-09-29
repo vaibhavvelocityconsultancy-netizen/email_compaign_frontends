@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Upload } from "lucide-react";
-import { getLeads, importLeads } from "../lib/mock-api";
+import { getLeads, importLeads } from "../lib/api";
 import { Modal } from "../components/common/Modal";
 import { StatusBadge } from "../components/common/StatusBadge";
 import { EmptyState, LoadingRows } from "../components/common/EmptyState";
@@ -54,7 +54,7 @@ function LeadsPage() {
       qc.invalidateQueries({ queryKey: ["leads"] });
       setImportOpen(false);
       setFile(null);
-      toast.success(`Imported ${res.imported} of ${res.total} rows`);
+      toast.success(`Imported ${res.imported} of ${res.total_rows} rows (${res.duplicates} duplicates, ${res.invalid} invalid)`);
     },
     onError: (e: Error) => toast.error(e.message || "Import failed"),
   });
@@ -90,7 +90,7 @@ function LeadsPage() {
           />
           <select value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} className={selectCls}>
             <option value="all">All statuses</option>
-            {["new", "contacted", "replied", "completed", "unsubscribed"].map((s) => (
+            {["new", "active", "junk", "hot", "cold"].map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
@@ -171,7 +171,7 @@ function LeadsPage() {
       <Modal open={importOpen} onClose={() => setImportOpen(false)} title="Upload CSV" eyebrow="IMPORT LEADS">
         <div className="space-y-3 p-5">
           <p className="text-xs text-muted-foreground">
-            Expected columns: name, email, company, phone, source. The first row is treated as a header.
+            Required columns: name, email, company, phone, source, status. Use the backend source and status codes. The first row is treated as a header.
           </p>
           <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-line bg-background px-4 py-8 text-center transition-colors hover:border-brand">
             <Upload className="size-5 text-muted-foreground" />

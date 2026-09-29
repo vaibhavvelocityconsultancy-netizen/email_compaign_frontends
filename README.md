@@ -24,3 +24,5 @@ cd <repository-name>
 npm i
 npm run dev
 ```
+
+The frontend sends API requests to `/api`, proxied to Django at `http://127.0.0.1:8000` during development. Start Django from `email_compaign` with `python manage.py runserver`. To use a separately hosted API, set `VITE_API_BASE_URL` to its `/api` URL before starting or building the frontend.

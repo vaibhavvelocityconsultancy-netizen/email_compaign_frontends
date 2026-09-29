@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { getBatches, getLeads, getEmailLogs, getSequences } from "../lib/mock-api";
+import { getBatches, getLeads, getEmailLogs, getSequences } from "../lib/api";
 import { StatCard } from "../components/common/StatCard";
 import { StatusBadge } from "../components/common/StatusBadge";
 import { EmptyState, LoadingRows } from "../components/common/EmptyState";
@@ -25,9 +25,9 @@ function Dashboard() {
 
   const seqName = (id: string) => sequences.data?.find((s) => s.id === id)?.name ?? "—";
   const activeCount = campaigns.data?.filter((c) => c.status === "active").length ?? 0;
-  const sentTotal = campaigns.data?.reduce((n, c) => n + c.emailsSent, 0) ?? 0;
+  const sentTotal = logs.data?.filter((log) => log.status === "delivered").length ?? 0;
   const failedTotal = logs.data?.filter((l) => l.status === "failed").length ?? 0;
-  const replyTotal = campaigns.data?.reduce((n, c) => n + c.replies, 0) ?? 0;
+  const replyTotal = logs.data?.filter((log) => log.status === "replied").length ?? 0;
   const completedTotal = leads.data?.filter((l) => l.status === "completed").length ?? 0;
 
   return (
@@ -42,7 +42,7 @@ function Dashboard() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatCard label="TOTAL LEADS" value={leads.data?.length ?? "…"} sub="across all sources" delay={0} />
         <StatCard label="ACTIVE CAMPAIGNS" value={activeCount} sub={`${campaigns.data?.filter((c) => c.status === "paused").length ?? 0} paused`} delay={40} />
-        <StatCard label="EMAILS SENT" value={sentTotal.toLocaleString()} sub="all campaigns" tone="good" delay={80} />
+        <StatCard label="EMAILS DELIVERED" value={sentTotal.toLocaleString()} sub="all campaigns" tone="good" delay={80} />
         <StatCard label="EMAILS FAILED" value={failedTotal} sub="delivery errors" tone="bad" delay={120} />
         <StatCard label="REPLIES" value={replyTotal.toLocaleString()} sub="from campaign leads" tone="good" delay={160} />
         <StatCard label="COMPLETED LEADS" value={completedTotal} sub="finished sequences" delay={200} />
@@ -89,8 +89,12 @@ function Dashboard() {
                     <td className="px-4 py-3 font-medium">{c.name}</td>
                     <td className="px-4 py-3 text-muted-foreground">{seqName(c.sequenceId)}</td>
                     <td className="px-4 py-3 text-right font-mono text-[13px]">{c.leadIds.length}</td>
-                    <td className="px-4 py-3 text-right font-mono text-[13px]">{c.emailsSent.toLocaleString()}</td>
-                    <td className="px-4 py-3 text-right font-mono text-[13px]">{c.replies}</td>
+                    <td className="px-4 py-3 text-right font-mono text-[13px]">
+                      {logs.data?.filter((log) => log.batchId === c.id && log.status === "delivered").length ?? 0}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono text-[13px]">
+                      {logs.data?.filter((log) => log.batchId === c.id && log.status === "replied").length ?? 0}
+                    </td>
                     <td className="px-4 py-3">
                       <StatusBadge status={c.status} />
                     </td>
