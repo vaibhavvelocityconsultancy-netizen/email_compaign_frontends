@@ -326,7 +326,7 @@ export function EntityForm<T extends Record<string, any>>({
                     type="button"
                     aria-label={`Remove ${file.file_name ?? "attachment"}`}
                     className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-destructive"
-                    onClick={() => onChange(savedFiles.filter((item) => item.id !== file.id).concat(pendingFiles))}
+                    onClick={() => onChange([...savedFiles.filter((item) => item.id !== file.id), ...pendingFiles])}
                   >
                     <X className="size-3.5" />
                   </button>

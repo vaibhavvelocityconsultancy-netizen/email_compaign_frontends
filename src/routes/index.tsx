@@ -28,7 +28,7 @@ function Dashboard() {
   const sentTotal = logs.data?.filter((log) => log.status === "delivered").length ?? 0;
   const failedTotal = logs.data?.filter((l) => l.status === "failed").length ?? 0;
   const replyTotal = logs.data?.filter((log) => log.status === "replied").length ?? 0;
-  const completedTotal = leads.data?.filter((l) => l.status === "completed").length ?? 0;
+  const completedTotal = leads.data?.filter((l) => (l.status as string) === "completed").length ?? 0;
 
   return (
     <div className="space-y-6">

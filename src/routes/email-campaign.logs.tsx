@@ -4,7 +4,7 @@ import { useMemo } from "react";
 
 import { DataTable, type Column } from "@/components/common/DataTable";
 import { StatusBadge } from "@/components/common/StatusBadge";
-import { getBatches, getEmailLogs, getLeads } from "@/lib/api";
+import { getBatches, getEmailLogs, getLeads, type LogStatus } from "@/lib/api";
 
 export const Route = createFileRoute("/email-campaign/logs")({
   head: () => ({
@@ -23,15 +23,7 @@ type LogRow = {
   leadId: string;
   leadName: string;
   subject: string;
-  status:
-    | "accepted"
-    | "delivered"
-    | "opened"
-    | "clicked"
-    | "failed"
-    | "complained"
-    | "unsubscribed"
-    | "replied";
+  status: LogStatus;
   step: number;
   sentAt: string;
   templateName: string;

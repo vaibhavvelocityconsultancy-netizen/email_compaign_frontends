@@ -165,7 +165,7 @@ function CampaignsPage() {
       header: "Created",
       filterType: "date",
       filterValue: (campaign) => campaign.enquiryDateFrom,
-      cell: (campaign) => <span className="font-mono text-[11px] text-muted-foreground">{new Date(campaign.enquiryDateFrom).toLocaleDateString()}</span>,
+      cell: (campaign) => <span className="font-mono text-[11px] text-muted-foreground">{campaign.enquiryDateFrom ? new Date(campaign.enquiryDateFrom).toLocaleDateString() : "—"}</span>,
     },
     {
       key: "actions",
@@ -303,8 +303,8 @@ function CampaignsPage() {
 
     createMutation.mutate({
       name: values.name,
-      sequenceId: String(values.sequenceId),
-      leadIds: values.leadIds.map(String),
+      sequenceId: Number(values.sequenceId),
+      leadIds: values.leadIds.map(Number),
     });
   };
 
@@ -532,7 +532,7 @@ function CampaignsPage() {
                     return (
                       <TableRow key={campaignLead.leadId}>
                         <TableCell className="font-medium">{lead?.name ?? "Unknown lead"}</TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">{campaignLead.email}</TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">{(campaignLead as { email?: string }).email ?? "—"}</TableCell>
                         <TableCell className="font-mono text-xs">{campaignLead.currentStep}</TableCell>
                         <TableCell><StatusBadge status={status} /></TableCell>
                       </TableRow>
