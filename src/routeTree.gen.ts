@@ -10,25 +10,15 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as CampaignsRouteImport } from './routes/campaigns'
-import { Route as EmailLogsRouteImport } from './routes/email-logs'
 import { Route as LeadsRouteImport } from './routes/leads'
-import { Route as SequencesRouteImport } from './routes/sequences'
-import { Route as TemplatesRouteImport } from './routes/templates'
+import { Route as EmailCampaignCampaignsRouteImport } from './routes/email-campaign.campaigns'
+import { Route as EmailCampaignLogsRouteImport } from './routes/email-campaign.logs'
+import { Route as EmailCampaignSequencesRouteImport } from './routes/email-campaign.sequences'
+import { Route as EmailCampaignTemplatesRouteImport } from './routes/email-campaign.templates'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CampaignsRoute = CampaignsRouteImport.update({
-  id: '/campaigns',
-  path: '/campaigns',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EmailLogsRoute = EmailLogsRouteImport.update({
-  id: '/email-logs',
-  path: '/email-logs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LeadsRoute = LeadsRouteImport.update({
@@ -36,66 +26,86 @@ const LeadsRoute = LeadsRouteImport.update({
   path: '/leads',
   getParentRoute: () => rootRouteImport,
 } as any)
-const SequencesRoute = SequencesRouteImport.update({
-  id: '/sequences',
-  path: '/sequences',
+const EmailCampaignCampaignsRoute = EmailCampaignCampaignsRouteImport.update({
+  id: '/email-campaign/campaigns',
+  path: '/email-campaign/campaigns',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TemplatesRoute = TemplatesRouteImport.update({
-  id: '/templates',
-  path: '/templates',
+const EmailCampaignLogsRoute = EmailCampaignLogsRouteImport.update({
+  id: '/email-campaign/logs',
+  path: '/email-campaign/logs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmailCampaignSequencesRoute = EmailCampaignSequencesRouteImport.update({
+  id: '/email-campaign/sequences',
+  path: '/email-campaign/sequences',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmailCampaignTemplatesRoute = EmailCampaignTemplatesRouteImport.update({
+  id: '/email-campaign/templates',
+  path: '/email-campaign/templates',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/campaigns': typeof CampaignsRoute
-  '/email-logs': typeof EmailLogsRoute
   '/leads': typeof LeadsRoute
-  '/sequences': typeof SequencesRoute
-  '/templates': typeof TemplatesRoute
+  '/email-campaign/campaigns': typeof EmailCampaignCampaignsRoute
+  '/email-campaign/logs': typeof EmailCampaignLogsRoute
+  '/email-campaign/sequences': typeof EmailCampaignSequencesRoute
+  '/email-campaign/templates': typeof EmailCampaignTemplatesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/campaigns': typeof CampaignsRoute
-  '/email-logs': typeof EmailLogsRoute
   '/leads': typeof LeadsRoute
-  '/sequences': typeof SequencesRoute
-  '/templates': typeof TemplatesRoute
+  '/email-campaign/campaigns': typeof EmailCampaignCampaignsRoute
+  '/email-campaign/logs': typeof EmailCampaignLogsRoute
+  '/email-campaign/sequences': typeof EmailCampaignSequencesRoute
+  '/email-campaign/templates': typeof EmailCampaignTemplatesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/campaigns': typeof CampaignsRoute
-  '/email-logs': typeof EmailLogsRoute
   '/leads': typeof LeadsRoute
-  '/sequences': typeof SequencesRoute
-  '/templates': typeof TemplatesRoute
+  '/email-campaign/campaigns': typeof EmailCampaignCampaignsRoute
+  '/email-campaign/logs': typeof EmailCampaignLogsRoute
+  '/email-campaign/sequences': typeof EmailCampaignSequencesRoute
+  '/email-campaign/templates': typeof EmailCampaignTemplatesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/campaigns' | '/email-logs' | '/leads' | '/sequences' | '/templates'
+    | '/'
+    | '/leads'
+    | '/email-campaign/campaigns'
+    | '/email-campaign/logs'
+    | '/email-campaign/sequences'
+    | '/email-campaign/templates'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/campaigns' | '/email-logs' | '/leads' | '/sequences' | '/templates'
+    | '/'
+    | '/leads'
+    | '/email-campaign/campaigns'
+    | '/email-campaign/logs'
+    | '/email-campaign/sequences'
+    | '/email-campaign/templates'
   id:
     | '__root__'
     | '/'
-    | '/campaigns'
-    | '/email-logs'
     | '/leads'
-    | '/sequences'
-    | '/templates'
+    | '/email-campaign/campaigns'
+    | '/email-campaign/logs'
+    | '/email-campaign/sequences'
+    | '/email-campaign/templates'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  CampaignsRoute: typeof CampaignsRoute
-  EmailLogsRoute: typeof EmailLogsRoute
   LeadsRoute: typeof LeadsRoute
-  SequencesRoute: typeof SequencesRoute
-  TemplatesRoute: typeof TemplatesRoute
+  EmailCampaignCampaignsRoute: typeof EmailCampaignCampaignsRoute
+  EmailCampaignLogsRoute: typeof EmailCampaignLogsRoute
+  EmailCampaignSequencesRoute: typeof EmailCampaignSequencesRoute
+  EmailCampaignTemplatesRoute: typeof EmailCampaignTemplatesRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -107,20 +117,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/campaigns': {
-      id: '/campaigns'
-      path: '/campaigns'
-      fullPath: '/campaigns'
-      preLoaderRoute: typeof CampaignsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/email-logs': {
-      id: '/email-logs'
-      path: '/email-logs'
-      fullPath: '/email-logs'
-      preLoaderRoute: typeof EmailLogsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/leads': {
       id: '/leads'
       path: '/leads'
@@ -128,18 +124,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LeadsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/sequences': {
-      id: '/sequences'
-      path: '/sequences'
-      fullPath: '/sequences'
-      preLoaderRoute: typeof SequencesRouteImport
+    '/email-campaign/campaigns': {
+      id: '/email-campaign/campaigns'
+      path: '/email-campaign/campaigns'
+      fullPath: '/email-campaign/campaigns'
+      preLoaderRoute: typeof EmailCampaignCampaignsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/templates': {
-      id: '/templates'
-      path: '/templates'
-      fullPath: '/templates'
-      preLoaderRoute: typeof TemplatesRouteImport
+    '/email-campaign/logs': {
+      id: '/email-campaign/logs'
+      path: '/email-campaign/logs'
+      fullPath: '/email-campaign/logs'
+      preLoaderRoute: typeof EmailCampaignLogsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/email-campaign/sequences': {
+      id: '/email-campaign/sequences'
+      path: '/email-campaign/sequences'
+      fullPath: '/email-campaign/sequences'
+      preLoaderRoute: typeof EmailCampaignSequencesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/email-campaign/templates': {
+      id: '/email-campaign/templates'
+      path: '/email-campaign/templates'
+      fullPath: '/email-campaign/templates'
+      preLoaderRoute: typeof EmailCampaignTemplatesRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -147,11 +157,11 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  CampaignsRoute: CampaignsRoute,
-  EmailLogsRoute: EmailLogsRoute,
   LeadsRoute: LeadsRoute,
-  SequencesRoute: SequencesRoute,
-  TemplatesRoute: TemplatesRoute,
+  EmailCampaignCampaignsRoute: EmailCampaignCampaignsRoute,
+  EmailCampaignLogsRoute: EmailCampaignLogsRoute,
+  EmailCampaignSequencesRoute: EmailCampaignSequencesRoute,
+  EmailCampaignTemplatesRoute: EmailCampaignTemplatesRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

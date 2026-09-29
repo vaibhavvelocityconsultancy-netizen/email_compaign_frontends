@@ -1,17 +1,50 @@
-import { Link, Outlet, useNavigate } from "@tanstack/react-router";
-import { LayoutDashboard, Users, Mail, ListOrdered, Megaphone, Search, Plus } from "lucide-react";
+import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useState } from "react";
+import {
+  LayoutDashboard,
+  Users,
+  Mail,
+  Megaphone,
+  Search,
+  Plus,
+  ChevronDown,
+  Briefcase,
+  Target,
+  FileText,
+} from "lucide-react";
 import { Toaster } from "sonner";
 
-const NAV = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
-  { to: "/leads", label: "Leads", icon: Users },
-  { to: "/templates", label: "Email Templates", icon: Mail },
-  { to: "/sequences", label: "Sequences", icon: ListOrdered },
-  { to: "/campaigns", label: "Campaigns", icon: Megaphone },
+const GROUPS = [
+  {
+    key: "marketing",
+    label: "Marketing",
+    icon: Megaphone,
+    prefixes: ["/", "/leads", "/email-campaign"],
+    items: [
+      { to: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
+      { to: "/leads", label: "Leads", icon: Users, exact: false },
+      { to: "/email-campaign", label: "Email Campaign", icon: Mail, exact: false },
+    ],
+  },
+  {
+    key: "sales",
+    label: "Sales",
+    icon: Briefcase,
+    prefixes: ["/sales"],
+    items: [
+      { to: "/sales", label: "Dashboard", icon: LayoutDashboard, exact: true },
+      { to: "/sales/opportunities", label: "Opportunity", icon: Target, exact: false },
+      { to: "/sales/quotations", label: "Quotation", icon: FileText, exact: false },
+    ],
+  },
 ] as const;
 
 export function AppLayout() {
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const activeGroup = pathname.startsWith("/sales") ? "sales" : "marketing";
+  const [open, setOpen] = useState<Record<string, boolean>>({ [activeGroup]: true });
+
   return (
     <div className="flex min-h-screen bg-background font-body text-foreground antialiased">
       <aside className="fixed inset-y-0 left-0 z-20 flex w-60 shrink-0 flex-col bg-ink text-white/85">
@@ -22,20 +55,43 @@ export function AppLayout() {
             <div className="mt-1 font-mono text-[10px] text-white/40">CRM · OPS</div>
           </div>
         </div>
-        <nav className="space-y-0.5 px-3 py-4 text-sm">
-          {NAV.map(({ to, label, icon: Icon, ...rest }) => (
-            <Link
-              key={to}
-              to={to}
-              activeOptions={{ exact: "exact" in rest }}
-              className="flex items-center gap-2.5 rounded-lg px-3 py-2 transition-colors hover:bg-white/5"
-              activeProps={{ className: "bg-white/10 text-white font-medium" }}
-              inactiveProps={{ className: "text-white/70" }}
-            >
-              <Icon className="size-4" />
-              {label}
-            </Link>
-          ))}
+        <nav className="space-y-2 px-3 py-4 text-sm">
+          {GROUPS.map((g) => {
+            const isOpen = open[g.key] ?? false;
+            const GIcon = g.icon;
+            return (
+              <div key={g.key}>
+                <button
+                  onClick={() => setOpen((o) => ({ ...o, [g.key]: !isOpen }))}
+                  className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left font-medium transition-colors hover:bg-white/5 ${
+                    activeGroup === g.key ? "text-white" : "text-white/70"
+                  }`}
+                  aria-expanded={isOpen}
+                >
+                  <GIcon className="size-4" />
+                  <span className="flex-1">{g.label}</span>
+                  <ChevronDown className={`size-4 transition-transform ${isOpen ? "" : "-rotate-90"}`} />
+                </button>
+                {isOpen && (
+                  <div className="mt-0.5 ml-4 space-y-0.5 border-l border-white/10 pl-2">
+                    {g.items.map(({ to, label, icon: Icon, exact }) => (
+                      <Link
+                        key={to}
+                        to={to}
+                        activeOptions={{ exact }}
+                        className="flex items-center gap-2.5 rounded-lg px-3 py-2 transition-colors hover:bg-white/5"
+                        activeProps={{ className: "bg-white/10 text-white font-medium" }}
+                        inactiveProps={{ className: "text-white/70" }}
+                      >
+                        <Icon className="size-4" />
+                        {label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </nav>
       </aside>
 
@@ -51,7 +107,7 @@ export function AppLayout() {
             </div>
           </div>
           <button
-            onClick={() => navigate({ to: "/campaigns", search: { create: true } })}
+            onClick={() => navigate({ to: "/email-campaign/campaigns", search: { create: true } })}
             className="flex h-9 items-center gap-1.5 rounded-lg bg-brand px-4 text-sm font-medium text-white transition-colors hover:bg-brand/90"
           >
             <Plus className="size-4" /> New campaign
