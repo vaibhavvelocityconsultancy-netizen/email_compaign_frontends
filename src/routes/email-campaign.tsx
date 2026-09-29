@@ -13,25 +13,30 @@ export const Route = createFileRoute("/email-campaign")({
 });
 
 const TABS = [
-  { to: "/email-campaign/campaigns", label: "Campaigns", search: { create: false } },
   { to: "/email-campaign/templates", label: "Templates" },
   { to: "/email-campaign/sequences", label: "Sequences" },
   { to: "/email-campaign/logs", label: "Email Logs" },
 ] as const;
 
+const tabCls = "-mb-px border-b-2 px-4 py-2.5 text-sm transition-colors";
+const activeCls = { className: "border-brand font-medium text-foreground" };
+const inactiveCls = { className: "border-transparent text-muted-foreground hover:text-foreground" };
+
 function EmailCampaignLayout() {
   return (
     <div className="space-y-6">
       <div className="flex gap-1 border-b border-line">
+        <Link
+          to="/email-campaign/campaigns"
+          search={{ create: false }}
+          className={tabCls}
+          activeProps={activeCls}
+          inactiveProps={inactiveCls}
+        >
+          Campaigns
+        </Link>
         {TABS.map((t) => (
-          <Link
-            key={t.to}
-            to={t.to}
-            search={"search" in t ? t.search : undefined}
-            className="-mb-px border-b-2 px-4 py-2.5 text-sm transition-colors"
-            activeProps={{ className: "border-brand font-medium text-foreground" }}
-            inactiveProps={{ className: "border-transparent text-muted-foreground hover:text-foreground" }}
-          >
+          <Link key={t.to} to={t.to} className={tabCls} activeProps={activeCls} inactiveProps={inactiveCls}>
             {t.label}
           </Link>
         ))}
