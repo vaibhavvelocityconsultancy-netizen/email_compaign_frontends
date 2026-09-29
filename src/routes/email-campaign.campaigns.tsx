@@ -28,7 +28,7 @@ import {
   type Lead,
 } from "@/lib/api";
 
-export const Route = createFileRoute("/campaigns")({
+export const Route = createFileRoute("/email-campaign/campaigns")({
   validateSearch: (search: Record<string, unknown>) => ({
     create: search.create === true || search.create === "true",
   }),
@@ -75,7 +75,7 @@ function CampaignsPage() {
   useEffect(() => {
     if (!search.create) return;
     setFormOpen(true);
-    void navigate({ to: "/campaigns", search: { create: false }, replace: true });
+    void navigate({ to: "/email-campaign/campaigns", search: { create: false }, replace: true });
   }, [search.create, navigate]);
 
   const createMutation = useMutation({
