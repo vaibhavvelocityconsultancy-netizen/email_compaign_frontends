@@ -22,15 +22,18 @@ export function AppLayout() {
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset className="min-w-0">
-          <header className="sticky top-0 z-10 flex h-[74px] items-center gap-5 border-b border-line bg-background/95 px-7 backdrop-blur">
-            <SidebarTrigger className="size-7 rounded-md text-foreground hover:bg-surface" />
-            <div className="flex items-center gap-3">
-              <div className="grid size-10 place-items-center rounded-[14px] bg-brand font-display text-xl font-bold text-white">
-                V
-              </div>
-              <div className="hidden leading-none sm:block">
-                <div className="font-display text-sm font-bold text-foreground">Vantage</div>
-                <div className="mt-1 font-mono text-[10px] text-muted-foreground">CRM · OPS</div>
+          <header className="sticky top-0 z-10 flex h-[74px] items-center justify-between border-b border-line bg-background/95 px-5 backdrop-blur sm:px-7">
+            <div className="flex min-w-0 items-center gap-4">
+              <SidebarTrigger className="size-8 shrink-0 rounded-md text-foreground hover:bg-surface" />
+              <div className="h-7 w-px bg-line" aria-hidden="true" />
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="grid size-10 shrink-0 place-items-center rounded-[13px] bg-brand font-display text-xl font-bold text-white shadow-sm">
+                  V
+                </div>
+                <div className="hidden min-w-0 leading-none sm:block">
+                  <div className="truncate font-display text-sm font-bold tracking-tight text-foreground">Vantage</div>
+                  <div className="mt-1 font-mono text-[10px] font-medium tracking-[0.16em] text-muted-foreground">CRM · OPS</div>
+                </div>
               </div>
             </div>
             <DropdownMenu>
