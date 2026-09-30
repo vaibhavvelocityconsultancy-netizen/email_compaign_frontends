@@ -13,15 +13,14 @@ import {
   FileText,
 } from "lucide-react";
 import { Toaster } from "sonner";
+import { Button } from "@/components/ui/button";
 
 const GROUPS = [
   {
     key: "marketing",
     label: "Marketing",
     icon: Megaphone,
-    prefixes: ["/", "/leads", "/email-campaign"],
     items: [
-      { to: "/", label: "Dashboard", icon: LayoutDashboard, exact: true },
       { to: "/leads", label: "Leads", icon: Users, exact: false },
       { to: "/email-campaign", label: "Email Campaign", icon: Mail, exact: false },
     ],
@@ -30,9 +29,7 @@ const GROUPS = [
     key: "sales",
     label: "Sales",
     icon: Briefcase,
-    prefixes: ["/sales"],
     items: [
-      { to: "/sales", label: "Dashboard", icon: LayoutDashboard, exact: true },
       { to: "/sales/opportunities", label: "Opportunity", icon: Target, exact: false },
       { to: "/sales/quotations", label: "Quotation", icon: FileText, exact: false },
     ],
@@ -42,8 +39,8 @@ const GROUPS = [
 export function AppLayout() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const activeGroup = pathname.startsWith("/sales") ? "sales" : "marketing";
-  const [open, setOpen] = useState<Record<string, boolean>>({ [activeGroup]: true });
+  const activeGroup = pathname.startsWith("/sales") ? "sales" : pathname === "/" ? "" : "marketing";
+  const [open, setOpen] = useState<Record<string, boolean>>({ marketing: true, sales: true });
 
   return (
     <div className="flex min-h-screen bg-background font-body text-foreground antialiased">
@@ -56,14 +53,24 @@ export function AppLayout() {
           </div>
         </div>
         <nav className="space-y-2 px-3 py-4 text-sm">
+          <Link
+            to="/"
+            activeOptions={{ exact: true }}
+            className="flex items-center gap-2.5 rounded-lg px-3 py-2 transition-colors hover:bg-white/5"
+            activeProps={{ className: "bg-white/10 text-white font-medium" }}
+            inactiveProps={{ className: "text-white/70" }}
+          >
+            <LayoutDashboard className="size-4" /> Dashboard
+          </Link>
           {GROUPS.map((g) => {
             const isOpen = open[g.key] ?? false;
             const GIcon = g.icon;
             return (
               <div key={g.key}>
-                <button
+                <Button
+                  variant="ghost"
                   onClick={() => setOpen((o) => ({ ...o, [g.key]: !isOpen }))}
-                  className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left font-medium transition-colors hover:bg-white/5 ${
+                  className={`h-auto w-full justify-start px-3 py-2 font-medium hover:bg-white/5 hover:text-white ${
                     activeGroup === g.key ? "text-white" : "text-white/70"
                   }`}
                   aria-expanded={isOpen}
@@ -71,7 +78,7 @@ export function AppLayout() {
                   <GIcon className="size-4" />
                   <span className="flex-1">{g.label}</span>
                   <ChevronDown className={`size-4 transition-transform ${isOpen ? "" : "-rotate-90"}`} />
-                </button>
+                </Button>
                 {isOpen && (
                   <div className="mt-0.5 ml-4 space-y-0.5 border-l border-white/10 pl-2">
                     {g.items.map(({ to, label, icon: Icon, exact }) => (
@@ -106,12 +113,12 @@ export function AppLayout() {
               />
             </div>
           </div>
-          <button
+          <Button
             onClick={() => navigate({ to: "/email-campaign/campaigns", search: { create: true } })}
-            className="flex h-9 items-center gap-1.5 rounded-lg bg-brand px-4 text-sm font-medium text-white transition-colors hover:bg-brand/90"
+            className="bg-brand text-primary-foreground hover:bg-brand/90"
           >
             <Plus className="size-4" /> New campaign
-          </button>
+          </Button>
         </header>
         <main className="flex-1 p-6">
           <Outlet />
