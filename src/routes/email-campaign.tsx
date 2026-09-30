@@ -15,7 +15,6 @@ export const Route = createFileRoute("/email-campaign")({
 const TABS = [
   { to: "/email-campaign/templates", label: "Templates" },
   { to: "/email-campaign/sequences", label: "Sequences" },
-  { to: "/email-campaign/logs", label: "Email Logs" },
 ] as const;
 
 const tabCls = "-mb-px border-b-2 px-4 py-2.5 text-sm transition-colors";
