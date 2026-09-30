@@ -1,5 +1,5 @@
 import { Outlet, useNavigate } from "@tanstack/react-router";
-import { LogOut, User } from "lucide-react";
+import { Bell, LogOut, User } from "lucide-react";
 import { Toaster } from "sonner";
 import { Button } from "@/components/ui/button";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -36,8 +36,17 @@ export function AppLayout() {
                 </div>
               </div>
             </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                className="relative size-10 rounded-full p-0 text-muted-foreground hover:bg-surface hover:text-foreground"
+                aria-label="Open notifications"
+              >
+                <Bell className="size-[18px]" />
+                <span className="absolute right-2 top-2 size-1.5 rounded-full bg-brand" aria-hidden="true" />
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   className="size-10 rounded-full p-0 hover:bg-surface"
@@ -60,8 +69,9 @@ export function AppLayout() {
                   <LogOut data-icon="inline-start" />
                   Log out
                 </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </header>
           <main className="flex-1 p-6">
             <Outlet />
