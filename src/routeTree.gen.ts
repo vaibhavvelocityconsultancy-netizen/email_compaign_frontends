@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EmailCampaignRouteImport } from './routes/email-campaign'
 import { Route as LeadsRouteImport } from './routes/leads'
+import { Route as MarketingRouteImport } from './routes/marketing'
 import { Route as EmailCampaignIndexRouteImport } from './routes/email-campaign.index'
 import { Route as EmailCampaignCampaignsRouteImport } from './routes/email-campaign.campaigns'
 import { Route as EmailCampaignLogsRouteImport } from './routes/email-campaign.logs'
@@ -34,6 +35,11 @@ const EmailCampaignRoute = EmailCampaignRouteImport.update({
 const LeadsRoute = LeadsRouteImport.update({
   id: '/leads',
   path: '/leads',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketingRoute = MarketingRouteImport.update({
+  id: '/marketing',
+  path: '/marketing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EmailCampaignIndexRoute = EmailCampaignIndexRouteImport.update({
@@ -81,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/email-campaign': typeof EmailCampaignRouteWithChildren
   '/leads': typeof LeadsRoute
+  '/marketing': typeof MarketingRoute
   '/email-campaign/campaigns': typeof EmailCampaignCampaignsRoute
   '/email-campaign/logs': typeof EmailCampaignLogsRoute
   '/email-campaign/sequences': typeof EmailCampaignSequencesRoute
@@ -93,6 +100,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/leads': typeof LeadsRoute
+  '/marketing': typeof MarketingRoute
   '/email-campaign/campaigns': typeof EmailCampaignCampaignsRoute
   '/email-campaign/logs': typeof EmailCampaignLogsRoute
   '/email-campaign/sequences': typeof EmailCampaignSequencesRoute
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/email-campaign': typeof EmailCampaignRouteWithChildren
   '/leads': typeof LeadsRoute
+  '/marketing': typeof MarketingRoute
   '/email-campaign/campaigns': typeof EmailCampaignCampaignsRoute
   '/email-campaign/logs': typeof EmailCampaignLogsRoute
   '/email-campaign/sequences': typeof EmailCampaignSequencesRoute
@@ -122,6 +131,7 @@ export interface FileRouteTypes {
     | '/'
     | '/email-campaign'
     | '/leads'
+    | '/marketing'
     | '/email-campaign/campaigns'
     | '/email-campaign/logs'
     | '/email-campaign/sequences'
@@ -134,6 +144,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/leads'
+    | '/marketing'
     | '/email-campaign/campaigns'
     | '/email-campaign/logs'
     | '/email-campaign/sequences'
@@ -147,6 +158,7 @@ export interface FileRouteTypes {
     | '/'
     | '/email-campaign'
     | '/leads'
+    | '/marketing'
     | '/email-campaign/campaigns'
     | '/email-campaign/logs'
     | '/email-campaign/sequences'
@@ -161,6 +173,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   EmailCampaignRoute: typeof EmailCampaignRouteWithChildren
   LeadsRoute: typeof LeadsRoute
+  MarketingRoute: typeof MarketingRoute
   SalesOpportunitiesRoute: typeof SalesOpportunitiesRoute
   SalesQuotationsRoute: typeof SalesQuotationsRoute
   SalesIndexRoute: typeof SalesIndexRoute
@@ -187,6 +200,13 @@ declare module '@tanstack/react-router' {
       path: '/leads'
       fullPath: '/leads'
       preLoaderRoute: typeof LeadsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/marketing': {
+      id: '/marketing'
+      path: '/marketing'
+      fullPath: '/marketing'
+      preLoaderRoute: typeof MarketingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/email-campaign/': {
@@ -272,6 +292,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   EmailCampaignRoute: EmailCampaignRouteWithChildren,
   LeadsRoute: LeadsRoute,
+  MarketingRoute: MarketingRoute,
   SalesOpportunitiesRoute: SalesOpportunitiesRoute,
   SalesQuotationsRoute: SalesQuotationsRoute,
   SalesIndexRoute: SalesIndexRoute,
