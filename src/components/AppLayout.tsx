@@ -21,6 +21,7 @@ const GROUPS = [
     label: "Marketing",
     icon: Megaphone,
     items: [
+      { to: "/marketing", label: "Dashboard", icon: LayoutDashboard, exact: true },
       { to: "/leads", label: "Leads", icon: Users, exact: false },
       { to: "/email-campaign", label: "Email Campaign", icon: Mail, exact: false },
     ],
@@ -30,6 +31,7 @@ const GROUPS = [
     label: "Sales",
     icon: Briefcase,
     items: [
+      { to: "/sales", label: "Dashboard", icon: LayoutDashboard, exact: true },
       { to: "/sales/opportunities", label: "Opportunity", icon: Target, exact: false },
       { to: "/sales/quotations", label: "Quotation", icon: FileText, exact: false },
     ],
