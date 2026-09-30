@@ -4,14 +4,17 @@ import { getBatches, getLeads, getEmailLogs, getSequences } from "../lib/api";
 import { StatCard } from "../components/common/StatCard";
 import { StatusBadge } from "../components/common/StatusBadge";
 import { EmptyState, LoadingRows } from "../components/common/EmptyState";
+import { ArrowUpRight, FileText, Target } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Dashboard — Vantage CRM" },
-      { name: "description", content: "Campaign statistics and recent campaign activity." },
+      { name: "description", content: "Your marketing activity and sales workspace in one dashboard." },
       { property: "og:title", content: "Dashboard — Vantage CRM" },
-      { property: "og:description", content: "Campaign statistics and recent campaign activity." },
+      { property: "og:description", content: "Your marketing activity and sales workspace in one dashboard." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Dashboard,
@@ -28,25 +31,44 @@ function Dashboard() {
   const sentTotal = logs.data?.filter((log) => log.status === "delivered").length ?? 0;
   const failedTotal = logs.data?.filter((l) => l.status === "failed").length ?? 0;
   const replyTotal = logs.data?.filter((log) => log.status === "replied").length ?? 0;
-  const completedTotal = leads.data?.filter((l) => (l.status as string) === "completed").length ?? 0;
 
   return (
     <div className="space-y-6">
       <div className="rise flex items-end justify-between">
         <div>
           <div className="font-mono text-[11px] tracking-wide text-muted-foreground">OVERVIEW</div>
-          <h1 className="mt-1 font-display text-3xl font-bold tracking-tight">Campaign dashboard</h1>
+          <h1 className="mt-1 font-display text-3xl font-bold tracking-tight">Dashboard</h1>
         </div>
       </div>
 
+      <h2 className="font-display text-lg font-semibold">Marketing</h2>
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatCard label="TOTAL LEADS" value={leads.data?.length ?? "…"} sub="across all sources" delay={0} />
         <StatCard label="ACTIVE CAMPAIGNS" value={activeCount} sub={`${campaigns.data?.filter((c) => c.status === "paused").length ?? 0} paused`} delay={40} />
         <StatCard label="EMAILS DELIVERED" value={sentTotal.toLocaleString()} sub="all campaigns" tone="good" delay={80} />
         <StatCard label="EMAILS FAILED" value={failedTotal} sub="delivery errors" tone="bad" delay={120} />
         <StatCard label="REPLIES" value={replyTotal.toLocaleString()} sub="from campaign leads" tone="good" delay={160} />
-        <StatCard label="COMPLETED LEADS" value={completedTotal} sub="finished sequences" delay={200} />
+        <StatCard label="TOTAL CAMPAIGNS" value={campaigns.data?.length ?? "…"} sub="across all statuses" delay={200} />
       </div>
+
+      <section className="rise border-t border-line pt-6" aria-labelledby="sales-heading">
+        <div className="mb-4 flex items-baseline justify-between gap-4">
+          <h2 id="sales-heading" className="font-display text-lg font-semibold">Sales</h2>
+          <span className="text-xs text-muted-foreground">Sales data isn’t connected yet</span>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Link to="/sales/opportunities" className="group flex items-center gap-4 rounded-md border border-line bg-surface p-4 transition-colors hover:border-brand">
+            <div className="grid size-10 shrink-0 place-items-center rounded-md bg-brand-soft text-brand"><Target className="size-5" /></div>
+            <div className="min-w-0 flex-1"><div className="font-display font-semibold">Opportunities</div><div className="text-xs text-muted-foreground">View sales pipeline</div></div>
+            <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-brand" />
+          </Link>
+          <Link to="/sales/quotations" className="group flex items-center gap-4 rounded-md border border-line bg-surface p-4 transition-colors hover:border-brand">
+            <div className="grid size-10 shrink-0 place-items-center rounded-md bg-brand-soft text-brand"><FileText className="size-5" /></div>
+            <div className="min-w-0 flex-1"><div className="font-display font-semibold">Quotations</div><div className="text-xs text-muted-foreground">View quotations</div></div>
+            <ArrowUpRight className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-brand" />
+          </Link>
+        </div>
+      </section>
 
       <div className="rise overflow-hidden rounded-xl border border-line bg-surface" style={{ animationDelay: "240ms" }}>
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
