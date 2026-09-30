@@ -296,6 +296,11 @@ export async function getLeads(): Promise<Lead[]> {
   return response.results.map(mapLead);
 }
 
+export async function getLead(id: string): Promise<Lead> {
+  const lead = await request<ApiLead>(`/leads/${id}/`);
+  return mapLead(lead);
+}
+
 export async function getLeadUsers(): Promise<LeadUser[]> {
   return request<LeadUser[]>("/lead-users/");
 }
