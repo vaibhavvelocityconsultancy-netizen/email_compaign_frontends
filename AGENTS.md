@@ -9,4 +9,4 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
-- Keep `/` as the single Dashboard and redirect the old `/sales` dashboard to it; this avoids duplicate dashboard destinations while preserving old links.
+- Keep `/` as the overall Dashboard, `/marketing` as the Marketing dashboard, and `/sales` as the Sales dashboard; each scope has its own navigation destination.
