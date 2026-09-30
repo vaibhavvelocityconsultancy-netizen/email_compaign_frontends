@@ -49,15 +49,15 @@ const MENU_ITEMS: MenuItem[] = [
         icon: Megaphone,
         items: [
             {
-                to: "/",
+                to: "/marketing",
                 label: "Marketing Dashboard",
             },
             {
-                to: "/leads",
+                to: "/marketing/leads",
                 label: "Leads",
             },
             {
-                to: "/email-campaign",
+                to: "/marketing/email-campaign",
                 label: "Email Campaign",
             },
         ],
@@ -69,7 +69,7 @@ const MENU_ITEMS: MenuItem[] = [
         icon: Briefcase,
         items: [
             {
-                to: "/sales/dashboard",
+                to: "/sales",
                 label: "Sales Dashboard",
             },
             {

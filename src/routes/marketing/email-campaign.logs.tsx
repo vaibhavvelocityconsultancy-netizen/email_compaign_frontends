@@ -6,7 +6,7 @@ import { DataTable, type Column } from "@/components/common/DataTable";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { getBatches, getEmailLogs, getLeads, type LogStatus } from "@/lib/api";
 
-export const Route = createFileRoute("/email-campaign/logs")({
+export const Route = createFileRoute("/marketing/email-campaign/logs")({
   head: () => ({
     meta: [
       { title: "Email Logs — Vantage CRM" },

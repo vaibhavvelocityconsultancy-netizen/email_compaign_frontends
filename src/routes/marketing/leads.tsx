@@ -3,13 +3,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Pencil, Plus, Trash2, Upload } from "lucide-react";
-import { deleteLead, getLeads, importLeads, type Lead } from "../lib/api";
-import { DataTable, type Column } from "../components/common/DataTable";
-import { Modal } from "../components/common/Modal";
-import { ConfirmDialog } from "../components/common/ConfirmDialog";
-import { StatusBadge } from "../components/common/StatusBadge";
+import { deleteLead, getLeads, importLeads, type Lead } from "../../lib/api";
+import { DataTable, type Column } from "../../components/common/DataTable";
+import { Modal } from "../../components/common/Modal";
+import { ConfirmDialog } from "../../components/common/ConfirmDialog";
+import { StatusBadge } from "../../components/common/StatusBadge";
 
-export const Route = createFileRoute("/leads")({
+export const Route = createFileRoute("/marketing/leads")({
   head: () => ({
     meta: [
       { title: "Leads — Vantage CRM" },
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/leads")({
 
 function LeadsRouteView() {
   const isFormRoute = useRouterState({
-    select: (state) => state.location.pathname === "/leads/form",
+    select: (state) => state.location.pathname === "/marketing/leads/form",
   });
 
   return isFormRoute ? <Outlet /> : <LeadsPage />;
@@ -84,7 +84,7 @@ function LeadsPage() {
     onError: (e: Error) => toast.error(e.message || "Unable to remove lead"),
   });
 
-  const openCreate = () => navigate({ to: "/leads/form", search: { leadId: undefined } });
+  const openCreate = () => navigate({ to: "/marketing/leads/form", search: { leadId: undefined } });
 
   const columns = useMemo<Column<Lead>[]>(() => [
     {
@@ -150,7 +150,7 @@ function LeadsPage() {
         <div className="flex justify-end gap-1">
           <button
             type="button"
-            onClick={() => navigate({ to: "/leads/form", search: { leadId: lead.id } })}
+            onClick={() => navigate({ to: "/marketing/leads/form", search: { leadId: lead.id } })}
             className="grid size-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
             aria-label={`Edit enquiry ${lead.srNo}`}
             title="Edit lead"

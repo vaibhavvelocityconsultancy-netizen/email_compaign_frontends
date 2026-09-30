@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/email-campaign")({
+export const Route = createFileRoute("/marketing/email-campaign")({
   head: () => ({
     meta: [
       { title: "Email Campaign — Vantage CRM" },
@@ -13,8 +13,8 @@ export const Route = createFileRoute("/email-campaign")({
 });
 
 const TABS = [
-  { to: "/email-campaign/templates", label: "Templates" },
-  { to: "/email-campaign/sequences", label: "Sequences" },
+  { to: "/marketing/email-campaign/templates", label: "Templates" },
+  { to: "/marketing/email-campaign/sequences", label: "Sequences" },
 ] as const;
 
 const tabCls = "-mb-px border-b-2 px-4 py-2.5 text-sm transition-colors";
@@ -26,7 +26,7 @@ function EmailCampaignLayout() {
     <div className="space-y-6">
       <div className="flex gap-1 border-b border-line">
         <Link
-          to="/email-campaign/campaigns"
+          to="/marketing/email-campaign/campaigns"
           search={{ create: false }}
           className={tabCls}
           activeProps={activeCls}

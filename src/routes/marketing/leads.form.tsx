@@ -1,13 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Target } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { getLead, createLead, updateLead, type LeadInput } from "@/lib/api";
 
-export const Route = createFileRoute("/leads/form")({
+export const Route = createFileRoute("/marketing/leads/form")({
   validateSearch: (search: Record<string, unknown>) => ({
     leadId: typeof search.leadId === "string" ? search.leadId : undefined,
   }),
@@ -227,7 +227,7 @@ function LeadFormPage() {
       await queryClient.invalidateQueries({ queryKey: ["leads"] });
       if (leadId) await queryClient.invalidateQueries({ queryKey: ["lead", leadId] });
       toast.success(leadId ? "Lead updated" : "Lead created");
-      await navigate({ to: "/leads" });
+      await navigate({ to: "/marketing/leads" });
     },
     onError: (error: Error) => toast.error(error.message || "Unable to save lead"),
   });
@@ -241,7 +241,7 @@ function LeadFormPage() {
       ? "Follow-up can't be before the enquiry date."
       : null;
   const canSubmit = !saveMutation.isPending && !followupError;
-  const goBack = () => navigate({ to: "/leads" });
+  const goBack = () => navigate({ to: "/marketing/leads" });
 
   if (leadId && leadQuery.isLoading) return <LeadFormSkeleton />;
 
@@ -483,18 +483,22 @@ function LeadFormPage() {
               />
             </Field>
 
-            <label className="flex cursor-pointer items-start gap-3 rounded-md border border-line p-3.5 transition-colors hover:bg-muted/40 sm:col-span-2">
-              <input
-                type="checkbox"
-                checked={form.is_opportunity}
-                onChange={(event) => update("is_opportunity", event.target.checked)}
-                className="mt-0.5 size-4 accent-brand"
-              />
+            <button
+              type="button"
+              aria-pressed={form.is_opportunity}
+              onClick={() => update("is_opportunity", !form.is_opportunity)}
+              className={`flex w-full items-start gap-3 rounded-md border p-3.5 text-left transition-colors sm:col-span-2 ${
+                form.is_opportunity
+                  ? "border-brand bg-brand/10 text-foreground"
+                  : "border-line hover:bg-muted/40"
+              }`}
+            >
+              <Target className={`mt-0.5 size-5 shrink-0 ${form.is_opportunity ? "text-brand" : "text-muted-foreground"}`} />
               <span className="grid gap-0.5 text-sm">
                 <span className="font-medium">Mark as opportunity</span>
                 <span className="text-xs text-muted-foreground">Use this once the enquiry looks like a real deal.</span>
               </span>
-            </label>
+            </button>
           </Group>
         </Section>
 

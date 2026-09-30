@@ -26,7 +26,7 @@ import {
   type EmailTemplate,
 } from "@/lib/api";
 
-export const Route = createFileRoute("/email-campaign/sequences")({
+export const Route = createFileRoute("/marketing/email-campaign/sequences")({
   head: () => ({
     meta: [
       { title: "Sequences — Vantage CRM" },

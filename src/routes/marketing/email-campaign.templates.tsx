@@ -12,15 +12,15 @@ import {
   deleteTemplate,
   type MessageTemplate,
   type Channel,
-} from "../lib/api";
-import { Modal } from "../components/common/Modal";
-import { ConfirmDialog } from "../components/common/ConfirmDialog";
-import { DataTable, type Column } from "../components/common/DataTable";
-import { EntityForm, fieldPresets, type FormFieldConfig } from "../components/common/EntityForm";
+} from "../../lib/api";
+import { Modal } from "../../components/common/Modal";
+import { ConfirmDialog } from "../../components/common/ConfirmDialog";
+import { DataTable, type Column } from "../../components/common/DataTable";
+import { EntityForm, fieldPresets, type FormFieldConfig } from "../../components/common/EntityForm";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export const Route = createFileRoute("/email-campaign/templates")({
+export const Route = createFileRoute("/marketing/email-campaign/templates")({
   head: () => ({
     meta: [
       { title: "Message Templates — Vantage CRM" },

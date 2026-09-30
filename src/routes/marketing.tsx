@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getBatches, getLeads, getEmailLogs, getSequences } from "../lib/api";
 import { StatCard } from "../components/common/StatCard";
@@ -16,8 +16,16 @@ export const Route = createFileRoute("/marketing")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: MarketingDashboard,
+  component: MarketingRouteView,
 });
+
+function MarketingRouteView() {
+  const isDashboard = useRouterState({
+    select: (state) => state.location.pathname === "/marketing",
+  });
+
+  return isDashboard ? <MarketingDashboard /> : <Outlet />;
+}
 
 function MarketingDashboard() {
   const leads = useQuery({ queryKey: ["leads"], queryFn: getLeads });
@@ -56,7 +64,7 @@ function MarketingDashboard() {
             <span className="font-mono text-[11px] text-muted-foreground">{campaigns.data?.length ?? 0} total</span>
           </div>
           <Link
-            to="/email-campaign/campaigns"
+            to="/marketing/email-campaign/campaigns"
             search={{ create: false }}
             className="h-8 rounded-md border border-line px-3 py-1.5 text-xs transition-colors hover:bg-background"
           >
@@ -102,7 +110,7 @@ function MarketingDashboard() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Link
-                        to="/email-campaign/campaigns"
+                        to="/marketing/email-campaign/campaigns"
                         search={{ create: false }}
                         className="text-xs font-medium text-brand hover:underline"
                       >
