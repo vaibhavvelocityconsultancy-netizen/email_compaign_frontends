@@ -78,7 +78,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Vantage — Email Campaign CRM" },
+      { title: "Vantage —  CRM" },
       { name: "description", content: "Manage leads, email templates, sequences, and campaigns in one clean CRM." },
       { property: "og:title", content: "Vantage — Email Campaign CRM" },
       { property: "og:description", content: "Manage leads, email templates, sequences, and campaigns in one clean CRM." },
