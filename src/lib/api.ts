@@ -13,10 +13,19 @@ export interface Lead {
   srNo: number;
   enquiryFor: "LEAD" | "CLIENT";
   enquiryDate: string;
-  leadReceivedBy: number;
-  leadReceivedByName: string;
-  leadAssignTo: number | null;
-  leadAssignToName: string | null;
+  companyId: number | null;
+  companyName: string;
+  companyAddress: string;
+  companyCity: string;
+  companyState: string;
+  companyPincode: string;
+  companyCountry: string;
+  companyGstNumber: string;
+  contactId: number | null;
+  contactName: string;
+  contactDesignation: string;
+  contactMobile: string;
+  contactEmail: string;
   source: string;
   status: LeadStatus;
   followupDate: string | null;
@@ -26,20 +35,24 @@ export interface Lead {
 }
 
 export interface LeadInput {
+  company_name: string;
+  company_address: string;
+  company_city: string;
+  company_state: string;
+  company_pincode: string;
+  company_country: string;
+  company_gst_number: string;
+  contact_name: string;
+  contact_designation: string;
+  contact_mobile: string;
+  contact_email: string;
   enquiry_for: "LEAD" | "CLIENT";
   enquiry_date: string;
-  lead_received_by: number;
-  lead_assign_to: number | null;
   source: string;
   status: string;
   followup_date: string | null;
   followup_remarks: string;
   is_opportunity: boolean;
-}
-
-export interface LeadUser {
-  id: number;
-  name: string;
 }
 
 export type Channel = "email" | "whatsapp";
@@ -120,12 +133,21 @@ export interface EmailLog {
 
 interface ApiLead {
   sr_no: number;
+  company: number | null;
+  contact: number | null;
+  company_name: string;
+  company_address: string;
+  company_city: string;
+  company_state: string;
+  company_pincode: string;
+  company_country: string;
+  company_gst_number: string;
+  contact_name: string;
+  contact_designation: string;
+  contact_mobile: string;
+  contact_email: string;
   enquiry_for: "LEAD" | "CLIENT";
   enquiry_date: string;
-  lead_received_by: number;
-  lead_received_by_name: string;
-  lead_assign_to: number | null;
-  lead_assign_to_name: string | null;
   source: string;
   status: string;
   followup_date: string | null;
@@ -259,10 +281,19 @@ function mapLead(lead: ApiLead): Lead {
     srNo: lead.sr_no,
     enquiryFor: lead.enquiry_for,
     enquiryDate: lead.enquiry_date,
-    leadReceivedBy: lead.lead_received_by,
-    leadReceivedByName: lead.lead_received_by_name,
-    leadAssignTo: lead.lead_assign_to,
-    leadAssignToName: lead.lead_assign_to_name,
+    companyId: lead.company,
+    companyName: lead.company_name,
+    companyAddress: lead.company_address,
+    companyCity: lead.company_city,
+    companyState: lead.company_state,
+    companyPincode: lead.company_pincode,
+    companyCountry: lead.company_country,
+    companyGstNumber: lead.company_gst_number,
+    contactId: lead.contact,
+    contactName: lead.contact_name,
+    contactDesignation: lead.contact_designation,
+    contactMobile: lead.contact_mobile,
+    contactEmail: lead.contact_email,
     source: lead.source,
     status: lead.status.toLowerCase() as LeadStatus,
     followupDate: lead.followup_date,
@@ -299,10 +330,6 @@ export async function getLeads(): Promise<Lead[]> {
 export async function getLead(id: string): Promise<Lead> {
   const lead = await request<ApiLead>(`/leads/${id}/`);
   return mapLead(lead);
-}
-
-export async function getLeadUsers(): Promise<LeadUser[]> {
-  return request<LeadUser[]>("/lead-users/");
 }
 
 export async function createLead(data: LeadInput): Promise<Lead> {

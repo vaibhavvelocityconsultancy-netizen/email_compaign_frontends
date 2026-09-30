@@ -40,6 +40,9 @@ const LEAD_SOURCES = [
   ["EMAIL_MARKETING", "Email Marketing"],
   ["OTHER", "Other"],
 ] as const;
+const LEAD_STATUSES = ["NEW", "ACTIVE", "JUNK", "HOT", "COLD"] as const;
+const selectCls = "h-9 rounded-lg border border-line bg-surface px-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/20 focus:outline-none";
+
 function LeadsPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -84,7 +87,23 @@ function LeadsPage() {
   const openCreate = () => navigate({ to: "/leads/form", search: { leadId: undefined } });
 
   const columns = useMemo<Column<Lead>[]>(() => [
-   
+    {
+      key: "companyName",
+      header: "Company",
+      filterValue: (lead) => lead.companyName,
+      cell: (lead) => <span className="font-medium">{lead.companyName || "—"}</span>,
+    },
+    {
+      key: "contactName",
+      header: "Contact",
+      filterValue: (lead) => lead.contactName,
+      cell: (lead) => (
+        <div>
+          <div>{lead.contactName || "—"}</div>
+          {lead.contactMobile && <div className="font-mono text-[11px] text-muted-foreground">{lead.contactMobile}</div>}
+        </div>
+      ),
+    },
     {
       key: "enquiryDate",
       header: "Enquiry date",
@@ -179,7 +198,7 @@ function LeadsPage() {
         <DataTable<Lead>
           data={filtered}
           columns={columns}
-          searchKeys={["id", "enquiryFor", "leadReceivedByName", "leadAssignToName", "followupRemarks"]}
+          searchKeys={["id", "enquiryFor", "companyName", "contactName", "contactMobile", "followupRemarks"]}
           searchPlaceholder="Search enquiries..."
           pageSize={12}
           storageKey="leads"
@@ -202,7 +221,7 @@ function LeadsPage() {
       <Modal open={importOpen} onClose={() => setImportOpen(false)} title="Upload CSV" eyebrow="IMPORT LEADS">
         <div className="space-y-3 p-5">
           <p className="text-xs text-muted-foreground">
-            Required columns: enquiry_for, enquiry_date, lead_received_by, source. User fields accept an active username or ID. Optional columns: lead_assign_to, status, followup_date, followup_remarks, is_opportunity.
+            Required columns: company_name, enquiry_for, enquiry_date, source. Optional columns: company_address, company_city, company_state, company_pincode, company_country, company_gst_number, contact_name, contact_designation, contact_mobile, contact_email, status, followup_date, followup_remarks, is_opportunity.
           </p>
           <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-line bg-background px-4 py-8 text-center transition-colors hover:border-brand">
             <Upload className="size-5 text-muted-foreground" />

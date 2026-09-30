@@ -240,7 +240,7 @@ function CampaignsPage() {
   const filteredLeads = useMemo(() => {
     return leads.filter((lead) => {
       const searchText = leadSearch.trim().toLowerCase();
-      const matchesSearch = !searchText || String(lead.srNo).includes(searchText) || lead.enquiryFor.toLowerCase().includes(searchText) || lead.leadReceivedByName.toLowerCase().includes(searchText);
+      const matchesSearch = !searchText || String(lead.srNo).includes(searchText) || lead.enquiryFor.toLowerCase().includes(searchText) || lead.companyName.toLowerCase().includes(searchText) || lead.contactName.toLowerCase().includes(searchText);
       const matchesStatus = statusFilter === "all" || lead.status === statusFilter;
       const matchesSource = sourceFilter === "all" || lead.source === sourceFilter;
 
@@ -475,8 +475,8 @@ function CampaignsPage() {
                         className="h-4 w-4 rounded border-input text-[#2f80ed] focus:ring-[#2f80ed]"
                       />
                       <div>
-                        <div className="text-sm font-semibold uppercase text-foreground">Enquiry #{lead.srNo} · {lead.enquiryFor}</div>
-                        <div className="text-sm text-muted-foreground">{leadDate} · {lead.leadReceivedByName}</div>
+                        <div className="text-sm font-semibold uppercase text-foreground">{lead.companyName || `Enquiry #${lead.srNo}`} · {lead.enquiryFor}</div>
+                        <div className="text-sm text-muted-foreground">{leadDate}{lead.contactName ? ` · ${lead.contactName}` : ""}</div>
                       </div>
                     </div>
 
