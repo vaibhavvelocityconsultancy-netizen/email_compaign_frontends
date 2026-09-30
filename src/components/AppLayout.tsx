@@ -22,10 +22,10 @@ export function AppLayout() {
       <SidebarProvider>
         <AppSidebar />
         <SidebarInset className="min-w-0">
-          <header className="sticky top-0 z-10 flex h-16 items-center gap-4 border-b border-line bg-background/90 px-6 backdrop-blur">
-            <SidebarTrigger />
-            <div className="flex items-center gap-2.5 pr-2">
-              <div className="grid size-8 place-items-center rounded-lg bg-brand font-display text-lg font-bold text-white">
+          <header className="sticky top-0 z-10 flex h-[74px] items-center gap-5 border-b border-line bg-background/95 px-7 backdrop-blur">
+            <SidebarTrigger className="size-7 rounded-md text-foreground hover:bg-surface" />
+            <div className="flex items-center gap-3">
+              <div className="grid size-10 place-items-center rounded-[14px] bg-brand font-display text-xl font-bold text-white">
                 V
               </div>
               <div className="hidden leading-none sm:block">
