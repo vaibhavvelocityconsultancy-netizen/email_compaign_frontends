@@ -10,13 +10,36 @@ export type LogStatus =
 
 export interface Lead {
   id: string;
-  name: string;
-  email: string;
-  company: string;
-  phone: string;
+  srNo: number;
+  enquiryFor: "LEAD" | "CLIENT";
+  enquiryDate: string;
+  leadReceivedBy: number;
+  leadReceivedByName: string;
+  leadAssignTo: number | null;
+  leadAssignToName: string | null;
   source: string;
   status: LeadStatus;
+  followupDate: string | null;
+  followupRemarks: string;
+  isOpportunity: boolean;
   createdAt: string;
+}
+
+export interface LeadInput {
+  enquiry_for: "LEAD" | "CLIENT";
+  enquiry_date: string;
+  lead_received_by: number;
+  lead_assign_to: number | null;
+  source: string;
+  status: string;
+  followup_date: string | null;
+  followup_remarks: string;
+  is_opportunity: boolean;
+}
+
+export interface LeadUser {
+  id: number;
+  name: string;
 }
 
 export type Channel = "email" | "whatsapp";
@@ -96,13 +119,18 @@ export interface EmailLog {
 }
 
 interface ApiLead {
-  id: number;
-  name: string;
-  email: string;
-  company: string;
-  phone: string;
+  sr_no: number;
+  enquiry_for: "LEAD" | "CLIENT";
+  enquiry_date: string;
+  lead_received_by: number;
+  lead_received_by_name: string;
+  lead_assign_to: number | null;
+  lead_assign_to_name: string | null;
   source: string;
   status: string;
+  followup_date: string | null;
+  followup_remarks: string;
+  is_opportunity: boolean;
   created_at: string;
 }
 
@@ -227,13 +255,19 @@ function fileName(url: string | null): string | undefined {
 
 function mapLead(lead: ApiLead): Lead {
   return {
-    id: String(lead.id),
-    name: lead.name,
-    email: lead.email,
-    company: lead.company,
-    phone: lead.phone,
+    id: String(lead.sr_no),
+    srNo: lead.sr_no,
+    enquiryFor: lead.enquiry_for,
+    enquiryDate: lead.enquiry_date,
+    leadReceivedBy: lead.lead_received_by,
+    leadReceivedByName: lead.lead_received_by_name,
+    leadAssignTo: lead.lead_assign_to,
+    leadAssignToName: lead.lead_assign_to_name,
     source: lead.source,
     status: lead.status.toLowerCase() as LeadStatus,
+    followupDate: lead.followup_date,
+    followupRemarks: lead.followup_remarks,
+    isOpportunity: lead.is_opportunity,
     createdAt: lead.created_at,
   };
 }
@@ -260,6 +294,30 @@ function mapTemplate(template: ApiTemplate): MessageTemplate {
 export async function getLeads(): Promise<Lead[]> {
   const response = await request<ApiLeadsResponse>("/leads/");
   return response.results.map(mapLead);
+}
+
+export async function getLeadUsers(): Promise<LeadUser[]> {
+  return request<LeadUser[]>("/lead-users/");
+}
+
+export async function createLead(data: LeadInput): Promise<Lead> {
+  const lead = await request<ApiLead>("/leads/", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return mapLead(lead);
+}
+
+export async function updateLead(id: string, data: LeadInput): Promise<Lead> {
+  const lead = await request<ApiLead>(`/leads/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+  return mapLead(lead);
+}
+
+export async function deleteLead(id: string): Promise<void> {
+  await request<void>(`/leads/${id}/`, { method: "DELETE" });
 }
 
 export async function importLeads(file: File): Promise<ApiImportResponse> {

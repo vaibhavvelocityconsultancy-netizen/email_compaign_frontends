@@ -240,11 +240,11 @@ function CampaignsPage() {
   const filteredLeads = useMemo(() => {
     return leads.filter((lead) => {
       const searchText = leadSearch.trim().toLowerCase();
-      const matchesSearch = !searchText || lead.company.toLowerCase().includes(searchText) || lead.name.toLowerCase().includes(searchText);
+      const matchesSearch = !searchText || String(lead.srNo).includes(searchText) || lead.enquiryFor.toLowerCase().includes(searchText) || lead.leadReceivedByName.toLowerCase().includes(searchText);
       const matchesStatus = statusFilter === "all" || lead.status === statusFilter;
       const matchesSource = sourceFilter === "all" || lead.source === sourceFilter;
 
-      const leadCreated = new Date(lead.createdAt);
+      const leadCreated = new Date(`${lead.enquiryDate}T00:00:00`);
       const matchesFrom = !dateFrom || leadCreated >= new Date(dateFrom);
       const matchesTo = !dateTo || leadCreated <= new Date(`${dateTo}T23:59:59`);
 
@@ -460,7 +460,7 @@ function CampaignsPage() {
             ) : (
               filteredLeads.map((lead) => {
                 const checked = draftLeadIds.includes(Number(lead.id));
-                const leadDate = new Date(lead.createdAt).toLocaleDateString("en-GB");
+                const leadDate = new Date(`${lead.enquiryDate}T00:00:00`).toLocaleDateString("en-GB");
 
                 return (
                   <label
@@ -475,8 +475,8 @@ function CampaignsPage() {
                         className="h-4 w-4 rounded border-input text-[#2f80ed] focus:ring-[#2f80ed]"
                       />
                       <div>
-                        <div className="text-sm font-semibold uppercase text-foreground">{lead.company}</div>
-                        <div className="text-sm text-muted-foreground">{leadDate}</div>
+                        <div className="text-sm font-semibold uppercase text-foreground">Enquiry #{lead.srNo} · {lead.enquiryFor}</div>
+                        <div className="text-sm text-muted-foreground">{leadDate} · {lead.leadReceivedByName}</div>
                       </div>
                     </div>
 
@@ -531,7 +531,7 @@ function CampaignsPage() {
                     const status = campaignLead.completed ? "completed" : campaignLead.replied ? "replied" : campaignLead.unsubscribed ? "unsubscribed" : "active";
                     return (
                       <TableRow key={campaignLead.leadId}>
-                        <TableCell className="font-medium">{lead?.name ?? "Unknown lead"}</TableCell>
+                        <TableCell className="font-medium">{lead ? `Enquiry #${lead.srNo} · ${lead.enquiryFor}` : "Unknown enquiry"}</TableCell>
                         <TableCell className="font-mono text-xs text-muted-foreground">{(campaignLead as { email?: string }).email ?? "—"}</TableCell>
                         <TableCell className="font-mono text-xs">{campaignLead.currentStep}</TableCell>
                         <TableCell><StatusBadge status={status} /></TableCell>
@@ -563,7 +563,7 @@ function CampaignsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Recipient</TableHead>
+                      <TableHead>Enquiry</TableHead>
                       <TableHead>Subject</TableHead>
                       <TableHead>Step</TableHead>
                       <TableHead>Status</TableHead>
@@ -576,8 +576,8 @@ function CampaignsPage() {
                       return (
                         <TableRow key={log.id}>
                           <TableCell>
-                            <div className="font-medium">{lead?.name ?? "Unknown lead"}</div>
-                            <div className="font-mono text-[11px] text-muted-foreground">{lead?.email ?? log.leadId}</div>
+                            <div className="font-medium">{lead ? `Enquiry #${lead.srNo}` : "Unknown enquiry"}</div>
+                            <div className="font-mono text-[11px] text-muted-foreground">{lead?.enquiryFor ?? log.leadId}</div>
                           </TableCell>
                           <TableCell className="max-w-[220px] truncate text-muted-foreground">{log.subject}</TableCell>
                           <TableCell className="font-mono text-xs">#{log.step}</TableCell>

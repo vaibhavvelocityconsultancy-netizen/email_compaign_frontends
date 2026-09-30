@@ -36,7 +36,7 @@ function EmailLogsPage() {
 
   const rows = useMemo<LogRow[]>(() => {
     const batchMap = new Map((campaignsQuery.data ?? []).map((campaign) => [campaign.id, campaign.name]));
-    const leadMap = new Map((leadsQuery.data ?? []).map((lead) => [lead.id, lead.name]));
+    const leadMap = new Map((leadsQuery.data ?? []).map((lead) => [lead.id, `Enquiry #${lead.srNo} · ${lead.enquiryFor}`]));
 
     return (logsQuery.data ?? []).map((log) => ({
       id: log.id,
