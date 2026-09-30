@@ -1,5 +1,5 @@
 import { Outlet, useNavigate } from "@tanstack/react-router";
-import { LogOut, Plus, Search, User } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 import { Toaster } from "sonner";
 import { Button } from "@/components/ui/button";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -33,23 +33,6 @@ export function AppLayout() {
                 <div className="mt-1 font-mono text-[10px] text-muted-foreground">CRM · OPS</div>
               </div>
             </div>
-            <div className="max-w-md flex-1">
-              <div className="relative">
-                <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  className="w-full rounded-lg border border-line bg-surface py-2 pr-3 pl-9 text-sm placeholder:text-muted-foreground focus:border-brand focus:ring-2 focus:ring-brand/20 focus:outline-none"
-                  placeholder="Search leads, campaigns, templates…"
-                />
-              </div>
-            </div>
-            <Button
-              onClick={() =>
-                navigate({ to: "/email-campaign/campaigns", search: { create: true } })
-              }
-              className="bg-brand text-primary-foreground hover:bg-brand/90"
-            >
-              <Plus className="size-4" /> New campaign
-            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
