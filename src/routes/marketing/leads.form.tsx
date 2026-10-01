@@ -1,11 +1,23 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowLeft, Save, Target } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { getLead, createLead, updateLead, type LeadInput } from "@/lib/api";
+import { getLead, createLead, updateLead, getLeadOptions, type LeadChoiceOption, type LeadInput } from "@/lib/api";
+import {
+  createCompany,
+  createCompanyContact,
+  listCities,
+  listCompanies,
+  listCompanyContacts,
+  listCountries,
+  listStates,
+  updateCompany,
+  updateCompanyContact,
+  type Company,
+} from "@/lib/company-api";
 
 export const Route = createFileRoute("/marketing/leads/form")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -22,26 +34,30 @@ export const Route = createFileRoute("/marketing/leads/form")({
 
 type LeadFormValues = LeadInput;
 
-const LEAD_SOURCES = [
-  ["WEBSITE", "Website"],
-  ["SOCIAL_MEDIA", "Social Media"],
-  ["GOOGLE", "Google Search"],
-  ["ADVERTISEMENT", "Advertisement"],
-  ["REFERENCE", "Reference"],
-  ["EXISTING_CLIENT", "Existing Client"],
-  ["COLD_CALL", "Cold Call"],
-  ["EMAIL_MARKETING", "Email Marketing"],
-  ["OTHER", "Other"],
-] as const;
-
-// Static class strings so Tailwind can see them.
-const LEAD_STATUSES = [
-  { value: "NEW", label: "New", dot: "bg-blue-500" },
-  { value: "ACTIVE", label: "Active", dot: "bg-emerald-500" },
-  { value: "HOT", label: "Hot", dot: "bg-red-500" },
-  { value: "COLD", label: "Cold", dot: "bg-sky-300" },
-  { value: "JUNK", label: "Junk", dot: "bg-zinc-400" },
-] as const;
+const FALLBACK_LEAD_OPTIONS = {
+  enquiry_for: [
+    { value: "LEAD", label: "Lead" },
+    { value: "CLIENT", label: "Client" },
+  ],
+  source: [
+    { value: "WEBSITE", label: "Website" },
+    { value: "SOCIAL_MEDIA", label: "Social Media" },
+    { value: "GOOGLE", label: "Google Search" },
+    { value: "ADVERTISEMENT", label: "Advertisement" },
+    { value: "REFERENCE", label: "Reference" },
+    { value: "EXISTING_CLIENT", label: "Existing Client" },
+    { value: "COLD_CALL", label: "Cold Call" },
+    { value: "EMAIL_MARKETING", label: "Email Marketing" },
+    { value: "OTHER", label: "Other" },
+  ],
+  status: [
+    { value: "NEW", label: "New", dot: "bg-blue-500" },
+    { value: "ACTIVE", label: "Active", dot: "bg-emerald-500" },
+    { value: "HOT", label: "Hot", dot: "bg-red-500" },
+    { value: "COLD", label: "Cold", dot: "bg-sky-300" },
+    { value: "JUNK", label: "Junk", dot: "bg-zinc-400" },
+  ],
+} as const;
 
 const FOLLOWUP_SHORTCUTS = [
   { label: "Tomorrow", days: 1 },
@@ -184,14 +200,66 @@ function LeadFormPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [form, setForm] = useState<LeadFormValues>(emptyLead);
+  const [companySearch, setCompanySearch] = useState("");
+  const [companySuggestionsOpen, setCompanySuggestionsOpen] = useState(false);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
+  const [companyCreating, setCompanyCreating] = useState(false);
+  const [countryOptions, setCountryOptions] = useState<Array<{ id: number; name: string }>>([]);
+  const [stateOptions, setStateOptions] = useState<Array<{ id: number; name: string; country: number }>>([]);
+  const [cityOptions, setCityOptions] = useState<Array<{ id: number; name: string; state: number }>>([]);
   // Snapshot of the last loaded values, used to show "Unsaved changes".
   const [baseline, setBaseline] = useState(() => JSON.stringify(emptyLead()));
+
+  const companyQuery = useQuery({
+    queryKey: ["companies"],
+    queryFn: listCompanies,
+  });
+
+  const leadOptionsQuery = useQuery({
+    queryKey: ["lead-options"],
+    queryFn: getLeadOptions,
+  });
+
+  const leadOptions = leadOptionsQuery.data ?? FALLBACK_LEAD_OPTIONS;
+  const sourceOptions = leadOptions.source as LeadChoiceOption[];
+  const statusOptions = leadOptions.status as Array<LeadChoiceOption & { dot?: string }>;
+  const enquiryForOptions = leadOptions.enquiry_for as LeadChoiceOption[];
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadMasterOptions() {
+      try {
+        const [countries, states, cities] = await Promise.all([
+          listCountries(),
+          listStates(),
+          listCities(),
+        ]);
+        if (!mounted) return;
+        setCountryOptions(countries);
+        setStateOptions(states);
+        setCityOptions(cities);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Could not load master data");
+      }
+    }
+    void loadMasterOptions();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const leadQuery = useQuery({
     queryKey: ["lead", leadId],
     queryFn: () => getLead(leadId!),
     enabled: Boolean(leadId),
   });
+
+  const companySuggestions = useMemo(() => {
+    const query = companySearch.trim().toLowerCase();
+    const items = companyQuery.data ?? [];
+    if (!query) return items.slice(0, 8);
+    return items.filter((company) => company.name.toLowerCase().includes(query)).slice(0, 8);
+  }, [companyQuery.data, companySearch]);
 
   useEffect(() => {
     if (leadQuery.data) {
@@ -217,12 +285,169 @@ function LeadFormPage() {
         is_opportunity: lead.isOpportunity,
       };
       setForm(loaded);
+      setCompanySearch(lead.companyName ?? "");
+      setSelectedCompanyId(null);
       setBaseline(JSON.stringify(loaded));
     }
   }, [leadQuery.data]);
 
+  useEffect(() => {
+    if (!companyQuery.data) return;
+    if (!form.company_name.trim()) {
+      setCompanySearch("");
+      return;
+    }
+    setCompanySearch(form.company_name);
+  }, [companyQuery.data, form.company_name]);
+
+  const fillCompanyFields = async (company: Company) => {
+    const nextCompanyName = company.name ?? "";
+    const nextCompanyAddress = company.address ?? "";
+    const nextCompanyCity = company.city_name ?? "";
+    const nextCompanyState = company.state_name ?? "";
+    const nextCompanyPincode = company.pincode ?? "";
+    const nextCompanyCountry = company.country_name || "India";
+    const nextCompanyGst = company.gst_number ?? "";
+
+    setSelectedCompanyId(company.id);
+    setForm((current) => ({
+      ...current,
+      company_name: nextCompanyName,
+      company_address: nextCompanyAddress,
+      company_city: nextCompanyCity,
+      company_state: nextCompanyState,
+      company_pincode: nextCompanyPincode,
+      company_country: nextCompanyCountry,
+      company_gst_number: nextCompanyGst,
+    }));
+    setCompanySearch(nextCompanyName);
+    setCompanySuggestionsOpen(false);
+
+    try {
+      const contacts = await listCompanyContacts(company.id);
+      const preferred = contacts.find((contact) => contact.is_primary) ?? contacts[0];
+      if (!preferred) return;
+      setForm((current) => ({
+        ...current,
+        contact_name: preferred.name ?? current.contact_name,
+        contact_designation: preferred.designation ?? "",
+        contact_mobile: preferred.phone ?? current.contact_mobile,
+        contact_email: preferred.email ?? current.contact_email,
+      }));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not load company contacts");
+    }
+  };
+
+  const persistCompanyAndContact = async () => {
+    const trimmedCompanyName = form.company_name.trim();
+    const trimmedContactName = form.contact_name.trim();
+    if (!trimmedCompanyName) {
+      return null;
+    }
+
+    const matchedCompany =
+      companyQuery.data?.find(
+        (company) => company.name.trim().toLowerCase() === trimmedCompanyName.toLowerCase(),
+      ) ?? null;
+
+    const selectedCountryId = countryOptions.find(
+      (country) => country.name.trim().toLowerCase() === form.company_country.trim().toLowerCase(),
+    )?.id ?? null;
+
+    const selectedStateId = stateOptions.find(
+      (state) =>
+        state.name.trim().toLowerCase() === form.company_state.trim().toLowerCase() &&
+        (selectedCountryId === null || state.country === selectedCountryId),
+    )?.id ?? null;
+
+    const selectedCityId = cityOptions.find(
+      (city) =>
+        city.name.trim().toLowerCase() === form.company_city.trim().toLowerCase() &&
+        (selectedStateId === null || city.state === selectedStateId),
+    )?.id ?? null;
+
+    const companyPayload = {
+      name: trimmedCompanyName,
+      address: form.company_address,
+      city: selectedCityId,
+      state: selectedStateId,
+      country: selectedCountryId,
+      pincode: form.company_pincode,
+      gst_number: form.company_gst_number,
+    };
+
+    const companyToSaveId = selectedCompanyId ?? matchedCompany?.id ?? null;
+    const savedCompany = companyToSaveId
+      ? await updateCompany(companyToSaveId, companyPayload)
+      : await createCompany(companyPayload);
+
+    setSelectedCompanyId(savedCompany.id);
+    setCompanySearch(savedCompany.name);
+    setCompanySuggestionsOpen(false);
+    await companyQuery.refetch();
+
+    if (trimmedContactName) {
+      const contacts = await listCompanyContacts(savedCompany.id);
+      const preferredContact =
+        contacts.find((contact) => contact.name.trim().toLowerCase() === trimmedContactName.toLowerCase()) ??
+        contacts.find((contact) => contact.is_primary) ??
+        contacts[0];
+
+      const contactPayload = {
+        name: trimmedContactName,
+        designation: form.contact_designation,
+        phone: form.contact_mobile,
+        email: form.contact_email,
+        is_primary: true,
+      };
+
+      if (preferredContact) {
+        await updateCompanyContact(savedCompany.id, preferredContact.id, contactPayload);
+      } else {
+        await createCompanyContact(savedCompany.id, contactPayload);
+      }
+    }
+
+    setForm((current) => ({
+      ...current,
+      company_name: savedCompany.name,
+      company_address: savedCompany.address ?? current.company_address,
+      company_city: current.company_city || form.company_city,
+      company_state: current.company_state || form.company_state,
+      company_pincode: savedCompany.pincode ?? current.company_pincode,
+      company_country: current.company_country || form.company_country || "India",
+      company_gst_number: savedCompany.gst_number ?? current.company_gst_number,
+    }));
+
+    return savedCompany;
+  };
+
+  const saveCompanyToMaster = async () => {
+    const name = form.company_name.trim();
+    if (!name) {
+      toast.error("Enter a company name before saving it.");
+      return;
+    }
+
+    setCompanyCreating(true);
+    try {
+      const savedCompany = await persistCompanyAndContact();
+      if (savedCompany) {
+        toast.success(selectedCompanyId ? `Company "${savedCompany.name}" updated.` : `Company "${savedCompany.name}" added.`);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not save company");
+    } finally {
+      setCompanyCreating(false);
+    }
+  };
+
   const saveMutation = useMutation({
-    mutationFn: (values: LeadFormValues) => (leadId ? updateLead(leadId, values) : createLead(values)),
+    mutationFn: async (values: LeadFormValues) => {
+      await persistCompanyAndContact();
+      return leadId ? updateLead(leadId, values) : createLead(values);
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["leads"] });
       if (leadId) await queryClient.invalidateQueries({ queryKey: ["lead", leadId] });
@@ -285,14 +510,47 @@ function LeadFormPage() {
         >
           <Group title="Company">
             <Field label="Company name" required className="sm:col-span-2">
-              <input
-                type="text"
-                required
-                autoComplete="organization"
-                value={form.company_name}
-                onChange={(event) => update("company_name", event.target.value)}
-                className={controlClass}
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  required
+                  autoComplete="organization"
+                  value={form.company_name}
+                  onFocus={() => setCompanySuggestionsOpen(true)}
+                  onChange={(event) => {
+                    update("company_name", event.target.value);
+                    setCompanySearch(event.target.value);
+                    setCompanySuggestionsOpen(true);
+                    setSelectedCompanyId(null);
+                  }}
+                  className={controlClass}
+                />
+                {companySuggestionsOpen && companySuggestions.length > 0 && (
+                  <div className="absolute z-20 mt-1.5 w-full rounded-lg border border-line bg-popover p-1 shadow-lg">
+                    {companySuggestions.map((company) => (
+                      <button
+                        key={company.id}
+                        type="button"
+                        onClick={() => void fillCompanyFields(company)}
+                        className="flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted"
+                      >
+                        <span className="font-medium">{company.name}</span>
+                        <span className="text-xs text-muted-foreground">{company.city_name || company.state_name || "Company"}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="mt-2 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => void saveCompanyToMaster()}
+                    className="inline-flex items-center rounded-md border border-brand/50 bg-brand/8 px-3 py-1.5 text-xs font-medium text-brand transition-colors hover:bg-brand/10 disabled:opacity-60"
+                    disabled={companyCreating || !form.company_name.trim()}
+                  >
+                    {companyCreating ? "Saving…" : selectedCompanyId ? "Update company" : "Add company"}
+                  </button>
+                </div>
+              </div>
             </Field>
             <Field label="Address" className="sm:col-span-2">
               <textarea
@@ -303,29 +561,66 @@ function LeadFormPage() {
                 className={`${controlClass} h-auto py-2`}
               />
             </Field>
-            <Field label="City">
-              <input
-                type="text"
-                autoComplete="address-level2"
-                value={form.company_city}
-                onChange={(event) => update("company_city", event.target.value)}
+            <Field label="Country">
+              <select
+                value={form.company_country || ""}
+                onChange={(event) => {
+                  update("company_country", event.target.value);
+                  update("company_state", "");
+                  update("company_city", "");
+                }}
                 className={controlClass}
-              />
+              >
+                <option value="">Select country</option>
+                {countryOptions.map((country) => (
+                  <option key={country.id} value={country.name}>{country.name}</option>
+                ))}
+              </select>
             </Field>
             <Field label="State">
-              <input
-                type="text"
-                autoComplete="address-level1"
-                value={form.company_state}
-                onChange={(event) => update("company_state", event.target.value)}
+              <select
+                value={form.company_state || ""}
+                onChange={(event) => {
+                  update("company_state", event.target.value);
+                  update("company_city", "");
+                }}
                 className={controlClass}
-              />
+                disabled={!countryOptions.some((country) => country.name === form.company_country)}
+              >
+                <option value="">Select state</option>
+                {stateOptions
+                  .filter((state) => {
+                    const selectedCountry = countryOptions.find((country) => country.name === form.company_country);
+                    return !selectedCountry || state.country === selectedCountry.id;
+                  })
+                  .map((state) => (
+                    <option key={state.id} value={state.name}>{state.name}</option>
+                  ))}
+              </select>
+            </Field>
+            <Field label="City">
+              <select
+                value={form.company_city || ""}
+                onChange={(event) => update("company_city", event.target.value)}
+                className={controlClass}
+                disabled={!stateOptions.some((state) => state.name === form.company_state)}
+              >
+                <option value="">Select city</option>
+                {cityOptions
+                  .filter((city) => {
+                    const selectedState = stateOptions.find((state) => state.name === form.company_state);
+                    return !selectedState || city.state === selectedState.id;
+                  })
+                  .map((city) => (
+                    <option key={city.id} value={city.name}>{city.name}</option>
+                  ))}
+              </select>
             </Field>
             <Field label="Pincode">
               <input type="text" inputMode="numeric" autoComplete="postal-code" value={form.company_pincode} onChange={(event) => update("company_pincode", event.target.value)} className={controlClass} />
             </Field>
-            <Field label="Country">
-              <input type="text" autoComplete="country-name" value={form.company_country} onChange={(event) => update("company_country", event.target.value)} className={controlClass} />
+            <Field label="Country name" className="hidden">
+              <input type="text" value={form.company_country} readOnly className="hidden" />
             </Field>
             <Field label="GST number" className="sm:col-span-2">
               <input type="text" value={form.company_gst_number} onChange={(event) => update("company_gst_number", event.target.value)} className={controlClass} />
@@ -388,8 +683,9 @@ function LeadFormPage() {
                 onChange={(event) => update("enquiry_for", event.target.value as LeadInput["enquiry_for"])}
                 className={controlClass}
               >
-                <option value="LEAD">Lead</option>
-                <option value="CLIENT">Client</option>
+                {enquiryForOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
               </select>
             </Field>
             <Field label="Enquiry date" required>
@@ -403,15 +699,15 @@ function LeadFormPage() {
             </Field>
             <Field label="Source" className="sm:col-span-2">
               <select value={form.source} onChange={(event) => update("source", event.target.value)} className={controlClass}>
-                {LEAD_SOURCES.map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
+                {sourceOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
             </Field>
             <fieldset className="sm:col-span-2">
               <legend className="mb-1.5 text-sm font-medium text-foreground">Status</legend>
               <div className="flex flex-wrap gap-2">
-                {LEAD_STATUSES.map((status) => (
+                {statusOptions.map((status) => (
                   <label key={status.value} className="cursor-pointer">
                     <input
                       type="radio"
@@ -428,7 +724,7 @@ function LeadFormPage() {
                         "peer-focus-visible:ring-2 peer-focus-visible:ring-brand/40"
                       }
                     >
-                      <span aria-hidden className={`size-2 rounded-full ${status.dot}`} />
+                      <span aria-hidden className={`size-2 rounded-full ${status.dot ?? "bg-blue-500"}`} />
                       {status.label}
                     </span>
                   </label>

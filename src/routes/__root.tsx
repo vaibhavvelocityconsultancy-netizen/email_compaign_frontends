@@ -3,15 +3,20 @@ import {
   Outlet,
   Link,
   createRootRouteWithContext,
+  useNavigate,
+  useRouterState,
   useRouter,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { RecoilRoot } from "recoil";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppLayout } from "../components/AppLayout";
+import { AuthProvider } from "../lib/auth-context";
+import { useAuth } from "../lib/auth";
 
 function NotFoundComponent() {
   return (
@@ -121,7 +126,37 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AppLayout />
+      <RecoilRoot>
+        <AuthProvider>
+          <RootContent />
+        </AuthProvider>
+      </RecoilRoot>
     </QueryClientProvider>
   );
+}
+
+function RootContent() {
+  const navigate = useNavigate();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const { status } = useAuth();
+  const isAuthRoute = pathname === "/login" || pathname === "/register";
+
+  useEffect(() => {
+    if (status === "anonymous" && !isAuthRoute) {
+      void navigate({ to: "/login", replace: true });
+    } else if (status === "authenticated" && isAuthRoute) {
+      void navigate({ to: "/", replace: true });
+    }
+  }, [isAuthRoute, navigate, status]);
+
+  if (isAuthRoute) return <Outlet />;
+  if (status !== "authenticated") {
+    return (
+      <div className="grid min-h-screen place-items-center bg-background text-sm text-muted-foreground" role="status">
+        Checking your session…
+      </div>
+    );
+  }
+
+  return <AppLayout />;
 }

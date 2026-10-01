@@ -10,7 +10,12 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CompanyRouteImport } from './routes/company'
+import { Route as CountryRouteImport } from './routes/country'
+import { Route as LocationRouteImport } from './routes/location'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as MarketingRouteImport } from './routes/marketing'
+import { Route as RegisterRouteImport } from './routes/register'
 import { Route as MarketingEmailCampaignRouteImport } from './routes/marketing/email-campaign'
 import { Route as MarketingLeadsRouteImport } from './routes/marketing/leads'
 import { Route as SalesIndexRouteImport } from './routes/sales/index'
@@ -28,9 +33,34 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CompanyRoute = CompanyRouteImport.update({
+  id: '/company',
+  path: '/company',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CountryRoute = CountryRouteImport.update({
+  id: '/country',
+  path: '/country',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LocationRoute = LocationRouteImport.update({
+  id: '/location',
+  path: '/location',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MarketingRoute = MarketingRouteImport.update({
   id: '/marketing',
   path: '/marketing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegisterRoute = RegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MarketingEmailCampaignRoute = MarketingEmailCampaignRouteImport.update({
@@ -96,7 +126,12 @@ const MarketingLeadsFormRoute = MarketingLeadsFormRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/company': typeof CompanyRoute
+  '/country': typeof CountryRoute
+  '/location': typeof LocationRoute
+  '/login': typeof LoginRoute
   '/marketing': typeof MarketingRouteWithChildren
+  '/register': typeof RegisterRoute
   '/marketing/email-campaign': typeof MarketingEmailCampaignRouteWithChildren
   '/marketing/leads': typeof MarketingLeadsRouteWithChildren
   '/sales/opportunities': typeof SalesOpportunitiesRoute
@@ -111,7 +146,12 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/company': typeof CompanyRoute
+  '/country': typeof CountryRoute
+  '/location': typeof LocationRoute
+  '/login': typeof LoginRoute
   '/marketing': typeof MarketingRouteWithChildren
+  '/register': typeof RegisterRoute
   '/marketing/leads': typeof MarketingLeadsRouteWithChildren
   '/sales/opportunities': typeof SalesOpportunitiesRoute
   '/sales/quotations': typeof SalesQuotationsRoute
@@ -126,7 +166,12 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/company': typeof CompanyRoute
+  '/country': typeof CountryRoute
+  '/location': typeof LocationRoute
+  '/login': typeof LoginRoute
   '/marketing': typeof MarketingRouteWithChildren
+  '/register': typeof RegisterRoute
   '/marketing/email-campaign': typeof MarketingEmailCampaignRouteWithChildren
   '/marketing/leads': typeof MarketingLeadsRouteWithChildren
   '/sales/opportunities': typeof SalesOpportunitiesRoute
@@ -143,7 +188,12 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/company'
+    | '/country'
+    | '/location'
+    | '/login'
     | '/marketing'
+    | '/register'
     | '/marketing/email-campaign'
     | '/marketing/leads'
     | '/sales/opportunities'
@@ -158,7 +208,12 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/company'
+    | '/country'
+    | '/location'
+    | '/login'
     | '/marketing'
+    | '/register'
     | '/marketing/leads'
     | '/sales/opportunities'
     | '/sales/quotations'
@@ -172,7 +227,12 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/company'
+    | '/country'
+    | '/location'
+    | '/login'
     | '/marketing'
+    | '/register'
     | '/marketing/email-campaign'
     | '/marketing/leads'
     | '/sales/opportunities'
@@ -188,7 +248,12 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CompanyRoute: typeof CompanyRoute
+  CountryRoute: typeof CountryRoute
+  LocationRoute: typeof LocationRoute
+  LoginRoute: typeof LoginRoute
   MarketingRoute: typeof MarketingRouteWithChildren
+  RegisterRoute: typeof RegisterRoute
   SalesOpportunitiesRoute: typeof SalesOpportunitiesRoute
   SalesQuotationsRoute: typeof SalesQuotationsRoute
   SalesIndexRoute: typeof SalesIndexRoute
@@ -203,11 +268,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/company': {
+      id: '/company'
+      path: '/company'
+      fullPath: '/company'
+      preLoaderRoute: typeof CompanyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/country': {
+      id: '/country'
+      path: '/country'
+      fullPath: '/country'
+      preLoaderRoute: typeof CountryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/location': {
+      id: '/location'
+      path: '/location'
+      fullPath: '/location'
+      preLoaderRoute: typeof LocationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/marketing': {
       id: '/marketing'
       path: '/marketing'
       fullPath: '/marketing'
       preLoaderRoute: typeof MarketingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/register': {
+      id: '/register'
+      path: '/register'
+      fullPath: '/register'
+      preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/marketing/email-campaign': {
@@ -340,7 +440,12 @@ const MarketingRouteWithChildren = MarketingRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CompanyRoute: CompanyRoute,
+  CountryRoute: CountryRoute,
+  LocationRoute: LocationRoute,
+  LoginRoute: LoginRoute,
   MarketingRoute: MarketingRouteWithChildren,
+  RegisterRoute: RegisterRoute,
   SalesOpportunitiesRoute: SalesOpportunitiesRoute,
   SalesQuotationsRoute: SalesQuotationsRoute,
   SalesIndexRoute: SalesIndexRoute,

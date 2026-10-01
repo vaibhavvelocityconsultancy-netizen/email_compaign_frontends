@@ -1,7 +1,63 @@
 const configuredApiBase = (Reflect.get(import.meta.env, "VITE_API_BASE_URL") as string | undefined)?.replace(/\/+$/, "");
 const apiBase = configuredApiBase || "/api";
+const accessTokenKey = "vantage.access";
+const refreshTokenKey = "vantage.refresh";
+
+export interface AuthUser {
+  id: number;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+}
+
+interface AuthResponse {
+  access: string;
+  refresh: string;
+  user: AuthUser;
+}
+
+interface RefreshResponse {
+  access: string;
+  refresh?: string;
+}
+
+function getStoredToken(key: string): string | null {
+  if (typeof window === "undefined") return null;
+  window.localStorage.removeItem(key);
+  return window.sessionStorage.getItem(key);
+}
+
+function storeTokens(tokens: Pick<AuthResponse, "access" | "refresh">): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(accessTokenKey);
+  window.localStorage.removeItem(refreshTokenKey);
+  window.sessionStorage.setItem(accessTokenKey, tokens.access);
+  window.sessionStorage.setItem(refreshTokenKey, tokens.refresh);
+}
+
+export function hasAuthTokens(): boolean {
+  return Boolean(getStoredToken(accessTokenKey) || getStoredToken(refreshTokenKey));
+}
+
+export function clearAuthTokens(): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(accessTokenKey);
+  window.localStorage.removeItem(refreshTokenKey);
+  window.sessionStorage.removeItem(accessTokenKey);
+  window.sessionStorage.removeItem(refreshTokenKey);
+}
 
 export type LeadStatus = "new" | "active" | "junk" | "hot" | "cold";
+export interface LeadChoiceOption {
+  value: string;
+  label: string;
+}
+export interface LeadOptionsResponse {
+  enquiry_for: LeadChoiceOption[];
+  source: LeadChoiceOption[];
+  status: LeadChoiceOption[];
+}
 export type CampaignStatus = "active" | "paused" | "completed";
 export type LogStatus =
   | "accepted" | "sent" | "delivered" | "opened" | "read"
@@ -231,9 +287,33 @@ interface ApiImportResponse {
   invalid: number;
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+function makeApiUrl(path: string): URL {
   const baseUrl = typeof window === "undefined" ? "http://127.0.0.1:8000" : window.location.origin;
-  const url = new URL(`${apiBase}${path}`, baseUrl);
+  return new URL(`${apiBase}${path}`, baseUrl);
+}
+
+async function refreshAccessToken(): Promise<string | null> {
+  const refresh = getStoredToken(refreshTokenKey);
+  if (!refresh) return null;
+
+  try {
+    const response = await fetch(makeApiUrl("/auth/refresh/"), {
+      method: "POST",
+      headers: { Accept: "application/json", "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh }),
+    });
+    if (!response.ok) throw new Error("Session expired");
+    const tokens = (await response.json()) as RefreshResponse;
+    storeTokens({ access: tokens.access, refresh: tokens.refresh ?? refresh });
+    return tokens.access;
+  } catch {
+    clearAuthTokens();
+    return null;
+  }
+}
+
+export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const url = makeApiUrl(path);
   const headers = new Headers(init.headers);
   headers.set("Accept", "application/json");
 
@@ -241,7 +321,23 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     headers.set("Content-Type", "application/json");
   }
 
-  const response = await fetch(url, { ...init, headers });
+  const publicAuthPaths = ["/auth/login/", "/auth/register/", "/auth/refresh/", "/auth/logout/"];
+  const isPublicAuthRequest = publicAuthPaths.includes(path);
+  const accessToken = getStoredToken(accessTokenKey);
+  if (accessToken && !isPublicAuthRequest) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
+  }
+
+  let response = await fetch(url, { ...init, headers });
+  if (response.status === 401 && !isPublicAuthRequest) {
+    const refreshedAccessToken = await refreshAccessToken();
+    if (refreshedAccessToken) {
+      const retryHeaders = new Headers(headers);
+      retryHeaders.set("Authorization", `Bearer ${refreshedAccessToken}`);
+      response = await fetch(url, { ...init, headers: retryHeaders });
+    }
+  }
+
   const responseText = await response.text();
   let payload: unknown;
 
@@ -256,6 +352,47 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 
   return payload as T;
+}
+
+export async function loginUser(email: string, password: string): Promise<AuthUser> {
+  const result = await request<AuthResponse>("/auth/login/", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+  storeTokens(result);
+  return result.user;
+}
+
+export async function registerUser(data: {
+  first_name: string;
+  last_name: string;
+  email: string;
+  password: string;
+}): Promise<AuthUser> {
+  const result = await request<AuthResponse>("/auth/register/", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  storeTokens(result);
+  return result.user;
+}
+
+export function getCurrentUser(): Promise<AuthUser> {
+  return request<AuthUser>("/auth/me/");
+}
+
+export async function logoutUser(): Promise<void> {
+  const refresh = getStoredToken(refreshTokenKey);
+  try {
+    if (refresh) {
+      await request<void>("/auth/logout/", {
+        method: "POST",
+        body: JSON.stringify({ refresh }),
+      });
+    }
+  } finally {
+    clearAuthTokens();
+  }
 }
 
 function formatApiError(payload: unknown, fallback: string): string {
@@ -330,6 +467,10 @@ export async function getLeads(): Promise<Lead[]> {
 export async function getLead(id: string): Promise<Lead> {
   const lead = await request<ApiLead>(`/leads/${id}/`);
   return mapLead(lead);
+}
+
+export async function getLeadOptions(): Promise<LeadOptionsResponse> {
+  return request<LeadOptionsResponse>("/lead-options/");
 }
 
 export async function createLead(data: LeadInput): Promise<Lead> {
