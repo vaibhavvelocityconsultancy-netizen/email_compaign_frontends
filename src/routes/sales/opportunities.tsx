@@ -2,16 +2,17 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useFieldArray, useFormContext } from "react-hook-form";
 import { useMemo, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { z } from "zod";
-import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, FileText, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { DataTable, type Column } from "@/components/common/DataTable";
+import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { EntityForm, fieldPresets, type FormFieldConfig } from "@/components/common/EntityForm";
-import { Modal } from "@/components/common/Modal";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import {
   createOpportunity,
@@ -23,6 +24,7 @@ import {
   type OpportunityModulePriority,
   type OpportunityStatus,
 } from "@/lib/api";
+import { listCompanies, type Company } from "@/lib/company-api";
 
 export const Route = createFileRoute("/sales/opportunities")({
   head: () => ({
@@ -53,7 +55,7 @@ const opportunitySchema = z.object({
   company_name: z.string().trim().min(1, "Company name is required"),
   enquiry_for: z.string().min(1, "Enquiry type is required"),
   status: z.string().min(1),
-  enquiry_date: z.string().min(1, "Enquiry date is required"),
+  enquiry_date: z.string().regex(/^\d{2}-\d{2}-\d{4}$/, "Use MM-DD-YYYY"),
   modules: z.array(z.object({
     module_number: z.number().int().positive(),
     module_name: z.string().trim().min(1, "Module name is required"),
@@ -67,6 +69,18 @@ const opportunitySchema = z.object({
 });
 
 type OpportunityFormValues = z.infer<typeof opportunitySchema>;
+
+function toDisplayDate(value: string | null): string {
+  if (!value) return "";
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return match ? `${match[2]}-${match[3]}-${match[1]}` : value;
+}
+
+function toApiDate(value: string): string | null {
+  if (!value) return null;
+  const match = value.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  return match ? `${match[3]}-${match[1]}-${match[2]}` : value;
+}
 
 function OpportunityModulesEditor({ disabled }: { disabled: boolean }) {
   const { control, register, watch, formState: { errors } } = useFormContext<OpportunityFormValues>();
@@ -123,8 +137,13 @@ function OpportunityModulesEditor({ disabled }: { disabled: boolean }) {
       </div>
 
       {moduleDialogIndex !== null && modules[moduleDialogIndex] && (
-        <Modal open onClose={() => setModuleDialogIndex(null)} title={`${modules[moduleDialogIndex].module_name || "New module"}`} eyebrow="OPPORTUNITY MODULE" wide>
-          <div className="grid gap-3 p-5 sm:grid-cols-2">
+        <Drawer open onOpenChange={(open) => !open && setModuleDialogIndex(null)} direction="right">
+          <DrawerContent className="inset-y-0 right-0 bottom-auto left-auto mt-0 h-full w-full max-w-xl rounded-none border-l">
+            <DrawerHeader className="border-b border-line text-left">
+              <DrawerTitle>{modules[moduleDialogIndex].module_name || "New module"}</DrawerTitle>
+              <DrawerDescription>Configure this module for the opportunity.</DrawerDescription>
+            </DrawerHeader>
+            <div className="grid flex-1 gap-3 overflow-y-auto p-5 sm:grid-cols-2">
             <label className="space-y-1.5 text-sm sm:col-span-2">
               <span className="font-medium">Module name</span>
               <Input disabled={disabled} placeholder="Inventory Management" {...register(`modules.${moduleDialogIndex}.module_name`)} />
@@ -161,8 +180,9 @@ function OpportunityModulesEditor({ disabled }: { disabled: boolean }) {
             <div className="flex justify-end sm:col-span-2">
               <Button type="button" onClick={() => setModuleDialogIndex(null)}>Done</Button>
             </div>
-          </div>
-        </Modal>
+            </div>
+          </DrawerContent>
+        </Drawer>
       )}
     </section>
   );
@@ -174,18 +194,21 @@ function displayStatus(status: string): string {
 
 function OpportunitiesPage() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Opportunity | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Opportunity | null>(null);
   const opportunitiesQuery = useQuery({ queryKey: ["opportunities"], queryFn: getOpportunities });
+  const companiesQuery = useQuery({ queryKey: ["companies"], queryFn: listCompanies });
   const opportunities = opportunitiesQuery.data ?? [];
+  const companies = companiesQuery.data ?? [];
 
   const saveMutation = useMutation({
     mutationFn: (values: OpportunityFormValues) => {
       const payload: OpportunityInput = {
         ...values,
         status: values.status as OpportunityStatus,
-        enquiry_date: values.enquiry_date || null,
+        enquiry_date: toApiDate(values.enquiry_date),
         source: "",
         expected_close_date: null,
         estimated_value: null,
@@ -236,7 +259,7 @@ function OpportunitiesPage() {
       filterType: "date",
       filterValue: (opportunity) => opportunity.enquiryDate,
       cell: (opportunity) => opportunity.enquiryDate
-        ? <span className="font-mono text-xs text-muted-foreground">{new Date(`${opportunity.enquiryDate}T00:00:00`).toLocaleDateString()}</span>
+        ? <span className="font-mono text-xs text-muted-foreground">{toDisplayDate(opportunity.enquiryDate)}</span>
         : <span className="text-muted-foreground">—</span>,
     },
     {
@@ -266,20 +289,25 @@ function OpportunitiesPage() {
   ], []);
 
   const fields = useMemo<FormFieldConfig[]>(() => [
-    fieldPresets.text("company_name", "Company name", { required: true, colSpan: 2, placeholder: "Company name" }),
+    fieldPresets.searchableSelect(
+      "company_name",
+      "Company name",
+      companies.map((company: Company) => ({ value: company.name, label: company.name })),
+      { required: true, colSpan: 2, placeholder: companiesQuery.isLoading ? "Loading companies..." : "Select company" },
+    ),
     fieldPresets.select("enquiry_for", "Enquiry for", [
       { value: "LEAD", label: "Lead" },
       { value: "CLIENT", label: "Client" },
     ], { required: true }),
     fieldPresets.select("status", "Stage", OPPORTUNITY_STATUSES.map(([value, label]) => ({ value, label })), { required: true }),
-    fieldPresets.date("enquiry_date", "Enquiry date", { required: true }),
-  ], []);
+    fieldPresets.text("enquiry_date", "Enquiry date", { required: true, placeholder: "MM-DD-YYYY" }),
+  ], [companies, companiesQuery.isLoading]);
 
   const defaultValues: Partial<OpportunityFormValues> = editing ? {
     company_name: editing.companyName,
     enquiry_for: editing.enquiryFor || "LEAD",
     status: editing.status,
-    enquiry_date: editing.enquiryDate ?? "",
+    enquiry_date: toDisplayDate(editing.enquiryDate),
     modules: editing.modules.map((module) => ({
       module_number: module.moduleNumber,
       module_name: module.moduleName,
@@ -329,6 +357,18 @@ function OpportunitiesPage() {
         isLoading={saveMutation.isPending}
         submitLabel="Save opportunity"
         size="lg"
+        footerActions={editing ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 gap-1.5"
+            onClick={() => navigate({ to: "/sales/quotations" })}
+          >
+            <FileText className="size-4" />
+            Convert to quotation
+          </Button>
+        ) : undefined}
         onSubmit={async (values) => { await saveMutation.mutateAsync(values); }}
       >
         <OpportunityModulesEditor disabled={saveMutation.isPending} />

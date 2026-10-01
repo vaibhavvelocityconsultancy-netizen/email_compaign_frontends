@@ -607,7 +607,7 @@ export function EntityForm<T extends Record<string, any>>({
               {children}
             </div>
             {footerActions ? (
-              <DialogFooter className="w-full shrink-0 justify-between gap-2 border-t border-border pt-4 sm:flex-row">
+              <DialogFooter className="w-full shrink-0 justify-between gap-2 border-t border-border pt-4 sm:flex-row sm:justify-between">
                 <div className="flex flex-wrap items-center gap-2">{footerActions}</div>
                 <div className="flex items-center justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
