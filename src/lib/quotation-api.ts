@@ -22,9 +22,14 @@ export const TAX_TYPES: Array<[Exclude<TaxType, "">, string]> = [
 
 export interface QuotationItem {
   id?: string;
-  module: string;
+  module: string | null;
   moduleName: string;
   description: string;
+  requirements: string;
+  estimatedCost: number | null;
+  estimatedDays: number | null;
+  priority: "LOW" | "MEDIUM" | "HIGH";
+  remarks: string;
   amount: number;
 }
 
@@ -56,7 +61,7 @@ export interface Quotation {
 export interface QuotationInput {
   quotation_number: string;
   quotation_date: string | null;
-  opportunity: string;
+  opportunity: string | null;
   status: QuotationStatus;
   subtotal: number;
   discount: number;
@@ -71,7 +76,17 @@ export interface QuotationInput {
   total_amount: number;
   terms_conditions: string;
   delivery_timeline: string;
-  items: Array<{ module: string; description: string; amount: number }>;
+  items: Array<{
+    module: string | null;
+    module_name: string;
+    description: string;
+    requirements: string;
+    estimated_cost: number | null;
+    estimated_days: number | null;
+    priority: "LOW" | "MEDIUM" | "HIGH";
+    remarks: string;
+    amount: number;
+  }>;
 }
 
 const num = (v: unknown) => (v == null || v === "" ? 0 : Number(v));
@@ -107,9 +122,14 @@ function mapQuotation(raw: Record<string, unknown>): Quotation {
       const modObj = typeof mod === "object" && mod ? (mod as Record<string, unknown>) : null;
       return {
         id: it.id == null ? undefined : String(it.id),
-        module: String(modObj ? modObj.id : mod ?? ""),
+        module: modObj ? String(modObj.id) : mod == null ? null : String(mod),
         moduleName: String(it.module_name ?? modObj?.module_name ?? ""),
         description: String(it.description ?? ""),
+        requirements: String(it.requirements ?? ""),
+        estimatedCost: it.estimated_cost == null ? null : Number(it.estimated_cost),
+        estimatedDays: it.estimated_days == null ? null : Number(it.estimated_days),
+        priority: String(it.priority ?? "MEDIUM") as "LOW" | "MEDIUM" | "HIGH",
+        remarks: String(it.remarks ?? ""),
         amount: num(it.amount),
       };
     }),

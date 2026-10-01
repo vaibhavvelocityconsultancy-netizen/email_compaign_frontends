@@ -151,6 +151,7 @@ export interface OpportunityModuleInput {
 export interface Opportunity {
   id: string;
   companyName: string;
+  projectName: string;
   enquiryFor: string;
   enquiryDate: string | null;
   status: OpportunityStatus;
@@ -164,6 +165,7 @@ export interface Opportunity {
 
 export interface OpportunityInput {
   company_name: string;
+  project_name?: string;
   enquiry_for: string;
   enquiry_date: string | null;
   status: OpportunityStatus;
@@ -577,6 +579,7 @@ function mapOpportunity(opportunity: Record<string, unknown>): Opportunity {
   return {
     id: String(opportunity.id),
     companyName: String(opportunity.company_name ?? ""),
+    projectName: String(opportunity.project_name ?? ""),
     enquiryFor: String(opportunity.enquiry_for ?? ""),
     enquiryDate: (opportunity.enquiry_date as string | null | undefined) ?? null,
     status: String(opportunity.status ?? "PROSPECTING") as OpportunityStatus,
@@ -612,6 +615,16 @@ export async function updateOpportunity(id: string, data: OpportunityInput): Pro
 
 export async function deleteOpportunity(id: string): Promise<void> {
   await request<void>(`/opportunities/${id}/`, { method: "DELETE" });
+}
+
+export async function convertOpportunityToQuotation(
+  opportunityId: string,
+  items: Array<{ module: number; amount: string }>,
+): Promise<{ message: string; quotation: Record<string, unknown> }> {
+  return request<{ message: string; quotation: Record<string, unknown> }>(`/opportunities/${opportunityId}/convert-to-quotation/`, {
+    method: "POST",
+    body: JSON.stringify({ items }),
+  });
 }
 
 export async function importLeads(file: File): Promise<ApiImportResponse> {

@@ -11,10 +11,8 @@ import { DataTable, type Column } from "@/components/common/DataTable";
 import { EntityForm, fieldPresets, type FormFieldConfig } from "@/components/common/EntityForm";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { QuotationModulesTable, computeTotals } from "@/components/quotations/QuotationModulesTable";
-import { getOpportunities } from "@/lib/api";
 import {
   QUOTATION_STATUSES,
-  TAX_TYPES,
   createQuotation,
   deleteQuotation,
   generateFinalOffer,
@@ -45,7 +43,6 @@ const DELIVERY_OPTIONS = ["1 week", "2 weeks", "3 weeks", "4 weeks", "6 weeks", 
 const schema = z.object({
   quotation_number: z.string().trim().min(1, "Quotation number is required"),
   quotation_date: z.string().min(1, "Date is required"),
-  opportunity: z.string().min(1, "Opportunity is required"),
   delivery_timeline: z.string(),
   status: z.string().min(1),
   tax_type: z.string(),
@@ -54,8 +51,14 @@ const schema = z.object({
   packing_charges: z.coerce.number().min(0),
   terms_conditions: z.string(),
   modules: z.array(z.object({
-    module: z.string().min(1, "Select a module"),
+    module: z.string().nullable(),
+    module_name: z.string().trim().min(1, "Module name is required"),
     description: z.string(),
+    requirements: z.string(),
+    estimated_cost: z.number().min(0),
+    estimated_days: z.number().int().min(0),
+    priority: z.enum(["LOW", "MEDIUM", "HIGH"]),
+    remarks: z.string(),
     amount: z.number().min(0),
   })),
 });
@@ -63,6 +66,11 @@ type FormValues = z.infer<typeof schema>;
 
 const money = (n: number) => n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const statusLabel = (s: string) => QUOTATION_STATUSES.find(([v]) => v === s)?.[1] ?? s;
+const toInputDate = (value: string | null) => {
+  if (!value) return "";
+  const match = value.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+  return match ? `${match[3]}-${match[1]}-${match[2]}` : value;
+};
 
 function QuotationsPage() {
   const qc = useQueryClient();
@@ -70,9 +78,7 @@ function QuotationsPage() {
   const [editing, setEditing] = useState<Quotation | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Quotation | null>(null);
   const quotationsQuery = useQuery({ queryKey: ["quotations"], queryFn: getQuotations });
-  const opportunitiesQuery = useQuery({ queryKey: ["opportunities"], queryFn: getOpportunities });
   const quotations = quotationsQuery.data ?? [];
-  const opportunities = opportunitiesQuery.data ?? [];
 
   const saveMutation = useMutation({
     mutationFn: (v: FormValues) => {
@@ -81,7 +87,7 @@ function QuotationsPage() {
       const payload: QuotationInput = {
         quotation_number: v.quotation_number,
         quotation_date: v.quotation_date,
-        opportunity: v.opportunity,
+        opportunity: editing?.opportunity || null,
         status: v.status as QuotationStatus,
         subtotal: t.subtotal,
         discount: v.discount,
@@ -96,7 +102,12 @@ function QuotationsPage() {
         total_amount: t.total,
         terms_conditions: v.terms_conditions,
         delivery_timeline: v.delivery_timeline,
-        items: v.modules,
+        items: v.modules.map((module) => ({
+          ...module,
+          module_name: module.module_name,
+          estimated_cost: module.estimated_cost || null,
+          estimated_days: module.estimated_days || null,
+        })),
       };
       return editing ? updateQuotation(editing.id, payload) : createQuotation(payload);
     },
@@ -120,11 +131,9 @@ function QuotationsPage() {
 
   const foMutation = useMutation({
     mutationFn: (q: Quotation) => generateFinalOffer(q.id),
-    onSuccess: async (q) => {
+    onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["quotations"] });
-      setEditing(q);
       toast.success("Final offer created");
-      if (q.finalOfferPdf) window.open(q.finalOfferPdf, "_blank");
     },
     onError: (e: Error) => toast.error(e.message || "Could not create final offer"),
   });
@@ -148,31 +157,18 @@ function QuotationsPage() {
 
   const fields = useMemo<FormFieldConfig[]>(() => [
     fieldPresets.row([
-      fieldPresets.text("quotation_number", "Quotation No", { required: true, placeholder: "QT-2026-001" }),
+      fieldPresets.text("quotation_number", "Quotation number", { required: true, placeholder: "QT-2026-001" }),
       fieldPresets.date("quotation_date", "Date", { required: true, defaultToToday: true }),
-      fieldPresets.searchableSelect(
-        "opportunity",
-        "Opportunity",
-        opportunities.map((o) => ({ value: o.id, label: `${o.companyName}${o.enquiryDate ? ` — ${o.enquiryDate}` : ""}` })),
-        { required: true, placeholder: opportunitiesQuery.isLoading ? "Loading..." : "Search opportunity..." },
-      ),
-    ], 3),
+    ], 2),
     fieldPresets.row([
       fieldPresets.select("delivery_timeline", "Delivery Time", DELIVERY_OPTIONS.map((d) => ({ value: d, label: d })), { placeholder: "Select" }),
       fieldPresets.select("status", "Status", QUOTATION_STATUSES.map(([value, label]) => ({ value, label })), { required: true }),
-      fieldPresets.select("tax_type", "Tax Type", TAX_TYPES.map(([value, label]) => ({ value, label })), { placeholder: "Select" }),
     ], 3),
-    fieldPresets.row([
-      fieldPresets.number("tax_percentage", "Tax %", { min: 0, step: 0.01 }),
-      fieldPresets.currency("discount", "Discount"),
-      fieldPresets.currency("packing_charges", "Packing Charges"),
-    ], 3),
-  ], [opportunities, opportunitiesQuery.isLoading]);
+  ], []);
 
   const defaultValues: Partial<FormValues> = editing ? {
     quotation_number: editing.quotationNumber,
-    quotation_date: editing.quotationDate ?? "",
-    opportunity: editing.opportunity,
+    quotation_date: toInputDate(editing.quotationDate),
     delivery_timeline: editing.deliveryTimeline,
     status: editing.status,
     tax_type: editing.taxType,
@@ -180,11 +176,20 @@ function QuotationsPage() {
     discount: editing.discount,
     packing_charges: editing.packingCharges,
     terms_conditions: editing.termsConditions,
-    modules: editing.items.map((i) => ({ module: i.module, description: i.description, amount: i.amount })),
+    modules: editing.items.map((i) => ({
+      module: i.module,
+      module_name: i.moduleName,
+      description: i.description,
+      requirements: i.requirements,
+      estimated_cost: i.estimatedCost ?? 0,
+      estimated_days: i.estimatedDays ?? 0,
+      priority: i.priority,
+      remarks: i.remarks,
+      amount: i.amount,
+    })),
   } : {
     quotation_number: "",
     quotation_date: "",
-    opportunity: "",
     delivery_timeline: "",
     status: "DRAFT",
     tax_type: "",
@@ -229,12 +234,12 @@ function QuotationsPage() {
         footerActions={editing ? (
           <Button type="button" size="sm" variant="outline" className="h-8 gap-1.5" disabled={foMutation.isPending} onClick={() => foMutation.mutate(editing)}>
             <FileCheck2 className="size-4" />
-            {foMutation.isPending ? "Creating FO…" : editing.finalOfferGenerated ? "Regenerate FO" : "Create FO"}
+            {foMutation.isPending ? "Creating FO..." : editing.finalOfferGenerated ? "Regenerate FO" : "Create FO"}
           </Button>
         ) : undefined}
         onSubmit={async (v) => { await saveMutation.mutateAsync(v); }}
       >
-        <QuotationModulesTable opportunities={opportunities} disabled={saveMutation.isPending} />
+        <QuotationModulesTable opportunities={[]} disabled={saveMutation.isPending} />
       </EntityForm>
 
       <ConfirmDialog
