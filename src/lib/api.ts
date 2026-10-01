@@ -111,6 +111,69 @@ export interface LeadInput {
   is_opportunity: boolean;
 }
 
+export type OpportunityStatus =
+  | "PROSPECTING"
+  | "QUALIFICATION"
+  | "NEEDS_ANALYSIS"
+  | "VALUE_PROPOSITION"
+  | "IDENTIFY_DECISION_MAKERS"
+  | "PERCEPTION_ANALYSIS"
+  | "PROPOSAL_PRICE_QUOTE"
+  | "NEGOTIATION_REVIEW"
+  | "CLOSED_WON"
+  | "CLOSED_LOST";
+
+export type OpportunityModulePriority = "LOW" | "MEDIUM" | "HIGH";
+
+export interface OpportunityModule {
+  id?: string;
+  moduleNumber: number;
+  moduleName: string;
+  description: string;
+  requirements: string;
+  estimatedCost: number | null;
+  estimatedDays: number | null;
+  priority: OpportunityModulePriority;
+  remarks: string;
+}
+
+export interface OpportunityModuleInput {
+  module_number: number;
+  module_name: string;
+  description: string;
+  requirements: string;
+  estimated_cost: number | null;
+  estimated_days: number | null;
+  priority: OpportunityModulePriority;
+  remarks: string;
+}
+
+export interface Opportunity {
+  id: string;
+  companyName: string;
+  enquiryFor: string;
+  enquiryDate: string | null;
+  status: OpportunityStatus;
+  source: string;
+  expectedCloseDate: string | null;
+  estimatedValue: number | null;
+  probability: number | null;
+  modules: OpportunityModule[];
+  createdAt: string;
+}
+
+export interface OpportunityInput {
+  company_name: string;
+  enquiry_for: string;
+  enquiry_date: string | null;
+  status: OpportunityStatus;
+  source?: string;
+  expected_close_date?: string | null;
+  estimated_value?: number | null;
+  probability?: number | null;
+  modules?: OpportunityModuleInput[];
+}
+
 export type Channel = "email" | "whatsapp";
 
 export interface MessageTemplate {
@@ -491,6 +554,64 @@ export async function updateLead(id: string, data: LeadInput): Promise<Lead> {
 
 export async function deleteLead(id: string): Promise<void> {
   await request<void>(`/leads/${id}/`, { method: "DELETE" });
+}
+
+function mapOpportunity(opportunity: Record<string, unknown>): Opportunity {
+  const modules = Array.isArray(opportunity.modules)
+    ? opportunity.modules.map((module) => {
+        const item = module as Record<string, unknown>;
+        return {
+          id: item.id == null ? undefined : String(item.id),
+          moduleNumber: Number(item.module_number ?? 0),
+          moduleName: String(item.module_name ?? ""),
+          description: String(item.description ?? ""),
+          requirements: String(item.requirements ?? ""),
+          estimatedCost: item.estimated_cost == null ? null : Number(item.estimated_cost),
+          estimatedDays: item.estimated_days == null ? null : Number(item.estimated_days),
+          priority: String(item.priority ?? "MEDIUM") as OpportunityModulePriority,
+          remarks: String(item.remarks ?? ""),
+        };
+      })
+    : [];
+
+  return {
+    id: String(opportunity.id),
+    companyName: String(opportunity.company_name ?? ""),
+    enquiryFor: String(opportunity.enquiry_for ?? ""),
+    enquiryDate: (opportunity.enquiry_date as string | null | undefined) ?? null,
+    status: String(opportunity.status ?? "PROSPECTING") as OpportunityStatus,
+    source: String(opportunity.source ?? ""),
+    expectedCloseDate: (opportunity.expected_close_date as string | null | undefined) ?? null,
+    estimatedValue: opportunity.estimated_value == null ? null : Number(opportunity.estimated_value),
+    probability: opportunity.probability == null ? null : Number(opportunity.probability),
+    modules,
+    createdAt: String(opportunity.created_at ?? ""),
+  };
+}
+
+export async function getOpportunities(): Promise<Opportunity[]> {
+  const opportunities = await request<Record<string, unknown>[]>("/opportunities/");
+  return opportunities.map(mapOpportunity);
+}
+
+export async function createOpportunity(data: OpportunityInput): Promise<Opportunity> {
+  const opportunity = await request<Record<string, unknown>>("/opportunities/", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+  return mapOpportunity(opportunity);
+}
+
+export async function updateOpportunity(id: string, data: OpportunityInput): Promise<Opportunity> {
+  const opportunity = await request<Record<string, unknown>>(`/opportunities/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
+  return mapOpportunity(opportunity);
+}
+
+export async function deleteOpportunity(id: string): Promise<void> {
+  await request<void>(`/opportunities/${id}/`, { method: "DELETE" });
 }
 
 export async function importLeads(file: File): Promise<ApiImportResponse> {
