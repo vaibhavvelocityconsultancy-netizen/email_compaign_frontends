@@ -60,6 +60,10 @@ const MENU_ITEMS: MenuItem[] = [
                 to: "/email-campaign",
                 label: "Email Campaign",
             },
+            {
+                to: "/tasks",
+                label: "Tasks",
+            },
         ],
     },
 
