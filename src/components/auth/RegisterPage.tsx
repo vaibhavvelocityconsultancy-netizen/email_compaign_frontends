@@ -42,7 +42,7 @@ export default function RegisterPage({
         await onSubmit({ name, email, password });
       } else {
         await auth.register({
-          first_name: nameParts[0],
+          first_name: nameParts[0] ?? "",
           last_name: nameParts.slice(1).join(" "),
           email,
           password,
