@@ -24,6 +24,11 @@ const STYLES: Record<string, { bg: string; dot: string; text: string }> = {
   "negotiation / review": { bg: "bg-warn/10", dot: "bg-warn", text: "text-warn" },
   "closed won": { bg: "bg-good/10", dot: "bg-good", text: "text-good" },
   "closed lost": { bg: "bg-bad/10", dot: "bg-bad", text: "text-bad" },
+  sent: { bg: "bg-brand-soft", dot: "bg-brand", text: "text-brand" },
+  approved: { bg: "bg-good/10", dot: "bg-good", text: "text-good" },
+  rejected: { bg: "bg-bad/10", dot: "bg-bad", text: "text-bad" },
+  revision: { bg: "bg-warn/10", dot: "bg-warn", text: "text-warn" },
+  converted: { bg: "bg-good/10", dot: "bg-good", text: "text-good" },
 };
 
 export function StatusBadge({ status }: { status: string }) {
