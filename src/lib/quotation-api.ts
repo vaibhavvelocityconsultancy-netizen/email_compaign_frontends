@@ -37,8 +37,10 @@ export interface Quotation {
   id: string;
   quotationNumber: string;
   quotationDate: string | null;
+  foDate: string | null;
   opportunity: string;
   companyName: string;
+  city: string;
   status: QuotationStatus;
   subtotal: number;
   discount: number;
@@ -94,13 +96,19 @@ const num = (v: unknown) => (v == null || v === "" ? 0 : Number(v));
 function mapQuotation(raw: Record<string, unknown>): Quotation {
   const opp = raw.opportunity;
   const oppObj = typeof opp === "object" && opp ? (opp as Record<string, unknown>) : null;
+  const companyObj =
+    typeof oppObj?.company === "object" && oppObj.company ? (oppObj.company as Record<string, unknown>) : null;
+  const cityObj = typeof companyObj?.city === "object" && companyObj.city ? (companyObj.city as Record<string, unknown>) : null;
   const items = Array.isArray(raw.items) ? (raw.items as Record<string, unknown>[]) : [];
+
   return {
     id: String(raw.id),
     quotationNumber: String(raw.quotation_number ?? ""),
     quotationDate: (raw.quotation_date as string | null) ?? null,
+    foDate: (raw.fo_date as string | null) ?? (raw.quotation_date as string | null) ?? null,
     opportunity: String(oppObj ? oppObj.id : opp ?? ""),
-    companyName: String(raw.company_name ?? oppObj?.company_name ?? ""),
+    companyName: String(raw.company_name ?? oppObj?.company_name ?? companyObj?.name ?? ""),
+    city: String(companyObj?.city_name ?? cityObj?.name ?? ""),
     status: String(raw.status ?? "DRAFT") as QuotationStatus,
     subtotal: num(raw.subtotal),
     discount: num(raw.discount),

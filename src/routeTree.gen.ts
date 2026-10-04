@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CompanyRouteImport } from './routes/company'
 import { Route as CountryRouteImport } from './routes/country'
+import { Route as FinalOfferRouteImport } from './routes/final-offer'
 import { Route as LocationRouteImport } from './routes/location'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MarketingRouteImport } from './routes/marketing'
@@ -41,6 +42,11 @@ const CompanyRoute = CompanyRouteImport.update({
 const CountryRoute = CountryRouteImport.update({
   id: '/country',
   path: '/country',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FinalOfferRoute = FinalOfferRouteImport.update({
+  id: '/final-offer',
+  path: '/final-offer',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LocationRoute = LocationRouteImport.update({
@@ -128,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/company': typeof CompanyRoute
   '/country': typeof CountryRoute
+  '/final-offer': typeof FinalOfferRoute
   '/location': typeof LocationRoute
   '/login': typeof LoginRoute
   '/marketing': typeof MarketingRouteWithChildren
@@ -148,6 +155,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/company': typeof CompanyRoute
   '/country': typeof CountryRoute
+  '/final-offer': typeof FinalOfferRoute
   '/location': typeof LocationRoute
   '/login': typeof LoginRoute
   '/marketing': typeof MarketingRouteWithChildren
@@ -168,6 +176,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/company': typeof CompanyRoute
   '/country': typeof CountryRoute
+  '/final-offer': typeof FinalOfferRoute
   '/location': typeof LocationRoute
   '/login': typeof LoginRoute
   '/marketing': typeof MarketingRouteWithChildren
@@ -190,6 +199,7 @@ export interface FileRouteTypes {
     | '/'
     | '/company'
     | '/country'
+    | '/final-offer'
     | '/location'
     | '/login'
     | '/marketing'
@@ -210,6 +220,7 @@ export interface FileRouteTypes {
     | '/'
     | '/company'
     | '/country'
+    | '/final-offer'
     | '/location'
     | '/login'
     | '/marketing'
@@ -229,6 +240,7 @@ export interface FileRouteTypes {
     | '/'
     | '/company'
     | '/country'
+    | '/final-offer'
     | '/location'
     | '/login'
     | '/marketing'
@@ -250,6 +262,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CompanyRoute: typeof CompanyRoute
   CountryRoute: typeof CountryRoute
+  FinalOfferRoute: typeof FinalOfferRoute
   LocationRoute: typeof LocationRoute
   LoginRoute: typeof LoginRoute
   MarketingRoute: typeof MarketingRouteWithChildren
@@ -280,6 +293,13 @@ declare module '@tanstack/react-router' {
       path: '/country'
       fullPath: '/country'
       preLoaderRoute: typeof CountryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/final-offer': {
+      id: '/final-offer'
+      path: '/final-offer'
+      fullPath: '/final-offer'
+      preLoaderRoute: typeof FinalOfferRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/location': {
@@ -442,6 +462,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CompanyRoute: CompanyRoute,
   CountryRoute: CountryRoute,
+  FinalOfferRoute: FinalOfferRoute,
   LocationRoute: LocationRoute,
   LoginRoute: LoginRoute,
   MarketingRoute: MarketingRouteWithChildren,

@@ -197,7 +197,7 @@ export function QuotationModulesTable({ opportunities, disabled }: { opportuniti
             <thead className="border-y border-line text-left text-xs text-muted-foreground">
               <tr>
                 <th className="w-10 px-4 py-2 font-medium">#</th>
-                <th className="w-48 px-2 py-2 font-medium">Source module</th>
+                {/* <th className="w-48 px-2 py-2 font-medium">Source module</th> */}
                 <th className="w-56 px-2 py-2 font-medium">Module name</th>
                 <th className="w-56 px-2 py-2 font-medium">Description</th>
                 <th className="w-56 px-2 py-2 font-medium">Requirements</th>
@@ -217,40 +217,45 @@ export function QuotationModulesTable({ opportunities, disabled }: { opportuniti
                   </td>
                 </tr>
               )}
-              {fields.map((f, i) => (
-                <tr key={f.fieldKey} className="border-b border-line last:border-0">
-                  <td className="px-4 py-2 text-muted-foreground">{i + 1}</td>
-                  <td className="px-2 py-2">
-                    <select
-                      className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
-                      disabled={disabled}
-                      value={rows[i]?.module ?? ""}
-                      onChange={(e) => pickModule(i, e.target.value)}
-                    >
-                      <option value="">Custom module</option>
-                      {moduleOptions.map((m) => (
-                        <option key={m.id} value={m.id}>{m.moduleName}</option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="px-2 py-2"><Input className="h-9" disabled={disabled} placeholder="Module name" {...register(`modules.${i}.module_name`)} /></td>
-                  <td className="px-2 py-2"><Input className="h-9" disabled={disabled} {...register(`modules.${i}.description`)} /></td>
-                  <td className="px-2 py-2"><Input className="h-9" disabled={disabled} {...register(`modules.${i}.requirements`)} /></td>
-                  <td className="px-2 py-2"><Input className="h-9 text-right" type="number" min={0} step="0.01" disabled={disabled} {...register(`modules.${i}.estimated_cost`, { valueAsNumber: true })} /></td>
-                  <td className="px-2 py-2"><Input className="h-9" type="number" min={0} step={1} disabled={disabled} {...register(`modules.${i}.estimated_days`, { valueAsNumber: true })} /></td>
-                  <td className="px-2 py-2"><select className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" disabled={disabled} {...register(`modules.${i}.priority`)}><option value="LOW">Low</option><option value="MEDIUM">Medium</option><option value="HIGH">High</option></select></td>
-                  <td className="px-2 py-2"><Input className="h-9" disabled={disabled} {...register(`modules.${i}.remarks`)} /></td>
-                  <td className="px-2 py-2"><Input className="h-9 text-right" type="number" min={0} step="0.01" disabled={disabled} {...register(`modules.${i}.amount`, { valueAsNumber: true })} /></td>
-                  <td className="px-2 py-2">
-                    <Button type="button" variant="ghost" size="icon" disabled={disabled} onClick={() => setModuleDrawerIndex(i)} aria-label={`Edit module ${i + 1}`} title="Edit module">
-                      <Pencil className="size-4" />
-                    </Button>
-                    <Button type="button" variant="ghost" size="icon" className="text-destructive" disabled={disabled} onClick={() => remove(i)} aria-label={`Remove module ${i + 1}`}>
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </td>
-                </tr>
-              ))}
+              {fields.map((f, i) => {
+                const row = rows[i] ?? {};
+                return (
+                  <tr key={f.fieldKey} className="border-b border-line last:border-0 align-top">
+                    <td className="px-4 py-3 text-muted-foreground">{i + 1}</td>
+                    {/* <td className="px-2 py-3">
+                      <select
+                        className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm"
+                        disabled={disabled}
+                        value={row.module ?? ""}
+                        onChange={(e) => pickModule(i, e.target.value)}
+                      >
+                        <option value="">Custom module</option>
+                        {moduleOptions.map((m) => (
+                          <option key={m.id} value={m.id}>{m.moduleName}</option>
+                        ))}
+                      </select>
+                    </td> */}
+                    <td className="px-2 py-3 text-sm text-foreground">{row.module_name || "—"}</td>
+                    <td className="px-2 py-3 text-sm text-foreground">{row.description || "—"}</td>
+                    <td className="px-2 py-3 text-sm text-foreground">{row.requirements || "—"}</td>
+                    <td className="px-2 py-3 text-right text-sm font-medium text-foreground">{money(Number(row.estimated_cost ?? 0))}</td>
+                    <td className="px-2 py-3 text-right text-sm text-foreground">{row.estimated_days ?? 0}</td>
+                    <td className="px-2 py-3 text-sm text-foreground">{row.priority || "MEDIUM"}</td>
+                    <td className="px-2 py-3 text-sm text-foreground">{row.remarks || "—"}</td>
+                    <td className="px-2 py-3 text-right text-sm font-medium text-foreground">{money(Number(row.amount ?? 0))}</td>
+                    <td className="px-2 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button type="button" variant="ghost" size="icon" disabled={disabled} onClick={() => setModuleDrawerIndex(i)} aria-label={`Edit module ${i + 1}`} title="Edit module">
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button type="button" variant="ghost" size="icon" className="text-destructive" disabled={disabled} onClick={() => remove(i)} aria-label={`Remove module ${i + 1}`}>
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

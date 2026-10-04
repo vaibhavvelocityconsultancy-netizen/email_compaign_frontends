@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Briefcase, ChevronDown, Database, LayoutDashboard, Megaphone } from "lucide-react";
+import { Briefcase, ChevronDown, ClipboardList, Database, LayoutDashboard, Megaphone, ShoppingCart } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Sidebar,
@@ -72,6 +72,33 @@ const MENU_ITEMS: MenuItem[] = [
         label: "Quotation",
       },
     ],
+  },
+  {
+    key: "Order",
+    label: "Order",
+    icon: ClipboardList,
+    items: [
+      {
+        to: "/order-dashboard",
+        label: "Order Dashboard"
+      },
+      {
+        to: "/final-offer",
+        label: "Final Offer - FO"
+      },
+      {
+        to: "/customer-PO",
+        label: "Customer PO - CPO"
+      },
+      {
+        to: "/sales",
+        label: "Sales Order - SO"
+      },
+      {
+        to: "/work-order",
+        label: "Works Order - WO"
+      }
+    ]
   },
   {
     key: "Masters",
