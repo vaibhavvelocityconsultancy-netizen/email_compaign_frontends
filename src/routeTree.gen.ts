@@ -22,6 +22,8 @@ import { Route as MarketingLeadsRouteImport } from './routes/marketing/leads'
 import { Route as SalesIndexRouteImport } from './routes/sales/index'
 import { Route as SalesOpportunitiesRouteImport } from './routes/sales/opportunities'
 import { Route as SalesQuotationsRouteImport } from './routes/sales/quotations'
+import { Route as TasksFormRouteImport } from './routes/tasks/form'
+import { Route as TasksTasksRouteImport } from './routes/tasks/tasks'
 import { Route as MarketingEmailCampaignIndexRouteImport } from './routes/marketing/email-campaign.index'
 import { Route as MarketingEmailCampaignCampaignsRouteImport } from './routes/marketing/email-campaign.campaigns'
 import { Route as MarketingEmailCampaignLogsRouteImport } from './routes/marketing/email-campaign.logs'
@@ -94,6 +96,16 @@ const SalesQuotationsRoute = SalesQuotationsRouteImport.update({
   path: '/sales/quotations',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TasksFormRoute = TasksFormRouteImport.update({
+  id: '/tasks/form',
+  path: '/tasks/form',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TasksTasksRoute = TasksTasksRouteImport.update({
+  id: '/tasks/tasks',
+  path: '/tasks/tasks',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MarketingEmailCampaignIndexRoute =
   MarketingEmailCampaignIndexRouteImport.update({
     id: '/',
@@ -143,6 +155,8 @@ export interface FileRoutesByFullPath {
   '/marketing/leads': typeof MarketingLeadsRouteWithChildren
   '/sales/opportunities': typeof SalesOpportunitiesRoute
   '/sales/quotations': typeof SalesQuotationsRoute
+  '/tasks/form': typeof TasksFormRoute
+  '/tasks/tasks': typeof TasksTasksRoute
   '/sales/': typeof SalesIndexRoute
   '/marketing/email-campaign/campaigns': typeof MarketingEmailCampaignCampaignsRoute
   '/marketing/email-campaign/logs': typeof MarketingEmailCampaignLogsRoute
@@ -163,6 +177,8 @@ export interface FileRoutesByTo {
   '/marketing/leads': typeof MarketingLeadsRouteWithChildren
   '/sales/opportunities': typeof SalesOpportunitiesRoute
   '/sales/quotations': typeof SalesQuotationsRoute
+  '/tasks/form': typeof TasksFormRoute
+  '/tasks/tasks': typeof TasksTasksRoute
   '/sales': typeof SalesIndexRoute
   '/marketing/email-campaign/campaigns': typeof MarketingEmailCampaignCampaignsRoute
   '/marketing/email-campaign/logs': typeof MarketingEmailCampaignLogsRoute
@@ -185,6 +201,8 @@ export interface FileRoutesById {
   '/marketing/leads': typeof MarketingLeadsRouteWithChildren
   '/sales/opportunities': typeof SalesOpportunitiesRoute
   '/sales/quotations': typeof SalesQuotationsRoute
+  '/tasks/form': typeof TasksFormRoute
+  '/tasks/tasks': typeof TasksTasksRoute
   '/sales/': typeof SalesIndexRoute
   '/marketing/email-campaign/campaigns': typeof MarketingEmailCampaignCampaignsRoute
   '/marketing/email-campaign/logs': typeof MarketingEmailCampaignLogsRoute
@@ -208,6 +226,8 @@ export interface FileRouteTypes {
     | '/marketing/leads'
     | '/sales/opportunities'
     | '/sales/quotations'
+    | '/tasks/form'
+    | '/tasks/tasks'
     | '/sales/'
     | '/marketing/email-campaign/campaigns'
     | '/marketing/email-campaign/logs'
@@ -228,6 +248,8 @@ export interface FileRouteTypes {
     | '/marketing/leads'
     | '/sales/opportunities'
     | '/sales/quotations'
+    | '/tasks/form'
+    | '/tasks/tasks'
     | '/sales'
     | '/marketing/email-campaign/campaigns'
     | '/marketing/email-campaign/logs'
@@ -249,6 +271,8 @@ export interface FileRouteTypes {
     | '/marketing/leads'
     | '/sales/opportunities'
     | '/sales/quotations'
+    | '/tasks/form'
+    | '/tasks/tasks'
     | '/sales/'
     | '/marketing/email-campaign/campaigns'
     | '/marketing/email-campaign/logs'
@@ -269,6 +293,8 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   SalesOpportunitiesRoute: typeof SalesOpportunitiesRoute
   SalesQuotationsRoute: typeof SalesQuotationsRoute
+  TasksFormRoute: typeof TasksFormRoute
+  TasksTasksRoute: typeof TasksTasksRoute
   SalesIndexRoute: typeof SalesIndexRoute
 }
 
@@ -363,6 +389,20 @@ declare module '@tanstack/react-router' {
       path: '/sales/quotations'
       fullPath: '/sales/quotations'
       preLoaderRoute: typeof SalesQuotationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tasks/form': {
+      id: '/tasks/form'
+      path: '/tasks/form'
+      fullPath: '/tasks/form'
+      preLoaderRoute: typeof TasksFormRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tasks/tasks': {
+      id: '/tasks/tasks'
+      path: '/tasks/tasks'
+      fullPath: '/tasks/tasks'
+      preLoaderRoute: typeof TasksTasksRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/marketing/email-campaign/': {
@@ -469,6 +509,8 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   SalesOpportunitiesRoute: SalesOpportunitiesRoute,
   SalesQuotationsRoute: SalesQuotationsRoute,
+  TasksFormRoute: TasksFormRoute,
+  TasksTasksRoute: TasksTasksRoute,
   SalesIndexRoute: SalesIndexRoute,
 }
 export const routeTree = rootRouteImport

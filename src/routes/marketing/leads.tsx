@@ -180,6 +180,16 @@ function LeadsPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           <button
+            type="button"
+            onClick={() => navigate({
+              to: "/tasks/form",
+              search: { taskId: undefined, module: "LEAD", companyId: undefined, referenceId: undefined },
+            })}
+            className="flex h-9 items-center gap-1.5 rounded-lg border border-line bg-surface px-4 text-sm font-medium transition-colors hover:bg-background"
+          >
+            <Plus className="size-4" /> New Task
+          </button>
+          <button
             onClick={openCreate}
             className="flex h-9 items-center gap-1.5 rounded-lg bg-brand px-4 text-sm font-medium text-white transition-colors hover:bg-brand/90"
           >
@@ -198,20 +208,45 @@ function LeadsPage() {
         <DataTable<Lead>
           data={filtered}
           columns={columns}
-          searchKeys={["id", "enquiryFor", "companyName", "contactName", "contactMobile", "followupRemarks"]}
+          searchKeys={[
+            "id",
+            "enquiryFor",
+            "companyName",
+            "contactName",
+            "contactMobile",
+            "followupRemarks",
+          ]}
           searchPlaceholder="Search enquiries..."
           pageSize={12}
           storageKey="leads"
           emptyMessage={isLoading ? "Loading enquiries…" : "No enquiries match your filters."}
           toolbarActions={(
             <>
-              <select aria-label="Filter by status" value={status} onChange={(event) => setStatus(event.target.value)} className={selectCls}>
+              <select
+                aria-label="Filter by status"
+                value={status}
+                onChange={(event) => setStatus(event.target.value)}
+                className={selectCls}
+              >
                 <option value="all">All statuses</option>
-                {LEAD_STATUSES.map((value) => <option key={value} value={value.toLowerCase()}>{value[0] + value.slice(1).toLowerCase()}</option>)}
+                {LEAD_STATUSES.map((value) => (
+                  <option key={value} value={value.toLowerCase()}>
+                    {value[0] + value.slice(1).toLowerCase()}
+                  </option>
+                ))}
               </select>
-              <select aria-label="Filter by source" value={source} onChange={(event) => setSource(event.target.value)} className={selectCls}>
+              <select
+                aria-label="Filter by source"
+                value={source}
+                onChange={(event) => setSource(event.target.value)}
+                className={selectCls}
+              >
                 <option value="all">All sources</option>
-                {sources.map((value) => <option key={value} value={value}>{LEAD_SOURCES.find(([code]) => code === value)?.[1] ?? value}</option>)}
+                {sources.map((value) => (
+                  <option key={value} value={value}>
+                    {LEAD_SOURCES.find(([code]) => code === value)?.[1] ?? value}
+                  </option>
+                ))}
               </select>
             </>
           )}

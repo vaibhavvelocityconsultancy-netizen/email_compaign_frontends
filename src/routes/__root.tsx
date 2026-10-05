@@ -44,20 +44,37 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
+  const exactError = error instanceof Response
+    ? `HTTP ${error.status}${error.statusText ? ` ${error.statusText}` : ""}${error.url ? ` at ${error.url}` : ""}`
+    : error instanceof Error
+      ? `${error.name}: ${error.message}`
+      : String(error);
+  const technicalDetails = error instanceof Error ? error.stack : undefined;
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
-        </h1>
+    <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col justify-center gap-5 bg-background px-5 py-10">
+      <div>
+        <p className="font-mono text-xs uppercase text-destructive">Application error</p>
+        <h1 className="mt-2 text-2xl font-semibold text-foreground">This page could not load</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
+          The exact error is shown below. Share it with support if you need help.
         </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
+      </div>
+      <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-md border border-destructive/30 bg-destructive/5 p-4 font-mono text-sm text-foreground" role="alert">
+        {exactError || "No error message was provided."}
+      </pre>
+      {technicalDetails && (
+        <details className="rounded-md border border-border p-4">
+          <summary className="cursor-pointer text-sm font-medium">Technical details</summary>
+          <pre className="mt-3 max-h-72 overflow-auto whitespace-pre-wrap break-words font-mono text-xs text-muted-foreground">
+            {technicalDetails}
+          </pre>
+        </details>
+      )}
+      <div className="flex flex-wrap gap-2">
           <button
             onClick={() => {
               router.invalidate();
@@ -73,9 +90,8 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
           >
             Go home
           </a>
-        </div>
       </div>
-    </div>
+    </main>
   );
 }
 

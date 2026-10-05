@@ -39,8 +39,10 @@ export interface Quotation {
   quotationDate: string | null;
   foDate: string | null;
   opportunity: string;
+  companyId: number | null;
   companyName: string;
   city: string;
+  state: string;
   status: QuotationStatus;
   subtotal: number;
   discount: number;
@@ -57,6 +59,7 @@ export interface Quotation {
   deliveryTimeline: string;
   finalOfferGenerated: boolean;
   finalOfferPdf: string | null;
+  cpoCreated: boolean;
   items: QuotationItem[];
 }
 
@@ -64,6 +67,7 @@ export interface QuotationInput {
   quotation_number: string;
   quotation_date: string | null;
   opportunity: string | null;
+  selected_company_id: number;
   status: QuotationStatus;
   subtotal: number;
   discount: number;
@@ -107,8 +111,10 @@ function mapQuotation(raw: Record<string, unknown>): Quotation {
     quotationDate: (raw.quotation_date as string | null) ?? null,
     foDate: (raw.fo_date as string | null) ?? (raw.quotation_date as string | null) ?? null,
     opportunity: String(oppObj ? oppObj.id : opp ?? ""),
+    companyId: raw.company_id == null ? null : Number(raw.company_id),
     companyName: String(raw.company_name ?? oppObj?.company_name ?? companyObj?.name ?? ""),
     city: String(companyObj?.city_name ?? cityObj?.name ?? ""),
+    state: String(raw.company_state ?? companyObj?.state_name ?? ""),
     status: String(raw.status ?? "DRAFT") as QuotationStatus,
     subtotal: num(raw.subtotal),
     discount: num(raw.discount),
@@ -125,6 +131,7 @@ function mapQuotation(raw: Record<string, unknown>): Quotation {
     deliveryTimeline: String(raw.delivery_timeline ?? ""),
     finalOfferGenerated: Boolean(raw.final_offer_generated),
     finalOfferPdf: (raw.final_offer_pdf as string | null) ?? null,
+    cpoCreated: Boolean(raw.cpo_created),
     items: items.map((it) => {
       const mod = it.module;
       const modObj = typeof mod === "object" && mod ? (mod as Record<string, unknown>) : null;
@@ -149,8 +156,18 @@ export async function getQuotations(): Promise<Quotation[]> {
   return list.map(mapQuotation);
 }
 
+export async function getNextQuotationNumber(): Promise<string> {
+  const response = await request<{ quotation_number: string }>("/quotations/next-number/");
+  return response.quotation_number;
+}
+
 export async function createQuotation(data: QuotationInput): Promise<Quotation> {
-  return mapQuotation(await request<Record<string, unknown>>("/quotations/", { method: "POST", body: JSON.stringify(data) }));
+  return mapQuotation(
+    await request<Record<string, unknown>>("/quotations/", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  );
 }
 
 export async function updateQuotation(id: string, data: QuotationInput): Promise<Quotation> {
@@ -163,4 +180,42 @@ export async function deleteQuotation(id: string): Promise<void> {
 
 export async function generateFinalOffer(id: string): Promise<Quotation> {
   return mapQuotation(await request<Record<string, unknown>>(`/quotations/${id}/generate-final-offer/`, { method: "POST" }));
+}
+
+export async function updateFinalOffer(
+  id: string,
+  data: {
+    fo_date: string;
+    items: Array<{
+      module: string | null;
+      module_name: string;
+      description: string;
+      requirements: string;
+      estimated_cost: number | null;
+      estimated_days: number | null;
+      priority: "LOW" | "MEDIUM" | "HIGH";
+      remarks: string;
+      amount: number;
+    }>;
+  },
+): Promise<Quotation> {
+  return mapQuotation(await request<Record<string, unknown>>(`/quotations/${id}/final-offer/`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  }));
+}
+
+export async function createCpo(id: string): Promise<{ message: string; cpo_created: boolean }> {
+  return request<{ message: string; cpo_created: boolean }>(`/quotations/${id}/create-cpo/`, {
+    method: "POST",
+  });
+}
+
+
+export async function getQuotationById(id: string): Promise<Quotation> {
+  return mapQuotation(
+    await request<Record<string, unknown>>(
+      `/quotations/${id}/`
+    )
+  );
 }

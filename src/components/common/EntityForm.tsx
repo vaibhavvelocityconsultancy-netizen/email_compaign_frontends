@@ -32,7 +32,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -187,7 +193,9 @@ function SearchableSelectInput({
           disabled={disabled}
           className={cn("w-full justify-between font-normal", !selected && "text-muted-foreground")}
         >
-          <span className="truncate">{selected?.label ?? placeholder ?? `Select ${label.toLowerCase()}`}</span>
+          <span className="truncate">
+            {selected?.label ?? placeholder ?? `Select ${label.toLowerCase()}`}
+          </span>
           <ChevronsUpDown className="ml-2 size-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -279,9 +287,12 @@ export function EntityForm<T extends Record<string, any>>({
         }
         if (initialValues[field.name] !== undefined) return;
         if (field.defaultValue !== undefined) initialValues[field.name] = field.defaultValue;
-        else if (field.type === "number" || field.type === "currency") initialValues[field.name] = 0;
-        else if (field.type === "switch" || field.type === "checkbox") initialValues[field.name] = false;
-        else if (field.type === "date" && field.defaultToToday) initialValues[field.name] = todayAsDateField();
+        else if (field.type === "number" || field.type === "currency")
+          initialValues[field.name] = 0;
+        else if (field.type === "switch" || field.type === "checkbox")
+          initialValues[field.name] = false;
+        else if (field.type === "date" && field.defaultToToday)
+          initialValues[field.name] = todayAsDateField();
         else initialValues[field.name] = "";
       });
     };
@@ -296,7 +307,9 @@ export function EntityForm<T extends Record<string, any>>({
     disabled: boolean,
   ) => {
     const savedFiles = Array.isArray(fieldValue)
-      ? (fieldValue.filter((item) => Boolean(item && typeof item === "object" && "id" in item)) as SavedFile[])
+      ? (fieldValue.filter((item) =>
+          Boolean(item && typeof item === "object" && "id" in item),
+        ) as SavedFile[])
       : [];
     const pendingFiles = pendingFilesRef.current[config.name] ?? [];
     const updateFiles = (files: File[]) => {
@@ -326,7 +339,12 @@ export function EntityForm<T extends Record<string, any>>({
                     type="button"
                     aria-label={`Remove ${file.file_name ?? "attachment"}`}
                     className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-destructive"
-                    onClick={() => onChange([...savedFiles.filter((item) => item.id !== file.id), ...pendingFiles])}
+                    onClick={() =>
+                      onChange([
+                        ...savedFiles.filter((item) => item.id !== file.id),
+                        ...pendingFiles,
+                      ])
+                    }
                   >
                     <X className="size-3.5" />
                   </button>
@@ -338,15 +356,22 @@ export function EntityForm<T extends Record<string, any>>({
 
         {pendingFiles.length > 0 && (
           <div className="space-y-1 rounded-md border border-border bg-brand-soft p-2">
-            <p className="text-xs font-medium text-muted-foreground">{pendingFiles.length} selected</p>
+            <p className="text-xs font-medium text-muted-foreground">
+              {pendingFiles.length} selected
+            </p>
             {pendingFiles.map((file, index) => (
-              <div key={`${file.name}-${file.lastModified}`} className="flex items-center justify-between gap-2">
+              <div
+                key={`${file.name}-${file.lastModified}`}
+                className="flex items-center justify-between gap-2"
+              >
                 <span className="truncate text-xs">{file.name}</span>
                 <button
                   type="button"
                   aria-label={`Remove ${file.name}`}
                   className="rounded p-1 text-muted-foreground hover:bg-accent hover:text-destructive"
-                  onClick={() => updateFiles(pendingFiles.filter((_, fileIndex) => fileIndex !== index))}
+                  onClick={() =>
+                    updateFiles(pendingFiles.filter((_, fileIndex) => fileIndex !== index))
+                  }
                 >
                   <X className="size-3.5" />
                 </button>
@@ -361,7 +386,9 @@ export function EntityForm<T extends Record<string, any>>({
           multiple={config.multiple}
           disabled={disabled || isLoading}
           className="sr-only"
-          onClick={(event) => { event.currentTarget.value = ""; }}
+          onClick={(event) => {
+            event.currentTarget.value = "";
+          }}
           onChange={(event) => {
             const chosen = Array.from(event.currentTarget.files ?? []);
             if (!config.multiple) {
@@ -371,7 +398,8 @@ export function EntityForm<T extends Record<string, any>>({
             const existing = pendingFilesRef.current[config.name] ?? [];
             const next = [...existing];
             chosen.forEach((file) => {
-              if (!next.some((item) => item.name === file.name && item.size === file.size)) next.push(file);
+              if (!next.some((item) => item.name === file.name && item.size === file.size))
+                next.push(file);
             });
             updateFiles(next);
           }}
@@ -398,7 +426,11 @@ export function EntityForm<T extends Record<string, any>>({
       return (
         <div
           key={config.key ?? config.name}
-          className={cn("col-span-full grid grid-cols-1 gap-4 sm:gap-5", gridColumnClasses[columns], config.className)}
+          className={cn(
+            "col-span-full grid grid-cols-1 gap-4 sm:gap-5",
+            gridColumnClasses[columns],
+            config.className,
+          )}
         >
           {(config.fields ?? []).map(renderField)}
         </div>
@@ -432,7 +464,13 @@ export function EntityForm<T extends Record<string, any>>({
           const update = (next: unknown) => field.onChange(next);
 
           return (
-            <FormItem className={cn("min-w-0 space-y-2", colSpan === 2 && "col-span-full", config.className)}>
+            <FormItem
+              className={cn(
+                "min-w-0 space-y-2",
+                colSpan === 2 && "col-span-full",
+                config.className,
+              )}
+            >
               <div className="flex min-w-0 items-center gap-2">
                 <FormLabel>
                   {label}
@@ -442,11 +480,16 @@ export function EntityForm<T extends Record<string, any>>({
               </div>
               <FormControl>
                 <>
-                  {(type === "text" || type === "name" || type === "email" || type === "tel" || type === "password") && (
+                  {(type === "text" ||
+                    type === "name" ||
+                    type === "email" ||
+                    type === "tel" ||
+                    type === "password") && (
                     <Input
                       type={type === "name" ? "text" : type}
                       placeholder={placeholder}
                       disabled={fieldDisabled}
+                      readOnly={config.readonly}
                       value={String(value ?? "")}
                       onChange={(event) => update(event.target.value)}
                     />
@@ -459,8 +502,12 @@ export function EntityForm<T extends Record<string, any>>({
                       min={min}
                       max={max}
                       step={step ?? 1}
-                      value={value === undefined || value === null ? "" : (value as number | string)}
-                      onChange={(event) => update(event.target.value === "" ? "" : Number(event.target.value))}
+                      value={
+                        value === undefined || value === null ? "" : (value as number | string)
+                      }
+                      onChange={(event) =>
+                        update(event.target.value === "" ? "" : Number(event.target.value))
+                      }
                       readOnly={config.readonly}
                     />
                   )}
@@ -507,7 +554,9 @@ export function EntityForm<T extends Record<string, any>>({
                       </SelectTrigger>
                       <SelectContent>
                         {options.map((option) => (
-                          <SelectItem key={String(option.value)} value={String(option.value)}>{option.label}</SelectItem>
+                          <SelectItem key={String(option.value)} value={String(option.value)}>
+                            {option.label}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -526,17 +575,26 @@ export function EntityForm<T extends Record<string, any>>({
                     <div className="space-y-2">
                       {options.map((option) => {
                         const values = Array.isArray(value) ? value : [];
-                        const checked = values.some((item) => String(item) === String(option.value));
+                        const checked = values.some(
+                          (item) => String(item) === String(option.value),
+                        );
                         return (
-                          <label key={String(option.value)} className="flex cursor-pointer items-center gap-2 text-sm">
+                          <label
+                            key={String(option.value)}
+                            className="flex cursor-pointer items-center gap-2 text-sm"
+                          >
                             <Checkbox
                               checked={checked}
                               disabled={fieldDisabled}
-                              onCheckedChange={(isChecked) => update(
-                                isChecked
-                                  ? [...values, option.value]
-                                  : values.filter((item) => String(item) !== String(option.value)),
-                              )}
+                              onCheckedChange={(isChecked) =>
+                                update(
+                                  isChecked
+                                    ? [...values, option.value]
+                                    : values.filter(
+                                        (item) => String(item) !== String(option.value),
+                                      ),
+                                )
+                              }
                             />
                             <span>{option.label}</span>
                           </label>
@@ -546,14 +604,24 @@ export function EntityForm<T extends Record<string, any>>({
                   )}
                   {type === "checkbox" && (
                     <label className="flex items-center gap-2 text-sm">
-                      <Checkbox checked={Boolean(value)} onCheckedChange={update} disabled={fieldDisabled} />
+                      <Checkbox
+                        checked={Boolean(value)}
+                        onCheckedChange={update}
+                        disabled={fieldDisabled}
+                      />
                       {placeholder && <span className="text-muted-foreground">{placeholder}</span>}
                     </label>
                   )}
                   {type === "switch" && (
                     <div className="flex items-center gap-2">
-                      <Switch checked={Boolean(value)} onCheckedChange={update} disabled={fieldDisabled} />
-                      {placeholder && <span className="text-sm text-muted-foreground">{placeholder}</span>}
+                      <Switch
+                        checked={Boolean(value)}
+                        onCheckedChange={update}
+                        disabled={fieldDisabled}
+                      />
+                      {placeholder && (
+                        <span className="text-sm text-muted-foreground">{placeholder}</span>
+                      )}
                     </div>
                   )}
                 </>
@@ -583,26 +651,39 @@ export function EntityForm<T extends Record<string, any>>({
         </DialogHeader>
         <Form {...form}>
           <form
-            onSubmit={form.handleSubmit(async (values) => {
-              try {
-                await onSubmit(values);
-              } catch (error) {
-                toast.error(error instanceof Error ? error.message : "Could not save this item");
-              }
-            }, (errors) => {
-              const firstError = Object.entries(errors)[0];
-              if (!firstError) {
-                toast.error("Please check the required fields");
-                return;
-              }
-              const [name, error] = firstError;
-              const message = error && "message" in error ? error.message : undefined;
-              toast.error(typeof message === "string" ? message : "Please check the required fields");
-              document.querySelector<HTMLElement>(`[name="${CSS.escape(name)}"]`)?.focus();
-            })}
-            className={cn("mt-5 space-y-5", size === "full" && "flex min-h-0 flex-1 flex-col overflow-hidden")}
+            onSubmit={form.handleSubmit(
+              async (values) => {
+                try {
+                  await onSubmit(values);
+                } catch (error) {
+                  toast.error(error instanceof Error ? error.message : "Could not save this item");
+                }
+              },
+              (errors) => {
+                const firstError = Object.entries(errors)[0];
+                if (!firstError) {
+                  toast.error("Please check the required fields");
+                  return;
+                }
+                const [name, error] = firstError;
+                const message = error && "message" in error ? error.message : undefined;
+                toast.error(
+                  typeof message === "string" ? message : "Please check the required fields",
+                );
+                document.querySelector<HTMLElement>(`[name="${CSS.escape(name)}"]`)?.focus();
+              },
+            )}
+            className={cn(
+              "mt-5 space-y-5",
+              size === "full" && "flex min-h-0 flex-1 flex-col overflow-hidden",
+            )}
           >
-            <div className={cn("grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5", size === "full" && "min-h-0 flex-1 overflow-y-auto px-1")}>
+            <div
+              className={cn(
+                "grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5",
+                size === "full" && "min-h-0 flex-1 overflow-y-auto px-1",
+              )}
+            >
               {fields.map(renderField)}
               {children}
             </div>
@@ -610,21 +691,31 @@ export function EntityForm<T extends Record<string, any>>({
               <DialogFooter className="w-full shrink-0 justify-between gap-2 border-t border-border pt-4 sm:flex-row sm:justify-between">
                 <div className="flex flex-wrap items-center gap-2">{footerActions}</div>
                 <div className="flex items-center justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => onOpenChange(false)}
+                    disabled={isLoading}
+                  >
                     {cancelLabel}
                   </Button>
                   <Button type="submit" disabled={isLoading}>
-                    {isLoading ? "Saving..." : submitLabel ?? (isEdit ? "Update" : "Create")}
+                    {isLoading ? "Saving..." : (submitLabel ?? (isEdit ? "Update" : "Create"))}
                   </Button>
                 </div>
               </DialogFooter>
             ) : (
               <DialogFooter className="shrink-0 gap-2 border-t border-border pt-4">
-                <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  disabled={isLoading}
+                >
                   {cancelLabel}
                 </Button>
                 <Button type="submit" disabled={isLoading}>
-                  {isLoading ? "Saving..." : submitLabel ?? (isEdit ? "Update" : "Create")}
+                  {isLoading ? "Saving..." : (submitLabel ?? (isEdit ? "Update" : "Create"))}
                 </Button>
               </DialogFooter>
             )}
@@ -636,21 +727,128 @@ export function EntityForm<T extends Record<string, any>>({
 }
 
 export const fieldPresets = {
-  file: (name: string, label: string, options?: Partial<FormFieldConfig>): FormFieldConfig => ({ name, label, type: "file", ...options }),
-  text: (name: string, label: string, options?: Partial<FormFieldConfig>): FormFieldConfig => ({ name, label, type: "text", ...options }),
-  email: (name: string, label: string, options?: Partial<FormFieldConfig>): FormFieldConfig => ({ name, label, type: "email", placeholder: "name@example.com", ...options }),
-  phone: (name: string, label: string, options?: Partial<FormFieldConfig>): FormFieldConfig => ({ name, label, type: "tel", placeholder: "Phone number", ...options }),
-  currency: (name: string, label: string, options?: Partial<FormFieldConfig>): FormFieldConfig => ({ name, label, type: "currency", placeholder: "0", min: 0, ...options }),
-  select: (name: string, label: string, optionsList: SelectOption[], options?: Partial<FormFieldConfig>): FormFieldConfig => ({ name, label, type: "select", options: optionsList, ...options }),
-  searchableSelect: (name: string, label: string, optionsList: SelectOption[], options?: Partial<FormFieldConfig>): FormFieldConfig => ({ name, label, type: "searchable-select", options: optionsList, ...options }),
-  multiSelect: (name: string, label: string, optionsList: SelectOption[], options?: Partial<FormFieldConfig>): FormFieldConfig => ({ name, label, type: "multi-select", options: optionsList, colSpan: 2, ...options }),
-  checkbox: (name: string, label: string, options?: Partial<FormFieldConfig>): FormFieldConfig => ({ name, label, type: "checkbox", ...options }),
-  time: (name: string, label: string, options?: Partial<FormFieldConfig>): FormFieldConfig => ({ name, label, type: "time", ...options }),
-  textarea: (name: string, label: string, options?: Partial<FormFieldConfig>): FormFieldConfig => ({ name, label, type: "textarea", rows: 3, colSpan: 2, ...options }),
-  date: (name: string, label: string, options?: Partial<FormFieldConfig>): FormFieldConfig => ({ name, label, type: "date", ...options }),
-  password: (name: string, label: string, options?: Partial<FormFieldConfig>): FormFieldConfig => ({ name, label, type: "password", placeholder: "Enter password", ...options }),
-  number: (name: string, label: string, options?: Partial<FormFieldConfig>): FormFieldConfig => ({ name, label, type: "number", ...options }),
-  switch: (name: string, label: string, options?: Partial<FormFieldConfig>): FormFieldConfig => ({ name, label, type: "switch", ...options }),
-  name: (name: string, label: string, options?: Partial<FormFieldConfig>): FormFieldConfig => ({ name, label, type: "name", ...options }),
-  row: (fields: FormFieldConfig[], columns: number = 2): FormFieldConfig => ({ name: `row-${fields.map((field) => field.name).join("-")}`, label: "", type: "row", fields, columns, colSpan: 2 }),
+  file: (name: string, label: string, options?: Partial<FormFieldConfig>): FormFieldConfig => ({
+    name,
+    label,
+    type: "file",
+    ...options,
+  }),
+  text: (name: string, label: string, options?: Partial<FormFieldConfig>): FormFieldConfig => ({
+    name,
+    label,
+    type: "text",
+    ...options,
+  }),
+  email: (name: string, label: string, options?: Partial<FormFieldConfig>): FormFieldConfig => ({
+    name,
+    label,
+    type: "email",
+    placeholder: "name@example.com",
+    ...options,
+  }),
+  phone: (name: string, label: string, options?: Partial<FormFieldConfig>): FormFieldConfig => ({
+    name,
+    label,
+    type: "tel",
+    placeholder: "Phone number",
+    ...options,
+  }),
+  currency: (name: string, label: string, options?: Partial<FormFieldConfig>): FormFieldConfig => ({
+    name,
+    label,
+    type: "currency",
+    placeholder: "0",
+    min: 0,
+    ...options,
+  }),
+  select: (
+    name: string,
+    label: string,
+    optionsList: SelectOption[],
+    options?: Partial<FormFieldConfig>,
+  ): FormFieldConfig => ({ name, label, type: "select", options: optionsList, ...options }),
+  searchableSelect: (
+    name: string,
+    label: string,
+    optionsList: SelectOption[],
+    options?: Partial<FormFieldConfig>,
+  ): FormFieldConfig => ({
+    name,
+    label,
+    type: "searchable-select",
+    options: optionsList,
+    ...options,
+  }),
+  multiSelect: (
+    name: string,
+    label: string,
+    optionsList: SelectOption[],
+    options?: Partial<FormFieldConfig>,
+  ): FormFieldConfig => ({
+    name,
+    label,
+    type: "multi-select",
+    options: optionsList,
+    colSpan: 2,
+    ...options,
+  }),
+  checkbox: (name: string, label: string, options?: Partial<FormFieldConfig>): FormFieldConfig => ({
+    name,
+    label,
+    type: "checkbox",
+    ...options,
+  }),
+  time: (name: string, label: string, options?: Partial<FormFieldConfig>): FormFieldConfig => ({
+    name,
+    label,
+    type: "time",
+    ...options,
+  }),
+  textarea: (name: string, label: string, options?: Partial<FormFieldConfig>): FormFieldConfig => ({
+    name,
+    label,
+    type: "textarea",
+    rows: 3,
+    colSpan: 2,
+    ...options,
+  }),
+  date: (name: string, label: string, options?: Partial<FormFieldConfig>): FormFieldConfig => ({
+    name,
+    label,
+    type: "date",
+    ...options,
+  }),
+  password: (name: string, label: string, options?: Partial<FormFieldConfig>): FormFieldConfig => ({
+    name,
+    label,
+    type: "password",
+    placeholder: "Enter password",
+    ...options,
+  }),
+  number: (name: string, label: string, options?: Partial<FormFieldConfig>): FormFieldConfig => ({
+    name,
+    label,
+    type: "number",
+    ...options,
+  }),
+  switch: (name: string, label: string, options?: Partial<FormFieldConfig>): FormFieldConfig => ({
+    name,
+    label,
+    type: "switch",
+    ...options,
+  }),
+  name: (name: string, label: string, options?: Partial<FormFieldConfig>): FormFieldConfig => ({
+    name,
+    label,
+    type: "name",
+    ...options,
+  }),
+  row: (fields: FormFieldConfig[], columns: number = 2): FormFieldConfig => ({
+    name: `row-${fields.map((field) => field.name).join("-")}`,
+    label: "",
+    type: "row",
+    fields,
+    columns,
+    colSpan: 2,
+  }),
 };

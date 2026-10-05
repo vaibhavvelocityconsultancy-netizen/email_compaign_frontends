@@ -27,6 +27,7 @@ import {
   type OpportunityStatus,
 } from "@/lib/api";
 import { listCompanies, type Company } from "@/lib/company-api";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/sales/opportunities")({
   head: () => ({
@@ -204,6 +205,7 @@ function OpportunitiesPage() {
   const [editing, setEditing] = useState<Opportunity | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Opportunity | null>(null);
   const [convertTarget, setConvertTarget] = useState<Opportunity | null>(null);
+  const [convertCompanyId, setConvertCompanyId] = useState("");
   const [convertRows, setConvertRows] = useState<Array<{ moduleId: number; moduleName: string; description: string; estimatedCost: number; amount: string }>>([]);
   const [convertError, setConvertError] = useState("");
   const opportunitiesQuery = useQuery({ queryKey: ["opportunities"], queryFn: getOpportunities });
@@ -250,8 +252,8 @@ function OpportunitiesPage() {
   });
 
   const convertMutation = useMutation({
-    mutationFn: ({ opportunityId, items }: { opportunityId: string; items: Array<{ module: number; amount: string }> }) =>
-      convertOpportunityToQuotation(opportunityId, items),
+    mutationFn: ({ opportunityId, companyId, items }: { opportunityId: string; companyId: number; items: Array<{ module: number; amount: string }> }) =>
+      convertOpportunityToQuotation(opportunityId, companyId, items),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["opportunities"] });
       await queryClient.invalidateQueries({ queryKey: ["quotations"] });
@@ -273,6 +275,7 @@ function OpportunitiesPage() {
       amount: String(module.estimatedCost ?? 0),
     }));
     setConvertTarget(opportunity);
+    setConvertCompanyId(opportunity.companyId == null ? "" : String(opportunity.companyId));
     setConvertRows(rows);
     setConvertError("");
   };
@@ -281,6 +284,11 @@ function OpportunitiesPage() {
 
   const submitConversion = () => {
     if (!convertTarget) return;
+
+    if (!convertCompanyId) {
+      setConvertError("Select a company before converting.");
+      return;
+    }
 
     if (convertRows.length === 0) {
       setConvertError("This opportunity has no modules. Add at least one module before converting.");
@@ -299,7 +307,11 @@ function OpportunitiesPage() {
       amount: String(Number(row.amount)),
     }));
 
-    convertMutation.mutate({ opportunityId: convertTarget.id, items });
+    convertMutation.mutate({
+      opportunityId: convertTarget.id,
+      companyId: Number(convertCompanyId),
+      items,
+    });
   };
 
   const columns = useMemo<Column<Opportunity>[]>(() => [
@@ -338,9 +350,9 @@ function OpportunitiesPage() {
       headerClassName: "text-right",
       cell: (opportunity) => (
         <div className="flex justify-end gap-1">
-          <button type="button" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground" aria-label={`Convert ${opportunity.companyName} to quotation`} title="Convert to quotation" onClick={() => openConvertDialog(opportunity)}>
+          {/* <button type="button" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground" aria-label={`Convert ${opportunity.companyName} to quotation`} title="Convert to quotation" onClick={() => openConvertDialog(opportunity)}>
             <FileText className="size-4" />
-          </button>
+          </button> */}
           <button type="button" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground" aria-label={`Edit ${opportunity.companyName}`} title="Edit opportunity" onClick={() => { setEditing(opportunity); setFormOpen(true); }}>
             <Pencil className="size-4" />
           </button>
@@ -406,7 +418,22 @@ function OpportunitiesPage() {
           searchPlaceholder="Search opportunities..."
           storageKey="opportunities"
           emptyMessage={opportunitiesQuery.isLoading ? "Loading opportunities…" : "No opportunities yet."}
-          toolbarActions={<button type="button" className="flex h-9 items-center gap-1.5 rounded-lg bg-brand px-4 text-sm font-medium text-white hover:bg-brand/90" onClick={() => { setEditing(null); setFormOpen(true); }}><Plus className="size-4" /> New opportunity</button>}
+          toolbarActions={(
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-9 gap-1.5"
+                onClick={() => navigate({
+                  to: "/tasks/form",
+                  search: { taskId: undefined, module: "OPPORTUNITY", companyId: undefined, referenceId: undefined },
+                })}
+              >
+                <Plus className="size-4" /> New Task
+              </Button>
+              <button type="button" className="flex h-9 items-center gap-1.5 rounded-lg bg-brand px-4 text-sm font-medium text-white hover:bg-brand/90" onClick={() => { setEditing(null); setFormOpen(true); }}><Plus className="size-4" /> New opportunity</button>
+            </div>
+          )}
         />
         {opportunitiesQuery.isError && <p className="mt-2 text-sm text-destructive">{opportunitiesQuery.error.message}</p>}
       </div>
@@ -437,95 +464,126 @@ function OpportunitiesPage() {
       >
         <OpportunityModulesEditor disabled={saveMutation.isPending} />
       </EntityForm>
-      <Modal
-        open={Boolean(convertTarget)}
-        onClose={() => {
-          if (!convertMutation.isPending) {
-            setConvertTarget(null);
-            setConvertRows([]);
-            setConvertError("");
-          }
-        }}
-        title="Convert to Quotation"
-        wide
-      >
-        {convertTarget && (
-          <div className="space-y-5 p-5">
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Project Name</p>
-                <p className="mt-1 font-medium">{convertTarget.projectName || convertTarget.companyName || "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Company</p>
-                <p className="mt-1 font-medium">{convertTarget.companyName || "—"}</p>
-              </div>
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Enquiry For</p>
-                <p className="mt-1 font-medium">{convertTarget.enquiryFor || "—"}</p>
-              </div>
-            </div>
+    <Dialog
+  open={Boolean(convertTarget)}
+  onOpenChange={(open) => {
+    if (!open && !convertMutation.isPending) {
+      setConvertTarget(null);
+      setConvertRows([]);
+      setConvertError("");
+    }
+  }}
+>
+  <DialogContent className="max-h-[90dvh] w-[calc(100vw-2rem)] max-w-3xl gap-0 overflow-y-auto p-0">
+    <DialogHeader className="border-b border-line px-5 py-4">
+      <DialogTitle>Convert to Quotation</DialogTitle>
+    </DialogHeader>
 
-            <div className="overflow-hidden rounded-lg border border-line">
-              <table className="w-full text-left text-sm">
-                <thead className="bg-background text-muted-foreground">
-                  <tr>
-                    <th className="px-3 py-2 font-medium">Module Name</th>
-                    <th className="px-3 py-2 font-medium">Description</th>
-                    <th className="px-3 py-2 font-medium text-right">Estimated Cost</th>
-                    <th className="px-3 py-2 font-medium text-right">Quotation Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {convertRows.map((row) => (
-                    <tr key={row.moduleId} className="border-t border-line align-top">
-                      <td className="px-3 py-3 font-medium">{row.moduleName}</td>
-                      <td className="px-3 py-3 text-muted-foreground">{row.description || "—"}</td>
-                      <td className="px-3 py-3 text-right font-mono text-xs">{formatCurrency(row.estimatedCost)}</td>
-                      <td className="px-3 py-3 text-right">
-                        <div className="relative ml-auto w-40">
-                          <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">₹</span>
-                          <Input
-                            type="number"
-                            min={0}
-                            step="0.01"
-                            value={row.amount}
-                            className="pl-8 text-right"
-                            onChange={(event) => {
-                              const nextValue = event.target.value;
-                              setConvertRows((currentRows) => currentRows.map((currentRow) => (
-                                currentRow.moduleId === row.moduleId ? { ...currentRow, amount: nextValue } : currentRow
-                              )));
-                            }}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex items-center justify-between rounded-md border border-line bg-background px-3 py-2 text-sm font-medium">
-              <span>Subtotal</span>
-              <span className="font-mono">{formatCurrency(subtotal)}</span>
-            </div>
-
-            {convertError && <p className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">{convertError}</p>}
-
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => {
-                setConvertTarget(null);
-                setConvertRows([]);
-                setConvertError("");
-              }} disabled={convertMutation.isPending}>Cancel</Button>
-              <Button type="button" onClick={submitConversion} disabled={convertMutation.isPending}>
-                {convertMutation.isPending ? "Converting..." : "Convert to Quotation"}
-              </Button>
-            </div>
+    {convertTarget && (
+      <div className="space-y-5 p-5">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Project Name</p>
+            <p className="mt-1 font-medium">{convertTarget.projectName || convertTarget.companyName || "—"}</p>
           </div>
+          <label className="space-y-1.5 text-sm">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">Company</span>
+            <select
+              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+              value={convertCompanyId}
+              onChange={(event) => setConvertCompanyId(event.target.value)}
+              disabled={convertMutation.isPending || companiesQuery.isLoading}
+              required
+            >
+              <option value="">Select company</option>
+              {companies.map((company) => (
+                <option key={company.id} value={company.id}>{company.name}</option>
+              ))}
+            </select>
+          </label>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Enquiry For</p>
+            <p className="mt-1 font-medium">{convertTarget.enquiryFor || "—"}</p>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto rounded-lg border border-line">
+          <table className="w-full min-w-[560px] text-left text-sm">
+            <thead className="bg-background text-muted-foreground">
+              <tr>
+                <th className="px-3 py-2 font-medium">Module Name</th>
+                <th className="px-3 py-2 font-medium">Description</th>
+                <th className="px-3 py-2 text-right font-medium">Estimated Cost</th>
+                <th className="px-3 py-2 text-right font-medium">Quotation Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {convertRows.map((row) => (
+                <tr key={row.moduleId} className="border-t border-line align-top">
+                  <td className="px-3 py-3 font-medium">{row.moduleName}</td>
+                  <td className="px-3 py-3 text-muted-foreground">{row.description || "—"}</td>
+                  <td className="px-3 py-3 text-right font-mono text-xs">{formatCurrency(row.estimatedCost)}</td>
+                  <td className="px-3 py-3 text-right">
+                    <div className="relative ml-auto w-40">
+                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground">₹</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={row.amount}
+                        className="pl-8 text-right"
+                        disabled={convertMutation.isPending}
+                        onChange={(event) => {
+                          const nextValue = event.target.value;
+                          setConvertRows((currentRows) =>
+                            currentRows.map((currentRow) =>
+                              currentRow.moduleId === row.moduleId
+                                ? { ...currentRow, amount: nextValue }
+                                : currentRow,
+                            ),
+                          );
+                        }}
+                      />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="flex items-center justify-between rounded-md border border-line bg-background px-3 py-2 text-sm font-medium">
+          <span>Subtotal</span>
+          <span className="font-mono">{formatCurrency(subtotal)}</span>
+        </div>
+
+        {convertError && (
+          <p className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+            {convertError}
+          </p>
         )}
-      </Modal>
+
+        <div className="flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={convertMutation.isPending}
+            onClick={() => {
+              setConvertTarget(null);
+              setConvertRows([]);
+              setConvertError("");
+            }}
+          >
+            Cancel
+          </Button>
+          <Button type="button" onClick={submitConversion} disabled={convertMutation.isPending}>
+            {convertMutation.isPending ? "Converting..." : "Convert to Quotation"}
+          </Button>
+        </div>
+      </div>
+    )}
+  </DialogContent>
+</Dialog>
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}

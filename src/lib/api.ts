@@ -67,7 +67,7 @@ export type LogStatus =
 export interface Lead {
   id: string;
   srNo: number;
-  enquiryFor: "LEAD" | "CLIENT";
+  enquiryFor: string;
   enquiryDate: string;
   companyId: number | null;
   companyName: string;
@@ -102,7 +102,7 @@ export interface LeadInput {
   contact_designation: string;
   contact_mobile: string;
   contact_email: string;
-  enquiry_for: "LEAD" | "CLIENT";
+  enquiry_for: string;
   enquiry_date: string;
   source: string;
   status: string;
@@ -150,6 +150,7 @@ export interface OpportunityModuleInput {
 
 export interface Opportunity {
   id: string;
+  companyId: number | null;
   companyName: string;
   projectName: string;
   enquiryFor: string;
@@ -578,6 +579,12 @@ function mapOpportunity(opportunity: Record<string, unknown>): Opportunity {
 
   return {
     id: String(opportunity.id),
+    companyId:
+      typeof opportunity.company === "object" && opportunity.company
+        ? Number((opportunity.company as Record<string, unknown>).id)
+        : opportunity.company == null
+          ? null
+          : Number(opportunity.company),
     companyName: String(opportunity.company_name ?? ""),
     projectName: String(opportunity.project_name ?? ""),
     enquiryFor: String(opportunity.enquiry_for ?? ""),
@@ -619,11 +626,12 @@ export async function deleteOpportunity(id: string): Promise<void> {
 
 export async function convertOpportunityToQuotation(
   opportunityId: string,
+  companyId: number,
   items: Array<{ module: number; amount: string }>,
 ): Promise<{ message: string; quotation: Record<string, unknown> }> {
   return request<{ message: string; quotation: Record<string, unknown> }>(`/opportunities/${opportunityId}/convert-to-quotation/`, {
     method: "POST",
-    body: JSON.stringify({ items }),
+    body: JSON.stringify({ company_id: companyId, items }),
   });
 }
 
