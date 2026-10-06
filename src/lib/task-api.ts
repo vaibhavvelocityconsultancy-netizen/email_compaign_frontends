@@ -23,6 +23,7 @@ export interface Task {
   repeat_frequency: string | null;
   repeat_interval: number;
   repeat_end_date: string | null;
+  followup_history?: TaskFollowupHistory[];
   attachments?: Array<{
     id: number;
     file_name: string;
@@ -30,9 +31,32 @@ export interface Task {
   }>;
 }
 
+export interface TaskFollowupHistory {
+  id: number;
+  followup_date: string;
+  remark: string;
+  updated_by: string;
+  timestamp: string;
+}
+
 export interface TaskOption {
   value: number;
   label: string;
+}
+
+export interface TaskDashboard {
+  total: number;
+  by_status: { status: string; count: number }[];
+  by_priority: { priority: string; count: number }[];
+  by_module: { module: string; count: number }[];
+  in_progress: number;
+  pending: number;
+  recurring: number;
+  overdue: number;
+  due_today: number;
+  upcoming: number;
+  miscellaneous: number;
+  completed: number;
 }
 
 interface TaskOptionsResponse {
@@ -93,6 +117,11 @@ export function useTasks() {
   });
 }
 
+export function getTaskDashboard(userId?: string): Promise<TaskDashboard> {
+  const query = userId ? `?user_id=${encodeURIComponent(userId)}` : "";
+  return request<TaskDashboard>(`/tasks/dashboard/${query}`);
+}
+
 export function useTask(id?: number) {
   return useQuery({
     queryKey: ["task", id],
@@ -114,36 +143,47 @@ export function useTaskReferenceData() {
         opportunities.map((opportunity) => [opportunity.id, opportunity.companyId]),
       );
 
-      const newestFirst = (items: TaskReferenceOption[], dateField: "enquiryDate" | "quotationDate") =>
-        items.sort(
-          (left, right) => {
-            const leftDate = dateSortValue(left[dateField]);
-            const rightDate = dateSortValue(right[dateField]);
-            return leftDate === rightDate ? 0 : rightDate > leftDate ? 1 : -1;
-          },
-        );
+      const newestFirst = (
+        items: TaskReferenceOption[],
+        dateField: "enquiryDate" | "quotationDate",
+      ) =>
+        items.sort((left, right) => {
+          const leftDate = dateSortValue(left[dateField]);
+          const rightDate = dateSortValue(right[dateField]);
+          return leftDate === rightDate ? 0 : rightDate > leftDate ? 1 : -1;
+        });
 
       return {
-        leads: newestFirst(leads.map((lead) => ({
-          value: lead.id,
-          label: `${lead.enquiryDate || "No enquiry date"} · Lead #${lead.srNo}`,
-          companyId: lead.companyId,
-          enquiryDate: lead.enquiryDate,
-          lead,
-        })), "enquiryDate"),
-        opportunities: newestFirst(opportunities.map((opportunity) => ({
-          value: opportunity.id,
-          label: `${opportunity.enquiryDate || "No enquiry date"} · Opportunity #${opportunity.id}`,
-          companyId: opportunity.companyId,
-          enquiryDate: opportunity.enquiryDate,
-        })), "enquiryDate"),
-        quotations: newestFirst(quotations.map((quotation) => ({
-          value: quotation.quotationNumber,
-          label: quotation.quotationNumber,
-          companyId: quotation.companyId ?? companyByOpportunity.get(quotation.opportunity) ?? null,
-          quotationDate: quotation.quotationDate,
-          quotation,
-        })), "quotationDate"),
+        leads: newestFirst(
+          leads.map((lead) => ({
+            value: lead.id,
+            label: `${lead.enquiryDate || "No enquiry date"} · Lead #${lead.srNo}`,
+            companyId: lead.companyId,
+            enquiryDate: lead.enquiryDate,
+            lead,
+          })),
+          "enquiryDate",
+        ),
+        opportunities: newestFirst(
+          opportunities.map((opportunity) => ({
+            value: opportunity.id,
+            label: `${opportunity.enquiryDate || "No enquiry date"} · Opportunity #${opportunity.id}`,
+            companyId: opportunity.companyId,
+            enquiryDate: opportunity.enquiryDate,
+          })),
+          "enquiryDate",
+        ),
+        quotations: newestFirst(
+          quotations.map((quotation) => ({
+            value: quotation.quotationNumber,
+            label: quotation.quotationNumber,
+            companyId:
+              quotation.companyId ?? companyByOpportunity.get(quotation.opportunity) ?? null,
+            quotationDate: quotation.quotationDate,
+            quotation,
+          })),
+          "quotationDate",
+        ),
       };
     },
   });
@@ -183,8 +223,7 @@ export function useDeleteTask() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: number) =>
-      request<void>(`/tasks/${id}/`, { method: "DELETE" }),
+    mutationFn: (id: number) => request<void>(`/tasks/${id}/`, { method: "DELETE" }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tasks"] }),
   });
 }

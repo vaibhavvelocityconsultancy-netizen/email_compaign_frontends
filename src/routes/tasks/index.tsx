@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { DataTable, type Column } from "@/components/common/DataTable";
 import { useDeleteTask, useTasks, type Task } from "@/lib/task-api";
 
-export const Route = createFileRoute("/tasks/tasks")({
+export const Route = createFileRoute("/tasks/")({
   component: TasksPage,
 });
 
@@ -262,9 +262,7 @@ export default function TasksPage() {
         }
         storageKey="tasks-table"
         selectionResetKey={filter}
-        getRowClassName={(r) =>
-          r.followup_date < today && isOpen(r) ? "bg-red-50/60" : ""
-        }
+        getRowClassName={(r) => (r.followup_date < today && isOpen(r) ? "bg-red-50/60" : "")}
         toolbarActions={
           <Button
             size="sm"

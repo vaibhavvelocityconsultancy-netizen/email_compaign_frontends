@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import * as React from "react";
-import { ArrowLeft, Eye, Save } from "lucide-react";
+import { ArrowLeft, Eye, History, Save } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -132,6 +132,13 @@ function formatLeadDate(value?: string | null) {
   return match ? `${match[3]}-${match[2]}-${match[1]}` : value;
 }
 
+function formatFollowupHistoryDate(value?: string | null) {
+  if (!value) return "—";
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) return `${match[3]}-${match[2]}-${match[1]}`;
+  return value;
+}
+
 function formatLeadLabel(value?: string | null) {
   if (!value) return "—";
   return value
@@ -162,7 +169,12 @@ function LeadDetail({
 }
 
 function TaskFormPage() {
-  const { taskId, module: modulePrefill, companyId: companyPrefill, referenceId: referencePrefill } = Route.useSearch();
+  const {
+    taskId,
+    module: modulePrefill,
+    companyId: companyPrefill,
+    referenceId: referencePrefill,
+  } = Route.useSearch();
   const navigate = useNavigate();
   const numericTaskId = taskId && /^\d+$/.test(taskId) ? Number(taskId) : undefined;
   const isEdit = numericTaskId !== undefined;
@@ -180,6 +192,7 @@ function TaskFormPage() {
   const [removedAttachmentIds, setRemovedAttachmentIds] = React.useState<number[]>([]);
   const [leadDetailsOpen, setLeadDetailsOpen] = React.useState(false);
   const [quotationDetailsOpen, setQuotationDetailsOpen] = React.useState(false);
+  const [historyOpen, setHistoryOpen] = React.useState(false);
 
   React.useEffect(() => {
     if (isEdit || !modulePrefill) return;
@@ -231,6 +244,9 @@ function TaskFormPage() {
   const selectedQuotation =
     values.module === "QUOTATION" ? selectedReference?.quotation : undefined;
 
+  // Newest entry first.
+  const followupHistory = [...(taskQuery.data?.followup_history ?? [])].reverse();
+
   React.useEffect(() => {
     if (selectedCompanyId === null || referenceQuery.isLoading) {
       return;
@@ -277,15 +293,13 @@ function TaskFormPage() {
 
     try {
       const body = toFormData(payload, files);
-      removedAttachmentIds.forEach((id) =>
-        body.append("remove_attachment_ids", String(id)),
-      );
+      removedAttachmentIds.forEach((id) => body.append("remove_attachment_ids", String(id)));
       await save.mutateAsync({
         id: numericTaskId,
         body,
       });
       toast.success(isEdit ? "Task updated" : "Task created");
-      await navigate({ to: "/tasks/tasks" });
+      await navigate({ to: "/tasks" });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not save task");
     }
@@ -299,7 +313,7 @@ function TaskFormPage() {
     return (
       <div className="space-y-4 p-6">
         <p className="text-sm text-destructive">Task not found.</p>
-        <Button variant="outline" onClick={() => navigate({ to: "/tasks/tasks" })}>
+        <Button variant="outline" onClick={() => navigate({ to: "/tasks" })}>
           Back to tasks
         </Button>
       </div>
@@ -314,7 +328,7 @@ function TaskFormPage() {
           variant="outline"
           size="icon"
           aria-label="Back to tasks"
-          onClick={() => navigate({ to: "/tasks/tasks" })}
+          onClick={() => navigate({ to: "/tasks" })}
         >
           <ArrowLeft className="size-4" />
         </Button>
@@ -477,7 +491,6 @@ function TaskFormPage() {
             </select>
           </label>
 
-
           <label className="flex items-center gap-3 sm:col-span-2">
             <input
               type="checkbox"
@@ -527,7 +540,6 @@ function TaskFormPage() {
             </>
           )}
 
-          
           <div className="sm:col-span-2">
             <span className={labelClassName}>Attachments</span>
 
@@ -608,7 +620,6 @@ function TaskFormPage() {
               onChange={(event) => updateValue("remarks", event.target.value)}
             />
           </label>
-
         </div>
 
         {referenceQuery.isError && (
@@ -618,28 +629,33 @@ function TaskFormPage() {
         )}
 
         <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-4">
-          {selectedLead && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setLeadDetailsOpen(true)}
-            >
-              <Eye className="mr-2 size-4" />
-              View Lead Details
-            </Button>
-          )}
-          {selectedQuotation && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setQuotationDetailsOpen(true)}
-            >
-              <Eye className="mr-2 size-4" />
-              View Quotation Details
-            </Button>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {isEdit && (
+              <Button type="button" variant="outline" onClick={() => setHistoryOpen(true)}>
+                <History className="mr-2 size-4" />
+                Follow-up History
+                {followupHistory.length > 0 && (
+                  <span className="ml-2 rounded-full bg-muted px-1.5 text-xs tabular-nums">
+                    {followupHistory.length}
+                  </span>
+                )}
+              </Button>
+            )}
+            {selectedLead && (
+              <Button type="button" variant="outline" onClick={() => setLeadDetailsOpen(true)}>
+                <Eye className="mr-2 size-4" />
+                View Lead Details
+              </Button>
+            )}
+            {selectedQuotation && (
+              <Button type="button" variant="outline" onClick={() => setQuotationDetailsOpen(true)}>
+                <Eye className="mr-2 size-4" />
+                View Quotation Details
+              </Button>
+            )}
+          </div>
           <div className="ml-auto flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => navigate({ to: "/tasks/tasks" })}>
+            <Button type="button" variant="outline" onClick={() => navigate({ to: "/tasks" })}>
               Cancel
             </Button>
             <Button
@@ -658,6 +674,48 @@ function TaskFormPage() {
           </div>
         </div>
       </form>
+
+      {isEdit && (
+        <Modal
+          open={historyOpen}
+          onClose={() => setHistoryOpen(false)}
+          title="Follow-up History"
+          eyebrow="TASK"
+          wide
+        >
+          <div className="max-h-[70vh] overflow-y-auto p-5">
+            {followupHistory.length > 0 ? (
+              <ol className="space-y-3">
+                {followupHistory.map((entry) => (
+                  <li
+                    key={entry.id}
+                    className="rounded-md border border-line bg-surface p-3 text-sm"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
+                      <p className="font-medium">
+                        {formatFollowupHistoryDate(entry.followup_date)}
+                      </p>
+                      <div className="text-xs text-muted-foreground">
+                        {entry.updated_by && <span>{entry.updated_by}</span>}
+                        {entry.timestamp && <span className="ml-2">{entry.timestamp}</span>}
+                      </div>
+                    </div>
+                    {entry.remark && (
+                      <p className="mt-1.5 whitespace-pre-wrap text-muted-foreground">
+                        {entry.remark}
+                      </p>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                No follow-up history yet.
+              </p>
+            )}
+          </div>
+        </Modal>
+      )}
 
       {selectedLead && (
         <Modal
@@ -725,7 +783,10 @@ function TaskFormPage() {
                 </thead>
                 <tbody>
                   {selectedQuotation.items.map((item, index) => (
-                    <tr key={item.id ?? `${item.moduleName}-${index}`} className="border-t border-border">
+                    <tr
+                      key={item.id ?? `${item.moduleName}-${index}`}
+                      className="border-t border-border"
+                    >
                       <td className="px-3 py-2 font-medium">{item.moduleName || "—"}</td>
                       <td className="px-3 py-2">{item.description || "—"}</td>
                       <td className="px-3 py-2">{item.requirements || "—"}</td>

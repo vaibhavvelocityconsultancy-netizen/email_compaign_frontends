@@ -6,6 +6,13 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerDescription,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 import { Modal } from "@/components/common/Modal";
 import { DataTable, type Column } from "@/components/common/DataTable";
 import {
@@ -160,6 +167,13 @@ function FinalOfferPage() {
   const [editingOffer, setEditingOffer] = useState<Quotation | null>(null);
   const [foDate, setFoDate] = useState("");
   const [items, setItems] = useState<FinalOfferItemDraft[]>([]);
+  const [itemDrawerIndex, setItemDrawerIndex] = useState<number | null>(null);
+
+  const updateItem = (index: number, changes: Partial<FinalOfferItemDraft>) => {
+    setItems((current) =>
+      current.map((item, itemIndex) => (itemIndex === index ? { ...item, ...changes } : item)),
+    );
+  };
 
   const generateMutation = useMutation({
     mutationFn: (quotationId: string) => generateFinalOffer(quotationId),
@@ -197,8 +211,7 @@ function FinalOfferPage() {
   });
 
   const cpoMutation = useMutation({
-    mutationFn: (quotationId: string) =>
-      updateQuotationCpo(quotationId, { cpo_created: true }),
+    mutationFn: (quotationId: string) => updateQuotationCpo(quotationId, { cpo_created: true }),
     onSuccess: async (quotation) => {
       setEditingOffer((current) =>
         current ? { ...current, cpoCreated: quotation.cpoCreated } : current,
@@ -286,7 +299,6 @@ function FinalOfferPage() {
         eyebrow="FINAL OFFER"
         wide
       >
-
         {/* offer form sd*/}
         {editingOffer && (
           <form
@@ -338,199 +350,250 @@ function FinalOfferPage() {
             </label>
 
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold">Items</h3>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={() =>
-                    setItems((current) => [
-                      ...current,
-                      {
-                        module: null,
-                        moduleName: "",
-                        description: "",
-                        requirements: "",
-                        estimatedCost: 0,
-                        estimatedDays: 0,
-                        priority: "MEDIUM",
-                        remarks: "",
-                        amount: 0,
-                      },
-                    ])
-                  }
-                >
-                  <Plus className="mr-1 size-4" /> Add Item
-                </Button>
-              </div>
+              <section className="rounded-lg border border-line bg-surface">
+                <div className="flex items-center justify-between gap-2 p-4">
+                  <h3 className="text-sm font-semibold">Items</h3>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => {
+                      const nextIndex = items.length;
+                      setItems((current) => [
+                        ...current,
+                        {
+                          module: null,
+                          moduleName: "",
+                          description: "",
+                          requirements: "",
+                          estimatedCost: 0,
+                          estimatedDays: 0,
+                          priority: "MEDIUM",
+                          remarks: "",
+                          amount: 0,
+                        },
+                      ]);
+                      setItemDrawerIndex(nextIndex);
+                    }}
+                  >
+                    <Plus className="size-4" /> Add Item
+                  </Button>
+                </div>
 
-              <div className="overflow-x-auto rounded-md border border-line">
-                <table className="w-full min-w-[1000px] text-left text-sm">
-                  <thead className="bg-background text-muted-foreground">
-                    <tr>
-                      <th className="px-2 py-2 font-medium">Type</th>
-                      <th className="px-2 py-2 font-medium">Description</th>
-                      <th className="px-2 py-2 font-medium">Requirements</th>
-                      <th className="px-2 py-2 font-medium">Remarks</th>
-                      <th className="px-2 py-2 font-medium">Days</th>
-                      <th className="px-2 py-2 font-medium">Unit Cost</th>
-                      <th className="px-2 py-2 font-medium">Amount</th>
-                      <th className="px-2 py-2" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((item, index) => (
-                      <tr
-                        key={`new-${index}`}
-                        className="border-t border-line align-top"
-                      >
-                        <td className="p-2">
-                          <Input
-                            value={item.moduleName}
-                            onChange={(event) =>
-                              setItems((current) =>
-                                current.map((row, rowIndex) =>
-                                  rowIndex === index
-                                    ? { ...row, moduleName: event.target.value }
-                                    : row,
-                                ),
-                              )
-                            }
-                          />
-                        </td>
-                        <td className="p-2">
-                          <Input
-                            value={item.description}
-                            onChange={(event) =>
-                              setItems((current) =>
-                                current.map((row, rowIndex) =>
-                                  rowIndex === index
-                                    ? { ...row, description: event.target.value }
-                                    : row,
-                                ),
-                              )
-                            }
-                          />
-                        </td>
-                        <td className="p-2">
-                          <Input
-                            value={item.requirements}
-                            onChange={(event) =>
-                              setItems((current) =>
-                                current.map((row, rowIndex) =>
-                                  rowIndex === index
-                                    ? { ...row, requirements: event.target.value }
-                                    : row,
-                                ),
-                              )
-                            }
-                          />
-                        </td>
-                        <td className="p-2">
-                          <Input
-                            value={item.remarks}
-                            onChange={(event) =>
-                              setItems((current) =>
-                                current.map((row, rowIndex) =>
-                                  rowIndex === index
-                                    ? { ...row, remarks: event.target.value }
-                                    : row,
-                                ),
-                              )
-                            }
-                          />
-                        </td>
-                        <td className="p-2">
-                          <Input
-                            type="number"
-                            min="0"
-                            value={item.estimatedDays ?? ""}
-                            onChange={(event) =>
-                              setItems((current) =>
-                                current.map((row, rowIndex) =>
-                                  rowIndex === index
-                                    ? {
-                                        ...row,
-                                        estimatedDays:
-                                          event.target.value === ""
-                                            ? null
-                                            : Number(event.target.value),
-                                      }
-                                    : row,
-                                ),
-                              )
-                            }
-                          />
-                        </td>
-                        <td className="p-2">
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={item.estimatedCost ?? ""}
-                            onChange={(event) =>
-                              setItems((current) =>
-                                current.map((row, rowIndex) =>
-                                  rowIndex === index
-                                    ? {
-                                        ...row,
-                                        estimatedCost:
-                                          event.target.value === ""
-                                            ? null
-                                            : Number(event.target.value),
-                                      }
-                                    : row,
-                                ),
-                              )
-                            }
-                          />
-                        </td>
-                        <td className="p-2">
-                          <Input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={item.amount}
-                            onChange={(event) =>
-                              setItems((current) =>
-                                current.map((row, rowIndex) =>
-                                  rowIndex === index
-                                    ? { ...row, amount: Number(event.target.value) || 0 }
-                                    : row,
-                                ),
-                              )
-                            }
-                          />
-                        </td>
-                        <td className="p-2">
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            aria-label={`Remove item ${index + 1}`}
-                            onClick={() =>
-                              setItems((current) =>
-                                current.filter((_, rowIndex) => rowIndex !== index),
-                              )
-                            }
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                    {items.length === 0 && (
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[1080px] text-sm">
+                    <thead className="border-y border-line text-left text-xs text-muted-foreground">
                       <tr>
-                        <td colSpan={8} className="px-3 py-6 text-center text-muted-foreground">
-                          No items. Add an item to this final offer.
-                        </td>
+                        <th className="w-10 px-4 py-2 font-medium">#</th>
+                        <th className="w-56 px-2 py-2 font-medium">Item name</th>
+                        <th className="w-56 px-2 py-2 font-medium">Description</th>
+                        <th className="w-56 px-2 py-2 font-medium">Requirements</th>
+                        <th className="w-28 px-2 py-2 font-medium">Cost</th>
+                        <th className="w-24 px-2 py-2 font-medium">Days</th>
+                        <th className="w-28 px-2 py-2 font-medium">Priority</th>
+                        <th className="w-36 px-2 py-2 font-medium">Remarks</th>
+                        <th className="w-36 px-2 py-2 text-right font-medium">Amount</th>
+                        <th className="w-12 px-2 py-2" />
                       </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {items.length === 0 && (
+                        <tr>
+                          <td colSpan={10} className="px-4 py-8 text-center text-muted-foreground">
+                            No items added. Click "Add Item" to create a custom final offer item.
+                          </td>
+                        </tr>
+                      )}
+                      {items.map((item, index) => (
+                        <tr
+                          key={`new-${index}`}
+                          className="border-b border-line last:border-0 align-top"
+                        >
+                          <td className="px-4 py-3 text-muted-foreground">{index + 1}</td>
+                          <td className="px-2 py-3 text-sm text-foreground">
+                            {item.moduleName || "—"}
+                          </td>
+                          <td className="px-2 py-3 text-sm text-foreground">
+                            {item.description || "—"}
+                          </td>
+                          <td className="px-2 py-3 text-sm text-foreground">
+                            {item.requirements || "—"}
+                          </td>
+                          <td className="px-2 py-3 text-right text-sm font-medium text-foreground">
+                            {money(Number(item.estimatedCost ?? 0))}
+                          </td>
+                          <td className="px-2 py-3 text-right text-sm text-foreground">
+                            {item.estimatedDays ?? 0}
+                          </td>
+                          <td className="px-2 py-3 text-sm text-foreground">
+                            {item.priority || "MEDIUM"}
+                          </td>
+                          <td className="px-2 py-3 text-sm text-foreground">
+                            {item.remarks || "—"}
+                          </td>
+                          <td className="px-2 py-3 text-right text-sm font-medium text-foreground">
+                            {money(Number(item.amount ?? 0))}
+                          </td>
+                          <td className="px-2 py-3">
+                            <div className="flex items-center justify-end">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setItemDrawerIndex(index)}
+                                aria-label={`Edit item ${index + 1}`}
+                                title="Edit item"
+                              >
+                                <Pencil className="size-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8"
+                                aria-label={`Remove item ${index + 1}`}
+                                onClick={() =>
+                                  setItems((current) =>
+                                    current.filter((_, rowIndex) => rowIndex !== index),
+                                  )
+                                }
+                              >
+                                <Trash2 className="size-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
             </div>
+
+            {itemDrawerIndex !== null && items[itemDrawerIndex] && (
+              <Drawer
+                open
+                onOpenChange={(open) => !open && setItemDrawerIndex(null)}
+                direction="right"
+              >
+                <DrawerContent className="inset-y-0 right-0 bottom-auto left-auto mt-0 h-full w-full max-w-xl rounded-none border-l">
+                  <DrawerHeader className="border-b border-line text-left">
+                    <DrawerTitle>
+                      {items[itemDrawerIndex].moduleName || "New final offer item"}
+                    </DrawerTitle>
+                    <DrawerDescription>
+                      Edit the details for this final offer item.
+                    </DrawerDescription>
+                  </DrawerHeader>
+                  <div className="grid flex-1 gap-3 overflow-y-auto p-5 sm:grid-cols-2">
+                    <label className="space-y-1.5 text-sm sm:col-span-2">
+                      <span className="font-medium">Item name</span>
+                      <Input
+                        placeholder="Inventory Management"
+                        value={items[itemDrawerIndex].moduleName}
+                        onChange={(event) =>
+                          updateItem(itemDrawerIndex, { moduleName: event.target.value })
+                        }
+                      />
+                    </label>
+                    <label className="space-y-1.5 text-sm">
+                      <span className="font-medium">Description</span>
+                      <textarea
+                        className="min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        value={items[itemDrawerIndex].description}
+                        onChange={(event) =>
+                          updateItem(itemDrawerIndex, { description: event.target.value })
+                        }
+                      />
+                    </label>
+                    <label className="space-y-1.5 text-sm">
+                      <span className="font-medium">Requirements</span>
+                      <textarea
+                        className="min-h-24 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        value={items[itemDrawerIndex].requirements}
+                        onChange={(event) =>
+                          updateItem(itemDrawerIndex, { requirements: event.target.value })
+                        }
+                      />
+                    </label>
+                    <label className="space-y-1.5 text-sm">
+                      <span className="font-medium">Estimated cost</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={items[itemDrawerIndex].estimatedCost ?? ""}
+                        onChange={(event) =>
+                          updateItem(itemDrawerIndex, {
+                            estimatedCost:
+                              event.target.value === "" ? null : Number(event.target.value),
+                          })
+                        }
+                      />
+                    </label>
+                    <label className="space-y-1.5 text-sm">
+                      <span className="font-medium">Estimated days</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={items[itemDrawerIndex].estimatedDays ?? ""}
+                        onChange={(event) =>
+                          updateItem(itemDrawerIndex, {
+                            estimatedDays:
+                              event.target.value === "" ? null : Number(event.target.value),
+                          })
+                        }
+                      />
+                    </label>
+                    <label className="space-y-1.5 text-sm">
+                      <span className="font-medium">Priority</span>
+                      <select
+                        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                        value={items[itemDrawerIndex].priority}
+                        onChange={(event) =>
+                          updateItem(itemDrawerIndex, {
+                            priority: event.target.value as FinalOfferItemDraft["priority"],
+                          })
+                        }
+                      >
+                        <option value="LOW">Low</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="HIGH">High</option>
+                      </select>
+                    </label>
+                    <label className="space-y-1.5 text-sm">
+                      <span className="font-medium">Remarks</span>
+                      <Input
+                        value={items[itemDrawerIndex].remarks}
+                        onChange={(event) =>
+                          updateItem(itemDrawerIndex, { remarks: event.target.value })
+                        }
+                      />
+                    </label>
+                    <label className="space-y-1.5 text-sm sm:col-span-2">
+                      <span className="font-medium">Final offer amount</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={items[itemDrawerIndex].amount}
+                        onChange={(event) =>
+                          updateItem(itemDrawerIndex, {
+                            amount: Number(event.target.value) || 0,
+                          })
+                        }
+                      />
+                    </label>
+                    <div className="flex justify-end sm:col-span-2">
+                      <Button type="button" onClick={() => setItemDrawerIndex(null)}>
+                        Done
+                      </Button>
+                    </div>
+                  </div>
+                </DrawerContent>
+              </Drawer>
+            )}
 
             <div className="flex justify-between gap-2 border-t border-line pt-4">
               <div className="flex flex-wrap gap-2">

@@ -17,15 +17,18 @@ import { Route as FinalOfferRouteImport } from './routes/final-offer'
 import { Route as LocationRouteImport } from './routes/location'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MarketingRouteImport } from './routes/marketing'
+import { Route as OrderDashboardRouteImport } from './routes/order-dashboard'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as MarketingEmailCampaignRouteImport } from './routes/marketing/email-campaign'
 import { Route as MarketingLeadsRouteImport } from './routes/marketing/leads'
 import { Route as SalesIndexRouteImport } from './routes/sales/index'
 import { Route as SalesOpportunitiesRouteImport } from './routes/sales/opportunities'
 import { Route as SalesOrdersRouteImport } from './routes/sales/orders'
 import { Route as SalesQuotationsRouteImport } from './routes/sales/quotations'
+import { Route as TasksIndexRouteImport } from './routes/tasks/index'
+import { Route as TasksDashboardRouteImport } from './routes/tasks/dashboard'
 import { Route as TasksFormRouteImport } from './routes/tasks/form'
-import { Route as TasksTasksRouteImport } from './routes/tasks/tasks'
 import { Route as MarketingEmailCampaignIndexRouteImport } from './routes/marketing/email-campaign.index'
 import { Route as MarketingEmailCampaignCampaignsRouteImport } from './routes/marketing/email-campaign.campaigns'
 import { Route as MarketingEmailCampaignLogsRouteImport } from './routes/marketing/email-campaign.logs'
@@ -73,9 +76,19 @@ const MarketingRoute = MarketingRouteImport.update({
   path: '/marketing',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrderDashboardRoute = OrderDashboardRouteImport.update({
+  id: '/order-dashboard',
+  path: '/order-dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TasksRoute = TasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MarketingEmailCampaignRoute = MarketingEmailCampaignRouteImport.update({
@@ -108,15 +121,20 @@ const SalesQuotationsRoute = SalesQuotationsRouteImport.update({
   path: '/sales/quotations',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TasksFormRoute = TasksFormRouteImport.update({
-  id: '/tasks/form',
-  path: '/tasks/form',
-  getParentRoute: () => rootRouteImport,
+const TasksIndexRoute = TasksIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => TasksRoute,
 } as any)
-const TasksTasksRoute = TasksTasksRouteImport.update({
-  id: '/tasks/tasks',
-  path: '/tasks/tasks',
-  getParentRoute: () => rootRouteImport,
+const TasksDashboardRoute = TasksDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => TasksRoute,
+} as any)
+const TasksFormRoute = TasksFormRouteImport.update({
+  id: '/form',
+  path: '/form',
+  getParentRoute: () => TasksRoute,
 } as any)
 const MarketingEmailCampaignIndexRoute =
   MarketingEmailCampaignIndexRouteImport.update({
@@ -163,15 +181,18 @@ export interface FileRoutesByFullPath {
   '/location': typeof LocationRoute
   '/login': typeof LoginRoute
   '/marketing': typeof MarketingRouteWithChildren
+  '/order-dashboard': typeof OrderDashboardRoute
   '/register': typeof RegisterRoute
+  '/tasks': typeof TasksRouteWithChildren
   '/marketing/email-campaign': typeof MarketingEmailCampaignRouteWithChildren
   '/marketing/leads': typeof MarketingLeadsRouteWithChildren
   '/sales/opportunities': typeof SalesOpportunitiesRoute
   '/sales/orders': typeof SalesOrdersRoute
   '/sales/quotations': typeof SalesQuotationsRoute
+  '/tasks/dashboard': typeof TasksDashboardRoute
   '/tasks/form': typeof TasksFormRoute
-  '/tasks/tasks': typeof TasksTasksRoute
   '/sales/': typeof SalesIndexRoute
+  '/tasks/': typeof TasksIndexRoute
   '/marketing/email-campaign/campaigns': typeof MarketingEmailCampaignCampaignsRoute
   '/marketing/email-campaign/logs': typeof MarketingEmailCampaignLogsRoute
   '/marketing/email-campaign/sequences': typeof MarketingEmailCampaignSequencesRoute
@@ -188,14 +209,16 @@ export interface FileRoutesByTo {
   '/location': typeof LocationRoute
   '/login': typeof LoginRoute
   '/marketing': typeof MarketingRouteWithChildren
+  '/order-dashboard': typeof OrderDashboardRoute
   '/register': typeof RegisterRoute
   '/marketing/leads': typeof MarketingLeadsRouteWithChildren
   '/sales/opportunities': typeof SalesOpportunitiesRoute
   '/sales/orders': typeof SalesOrdersRoute
   '/sales/quotations': typeof SalesQuotationsRoute
+  '/tasks/dashboard': typeof TasksDashboardRoute
   '/tasks/form': typeof TasksFormRoute
-  '/tasks/tasks': typeof TasksTasksRoute
   '/sales': typeof SalesIndexRoute
+  '/tasks': typeof TasksIndexRoute
   '/marketing/email-campaign/campaigns': typeof MarketingEmailCampaignCampaignsRoute
   '/marketing/email-campaign/logs': typeof MarketingEmailCampaignLogsRoute
   '/marketing/email-campaign/sequences': typeof MarketingEmailCampaignSequencesRoute
@@ -213,15 +236,18 @@ export interface FileRoutesById {
   '/location': typeof LocationRoute
   '/login': typeof LoginRoute
   '/marketing': typeof MarketingRouteWithChildren
+  '/order-dashboard': typeof OrderDashboardRoute
   '/register': typeof RegisterRoute
+  '/tasks': typeof TasksRouteWithChildren
   '/marketing/email-campaign': typeof MarketingEmailCampaignRouteWithChildren
   '/marketing/leads': typeof MarketingLeadsRouteWithChildren
   '/sales/opportunities': typeof SalesOpportunitiesRoute
   '/sales/orders': typeof SalesOrdersRoute
   '/sales/quotations': typeof SalesQuotationsRoute
+  '/tasks/dashboard': typeof TasksDashboardRoute
   '/tasks/form': typeof TasksFormRoute
-  '/tasks/tasks': typeof TasksTasksRoute
   '/sales/': typeof SalesIndexRoute
+  '/tasks/': typeof TasksIndexRoute
   '/marketing/email-campaign/campaigns': typeof MarketingEmailCampaignCampaignsRoute
   '/marketing/email-campaign/logs': typeof MarketingEmailCampaignLogsRoute
   '/marketing/email-campaign/sequences': typeof MarketingEmailCampaignSequencesRoute
@@ -240,15 +266,18 @@ export interface FileRouteTypes {
     | '/location'
     | '/login'
     | '/marketing'
+    | '/order-dashboard'
     | '/register'
+    | '/tasks'
     | '/marketing/email-campaign'
     | '/marketing/leads'
     | '/sales/opportunities'
     | '/sales/orders'
     | '/sales/quotations'
+    | '/tasks/dashboard'
     | '/tasks/form'
-    | '/tasks/tasks'
     | '/sales/'
+    | '/tasks/'
     | '/marketing/email-campaign/campaigns'
     | '/marketing/email-campaign/logs'
     | '/marketing/email-campaign/sequences'
@@ -265,14 +294,16 @@ export interface FileRouteTypes {
     | '/location'
     | '/login'
     | '/marketing'
+    | '/order-dashboard'
     | '/register'
     | '/marketing/leads'
     | '/sales/opportunities'
     | '/sales/orders'
     | '/sales/quotations'
+    | '/tasks/dashboard'
     | '/tasks/form'
-    | '/tasks/tasks'
     | '/sales'
+    | '/tasks'
     | '/marketing/email-campaign/campaigns'
     | '/marketing/email-campaign/logs'
     | '/marketing/email-campaign/sequences'
@@ -289,15 +320,18 @@ export interface FileRouteTypes {
     | '/location'
     | '/login'
     | '/marketing'
+    | '/order-dashboard'
     | '/register'
+    | '/tasks'
     | '/marketing/email-campaign'
     | '/marketing/leads'
     | '/sales/opportunities'
     | '/sales/orders'
     | '/sales/quotations'
+    | '/tasks/dashboard'
     | '/tasks/form'
-    | '/tasks/tasks'
     | '/sales/'
+    | '/tasks/'
     | '/marketing/email-campaign/campaigns'
     | '/marketing/email-campaign/logs'
     | '/marketing/email-campaign/sequences'
@@ -315,12 +349,12 @@ export interface RootRouteChildren {
   LocationRoute: typeof LocationRoute
   LoginRoute: typeof LoginRoute
   MarketingRoute: typeof MarketingRouteWithChildren
+  OrderDashboardRoute: typeof OrderDashboardRoute
   RegisterRoute: typeof RegisterRoute
+  TasksRoute: typeof TasksRouteWithChildren
   SalesOpportunitiesRoute: typeof SalesOpportunitiesRoute
   SalesOrdersRoute: typeof SalesOrdersRoute
   SalesQuotationsRoute: typeof SalesQuotationsRoute
-  TasksFormRoute: typeof TasksFormRoute
-  TasksTasksRoute: typeof TasksTasksRoute
   SalesIndexRoute: typeof SalesIndexRoute
 }
 
@@ -382,11 +416,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MarketingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/order-dashboard': {
+      id: '/order-dashboard'
+      path: '/order-dashboard'
+      fullPath: '/order-dashboard'
+      preLoaderRoute: typeof OrderDashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register': {
       id: '/register'
       path: '/register'
       fullPath: '/register'
       preLoaderRoute: typeof RegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tasks': {
+      id: '/tasks'
+      path: '/tasks'
+      fullPath: '/tasks'
+      preLoaderRoute: typeof TasksRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/marketing/email-campaign': {
@@ -431,19 +479,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SalesQuotationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tasks/': {
+      id: '/tasks/'
+      path: '/'
+      fullPath: '/tasks/'
+      preLoaderRoute: typeof TasksIndexRouteImport
+      parentRoute: typeof TasksRoute
+    }
+    '/tasks/dashboard': {
+      id: '/tasks/dashboard'
+      path: '/dashboard'
+      fullPath: '/tasks/dashboard'
+      preLoaderRoute: typeof TasksDashboardRouteImport
+      parentRoute: typeof TasksRoute
+    }
     '/tasks/form': {
       id: '/tasks/form'
-      path: '/tasks/form'
+      path: '/form'
       fullPath: '/tasks/form'
       preLoaderRoute: typeof TasksFormRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/tasks/tasks': {
-      id: '/tasks/tasks'
-      path: '/tasks/tasks'
-      fullPath: '/tasks/tasks'
-      preLoaderRoute: typeof TasksTasksRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof TasksRoute
     }
     '/marketing/email-campaign/': {
       id: '/marketing/email-campaign/'
@@ -538,6 +593,20 @@ const MarketingRouteWithChildren = MarketingRoute._addFileChildren(
   MarketingRouteChildren,
 )
 
+interface TasksRouteChildren {
+  TasksDashboardRoute: typeof TasksDashboardRoute
+  TasksFormRoute: typeof TasksFormRoute
+  TasksIndexRoute: typeof TasksIndexRoute
+}
+
+const TasksRouteChildren: TasksRouteChildren = {
+  TasksDashboardRoute: TasksDashboardRoute,
+  TasksFormRoute: TasksFormRoute,
+  TasksIndexRoute: TasksIndexRoute,
+}
+
+const TasksRouteWithChildren = TasksRoute._addFileChildren(TasksRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CompanyRoute: CompanyRoute,
@@ -547,12 +616,12 @@ const rootRouteChildren: RootRouteChildren = {
   LocationRoute: LocationRoute,
   LoginRoute: LoginRoute,
   MarketingRoute: MarketingRouteWithChildren,
+  OrderDashboardRoute: OrderDashboardRoute,
   RegisterRoute: RegisterRoute,
+  TasksRoute: TasksRouteWithChildren,
   SalesOpportunitiesRoute: SalesOpportunitiesRoute,
   SalesOrdersRoute: SalesOrdersRoute,
   SalesQuotationsRoute: SalesQuotationsRoute,
-  TasksFormRoute: TasksFormRoute,
-  TasksTasksRoute: TasksTasksRoute,
   SalesIndexRoute: SalesIndexRoute,
 }
 export const routeTree = rootRouteImport

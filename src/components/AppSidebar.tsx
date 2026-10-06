@@ -1,5 +1,14 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Briefcase, ChevronDown, ClipboardList, Database, LayoutDashboard, ListChecks, Megaphone, ShoppingCart } from "lucide-react";
+import {
+  Briefcase,
+  ChevronDown,
+  ClipboardList,
+  Database,
+  LayoutDashboard,
+  ListChecks,
+  Megaphone,
+  ShoppingCart,
+} from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Sidebar,
@@ -80,25 +89,25 @@ const MENU_ITEMS: MenuItem[] = [
     items: [
       {
         to: "/order-dashboard",
-        label: "Order Dashboard"
+        label: "Order Dashboard",
       },
       {
         to: "/final-offer",
-        label: "Final Offer - FO"
+        label: "Final Offer - FO",
       },
       {
         to: "/customer-po",
-        label: "Customer PO - CPO"
+        label: "Customer PO - CPO",
       },
       {
         to: "/sales/orders",
-        label: "Sales Order - SO"
+        label: "Sales Order - SO",
       },
       // {
       //   to: "/work-order",
       //   label: "Works Order - WO"
       // }
-    ]
+    ],
   },
   {
     key: "Tasks",
@@ -106,14 +115,14 @@ const MENU_ITEMS: MenuItem[] = [
     icon: ListChecks,
     items: [
       {
-        to: "/task-dashboard",
-        label: "Task Dashboard"
+        to: "/tasks/dashboard",
+        label: "Task Dashboard",
       },
       {
-        to: "/tasks/tasks",
-        label: "Task List"
-      }
-    ]
+        to: "/tasks",
+        label: "Task List",
+      },
+    ],
   },
   {
     key: "Masters",

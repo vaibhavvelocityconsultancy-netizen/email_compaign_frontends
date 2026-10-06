@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, FileText, Pencil, Plus, X } from "lucide-react";
+import { Pencil, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { DataTable, type Column } from "@/components/common/DataTable";
@@ -42,9 +42,7 @@ const money = (value: number) =>
 function dateLabel(value: string) {
   if (!value) return "—";
   const date = new Date(`${value.slice(0, 10)}T00:00:00`);
-  return Number.isNaN(date.getTime())
-    ? value
-    : new Intl.DateTimeFormat("en-GB").format(date);
+  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("en-GB").format(date);
 }
 
 function DocumentLinks({ order }: { order: SalesOrder }) {
@@ -68,7 +66,11 @@ function DocumentLinks({ order }: { order: SalesOrder }) {
             {label}
           </a>
         ) : (
-          <span key={label} className="text-muted-foreground" title={`${label} document unavailable`}>
+          <span
+            key={label}
+            className="text-muted-foreground"
+            title={`${label} document unavailable`}
+          >
             {label} —
           </span>
         ),
@@ -81,7 +83,6 @@ function SalesOrdersPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { soId } = Route.useSearch();
-  const [editing, setEditing] = useState(false);
   const salesOrdersQuery = useQuery({
     queryKey: ["sales-orders"],
     queryFn: getSalesOrders,
@@ -89,9 +90,11 @@ function SalesOrdersPage() {
   const salesOrders = salesOrdersQuery.data ?? [];
   const selectedOrder = salesOrders.find((order) => order.id === soId);
 
+  const closeDialog = () => navigate({ to: "/sales/orders", search: {} });
+
   const columns = useMemo<Column<SalesOrder>[]>(
     () => [
-       {
+      {
         key: "companyName",
         header: "Customer / Company",
         cell: (order) => order.companyName || "—",
@@ -103,13 +106,6 @@ function SalesOrdersPage() {
         cell: (order) => <span className="font-mono text-xs">{order.soNumber}</span>,
         filterValue: (order) => order.soNumber,
       },
-     
-      // {
-      //   key: "quotationNumber",
-      //   header: "Quotation",
-      //   cell: (order) => order.quotationNumber || "—",
-      //   filterValue: (order) => order.quotationNumber,
-      // },
       {
         key: "soDate",
         header: "SO date",
@@ -138,7 +134,7 @@ function SalesOrdersPage() {
       },
       {
         key: "actions",
-        header: "Details",
+        header: "Actions",
         sortable: false,
         filterable: false,
         cell: (order) => (
@@ -146,12 +142,10 @@ function SalesOrdersPage() {
             type="button"
             size="sm"
             variant="outline"
-            onClick={() =>
-              navigate({ to: "/sales/orders", search: { soId: order.id } })
-            }
+            onClick={() => navigate({ to: "/sales/orders", search: { soId: order.id } })}
           >
-            <FileText className="mr-1 size-3.5" />
-            View
+            <Pencil className="mr-1 size-3.5" />
+            Edit
           </Button>
         ),
       },
@@ -187,129 +181,16 @@ function SalesOrdersPage() {
       />
 
       {selectedOrder && (
-        <section className="space-y-5 rounded-md border border-line bg-surface p-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Sales Order
-              </div>
-              <h2 className="mt-1 font-display text-2xl font-bold">{selectedOrder.soNumber}</h2>
-            </div>
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={() => setEditing(true)}>
-                <Pencil className="mr-2 size-4" />
-                Edit Sales Order
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate({ to: "/sales/orders", search: {} })}
-              >
-                <ArrowLeft className="mr-2 size-4" />
-                All Sales Orders
-              </Button>
-            </div>
-          </div>
-
-          <dl className="grid gap-4 rounded-md bg-muted/20 p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <dt className="text-muted-foreground">Company</dt>
-              <dd className="mt-1 font-medium">{selectedOrder.companyName || "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Address</dt>
-              <dd className="mt-1 whitespace-pre-wrap font-medium">
-                {[selectedOrder.companyAddress, selectedOrder.companyCityName, selectedOrder.companyStateName, selectedOrder.companyPincode]
-                  .filter(Boolean)
-                  .join(", ") || "—"}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Quotation</dt>
-              <dd className="mt-1 font-medium">{selectedOrder.quotationNumber || "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Project</dt>
-              <dd className="mt-1 font-medium">{selectedOrder.projectName || "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">SO date</dt>
-              <dd className="mt-1 font-medium">{dateLabel(selectedOrder.soDate)}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Status</dt>
-              <dd className="mt-1 font-medium">{selectedOrder.status.replaceAll("_", " ")}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Payment terms</dt>
-              <dd className="mt-1 whitespace-pre-wrap">{selectedOrder.paymentTerms || "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Delivery terms</dt>
-              <dd className="mt-1 whitespace-pre-wrap">{selectedOrder.deliveryTerms || "—"}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Remarks</dt>
-              <dd className="mt-1 whitespace-pre-wrap">{selectedOrder.remarks || "—"}</dd>
-            </div>
-            <div className="sm:col-span-2">
-              <dt className="text-muted-foreground">Documents</dt>
-              <dd className="mt-1"><DocumentLinks order={selectedOrder} /></dd>
-            </div>
-          </dl>
-
-          <div className="overflow-x-auto rounded-md border border-line">
-            <table className="w-full min-w-[720px] border-collapse text-left text-sm">
-              <thead className="border-b border-line bg-muted/30 text-xs text-muted-foreground">
-                <tr>
-                  <th className="px-3 py-2">#</th>
-                  <th className="px-3 py-2">Module</th>
-                  <th className="px-3 py-2">Description</th>
-                  <th className="px-3 py-2">Requirements</th>
-                  <th className="px-3 py-2 text-right">Amount</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {selectedOrder.items.map((item, index) => (
-                  <tr key={item.id ?? `${item.moduleName}-${index}`}>
-                    <td className="px-3 py-3">{index + 1}</td>
-                    <td className="px-3 py-3 font-medium">{item.moduleName || "—"}</td>
-                    <td className="max-w-64 whitespace-pre-wrap px-3 py-3">
-                      {item.description || "—"}
-                    </td>
-                    <td className="max-w-64 whitespace-pre-wrap px-3 py-3">
-                      {item.requirements || "—"}
-                    </td>
-                    <td className="px-3 py-3 text-right">{money(item.amount)}</td>
-                  </tr>
-                ))}
-                {!selectedOrder.items.length && (
-                  <tr>
-                    <td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">
-                      No line items on the source quotation.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="flex justify-end gap-5 border-t border-line pt-4 text-sm">
-            <span>Subtotal: {money(selectedOrder.subtotal)}</span>
-            <span>Discount: {money(selectedOrder.discountAmount)}</span>
-            <span>Tax: {money(selectedOrder.taxAmount)}</span>
-            <strong>Total: {money(selectedOrder.totalAmount)}</strong>
-          </div>
-          <SalesOrderEditDialog
-            open={editing}
-            order={selectedOrder}
-            onClose={() => setEditing(false)}
-            onSaved={async () => {
-              await queryClient.invalidateQueries({ queryKey: ["sales-orders"] });
-              setEditing(false);
-            }}
-          />
-        </section>
+        <SalesOrderEditDialog
+          key={selectedOrder.id}
+          open
+          order={selectedOrder}
+          onClose={closeDialog}
+          onSaved={async () => {
+            await queryClient.invalidateQueries({ queryKey: ["sales-orders"] });
+            closeDialog();
+          }}
+        />
       )}
     </div>
   );
@@ -333,7 +214,11 @@ interface SalesOrderEditDialogProps {
 }
 
 function SalesOrderEditDialog({ open, order, onClose, onSaved }: SalesOrderEditDialogProps) {
-  const countriesQuery = useQuery({ queryKey: ["countries"], queryFn: listCountries, enabled: open });
+  const countriesQuery = useQuery({
+    queryKey: ["countries"],
+    queryFn: listCountries,
+    enabled: open,
+  });
   const statesQuery = useQuery({ queryKey: ["states"], queryFn: listStates, enabled: open });
   const citiesQuery = useQuery({ queryKey: ["cities"], queryFn: listCities, enabled: open });
   const [saving, setSaving] = useState(false);
@@ -358,9 +243,14 @@ function SalesOrderEditDialog({ open, order, onClose, onSaved }: SalesOrderEditD
   const filteredCities = (citiesQuery.data ?? []).filter(
     (option) => !state || option.state === Number(state),
   );
-  const locationsLoading = countriesQuery.isLoading || statesQuery.isLoading || citiesQuery.isLoading;
+  const locationsLoading =
+    countriesQuery.isLoading || statesQuery.isLoading || citiesQuery.isLoading;
 
-  function updateContact(index: number, field: keyof Omit<ContactDraft, "key" | "id">, value: string | boolean) {
+  function updateContact(
+    index: number,
+    field: keyof Omit<ContactDraft, "key" | "id">,
+    value: string | boolean,
+  ) {
     setContacts((current) =>
       current.map((contact, contactIndex) =>
         contactIndex === index ? { ...contact, [field]: value } : contact,
@@ -422,7 +312,8 @@ function SalesOrderEditDialog({ open, order, onClose, onSaved }: SalesOrderEditD
       await onSaved();
       toast.success("Sales order and shared company details updated.");
     } catch (saveError) {
-      const message = saveError instanceof Error ? saveError.message : "Could not update sales order.";
+      const message =
+        saveError instanceof Error ? saveError.message : "Could not update sales order.";
       setError(message);
       toast.error(message);
     } finally {
@@ -432,7 +323,7 @@ function SalesOrderEditDialog({ open, order, onClose, onSaved }: SalesOrderEditD
 
   return (
     <Modal open={open} onClose={onClose} title="Edit Sales Order" eyebrow={order.soNumber} wide>
-      <form onSubmit={handleSubmit} className="space-y-5 p-5">
+      <form onSubmit={handleSubmit} className="max-h-[80vh] space-y-5 overflow-y-auto p-5">
         <section className="space-y-3">
           <h4 className="font-semibold">Company details</h4>
           <div className="grid gap-3 sm:grid-cols-2">
@@ -446,23 +337,57 @@ function SalesOrderEditDialog({ open, order, onClose, onSaved }: SalesOrderEditD
             </label>
             <label className="space-y-1 text-sm">
               Country
-              <select className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm" value={country} disabled={locationsLoading} onChange={(event) => { setCountry(event.target.value); setState(""); setCity(""); }}>
+              <select
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={country}
+                disabled={locationsLoading}
+                onChange={(event) => {
+                  setCountry(event.target.value);
+                  setState("");
+                  setCity("");
+                }}
+              >
                 <option value="">Select country</option>
-                {(countriesQuery.data ?? []).map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
+                {(countriesQuery.data ?? []).map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
               </select>
             </label>
             <label className="space-y-1 text-sm">
               State
-              <select className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm" value={state} disabled={locationsLoading} onChange={(event) => { setState(event.target.value); setCity(""); }}>
+              <select
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={state}
+                disabled={locationsLoading}
+                onChange={(event) => {
+                  setState(event.target.value);
+                  setCity("");
+                }}
+              >
                 <option value="">Select state</option>
-                {filteredStates.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
+                {filteredStates.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
               </select>
             </label>
             <label className="space-y-1 text-sm">
               City
-              <select className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm" value={city} disabled={locationsLoading} onChange={(event) => setCity(event.target.value)}>
+              <select
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                value={city}
+                disabled={locationsLoading}
+                onChange={(event) => setCity(event.target.value)}
+              >
                 <option value="">Select city</option>
-                {filteredCities.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
+                {filteredCities.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
               </select>
             </label>
             <label className="space-y-1 text-sm">
@@ -479,22 +404,76 @@ function SalesOrderEditDialog({ open, order, onClose, onSaved }: SalesOrderEditD
         <section className="space-y-3 border-t border-line pt-4">
           <div className="flex items-center justify-between">
             <h4 className="font-semibold">Company contacts</h4>
-            <Button type="button" size="sm" variant="outline" onClick={() => setContacts((current) => [...current, { key: `new-${Date.now()}`, name: "", designation: "", phone: "", email: "", is_primary: false }])}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                setContacts((current) => [
+                  ...current,
+                  {
+                    key: `new-${Date.now()}`,
+                    name: "",
+                    designation: "",
+                    phone: "",
+                    email: "",
+                    is_primary: false,
+                  },
+                ])
+              }
+            >
               <Plus className="mr-1 size-4" /> Add Contact
             </Button>
           </div>
           {contacts.map((contact, index) => (
-            <div key={contact.key} className="grid gap-2 rounded-md border border-line p-3 sm:grid-cols-2">
-              <Input aria-label="Contact name" placeholder="Name" value={contact.name} onChange={(event) => updateContact(index, "name", event.target.value)} required />
-              <Input aria-label="Designation" placeholder="Designation" value={contact.designation} onChange={(event) => updateContact(index, "designation", event.target.value)} />
-              <Input aria-label="Contact email" type="email" placeholder="Email" value={contact.email} onChange={(event) => updateContact(index, "email", event.target.value)} />
-              <Input aria-label="Contact phone" type="tel" placeholder="Phone" value={contact.phone} onChange={(event) => updateContact(index, "phone", event.target.value)} />
+            <div
+              key={contact.key}
+              className="grid gap-2 rounded-md border border-line p-3 sm:grid-cols-2"
+            >
+              <Input
+                aria-label="Contact name"
+                placeholder="Name"
+                value={contact.name}
+                onChange={(event) => updateContact(index, "name", event.target.value)}
+                required
+              />
+              <Input
+                aria-label="Designation"
+                placeholder="Designation"
+                value={contact.designation}
+                onChange={(event) => updateContact(index, "designation", event.target.value)}
+              />
+              <Input
+                aria-label="Contact email"
+                type="email"
+                placeholder="Email"
+                value={contact.email}
+                onChange={(event) => updateContact(index, "email", event.target.value)}
+              />
+              <Input
+                aria-label="Contact phone"
+                type="tel"
+                placeholder="Phone"
+                value={contact.phone}
+                onChange={(event) => updateContact(index, "phone", event.target.value)}
+              />
               <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" checked={contact.is_primary} onChange={(event) => updateContact(index, "is_primary", event.target.checked)} />
+                <input
+                  type="checkbox"
+                  checked={contact.is_primary}
+                  onChange={(event) => updateContact(index, "is_primary", event.target.checked)}
+                />
                 Primary contact
               </label>
               {!contact.id && (
-                <button type="button" aria-label="Remove new contact" className="justify-self-end text-muted-foreground hover:text-destructive" onClick={() => setContacts((current) => current.filter((item) => item.key !== contact.key))}>
+                <button
+                  type="button"
+                  aria-label="Remove new contact"
+                  className="justify-self-end text-muted-foreground hover:text-destructive"
+                  onClick={() =>
+                    setContacts((current) => current.filter((item) => item.key !== contact.key))
+                  }
+                >
                   <X className="size-4" />
                 </button>
               )}
@@ -505,18 +484,41 @@ function SalesOrderEditDialog({ open, order, onClose, onSaved }: SalesOrderEditD
         <section className="space-y-3 border-t border-line pt-4">
           <h4 className="font-semibold">Sales order</h4>
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="space-y-1 text-sm">SO number<Input name="so_number" defaultValue={order.soNumber} required /></label>
-            <label className="space-y-1 text-sm">SO date<Input name="so_date" type="date" defaultValue={order.soDate} required /></label>
-            <label className="space-y-1 text-sm">Quotation<Input value={order.quotationNumber} readOnly /></label>
-            <label className="space-y-1 text-sm">Created by<Input value={order.createdByName} readOnly /></label>
-            <label className="space-y-1 text-sm">Status
-              <select name="status" defaultValue={order.status} className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
-                {["DRAFT", "CONFIRMED", "IN_PROGRESS", "COMPLETED", "CANCELLED"].map((status) => <option key={status} value={status}>{status.replaceAll("_", " ")}</option>)}
+            <label className="space-y-1 text-sm">
+              SO number
+              <Input name="so_number" defaultValue={order.soNumber} required />
+            </label>
+            <label className="space-y-1 text-sm">
+              SO date
+              <Input name="so_date" type="date" defaultValue={order.soDate} required />
+            </label>
+            <label className="space-y-1 text-sm">
+              Quotation
+              <Input value={order.quotationNumber} readOnly />
+            </label>
+            <label className="space-y-1 text-sm">
+              Project
+              <Input value={order.projectName} readOnly />
+            </label>
+            <label className="space-y-1 text-sm">
+              Created by
+              <Input value={order.createdByName} readOnly />
+            </label>
+            <label className="space-y-1 text-sm">
+              Status
+              <select
+                name="status"
+                defaultValue={order.status}
+                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+              >
+                {["DRAFT", "CONFIRMED", "IN_PROGRESS", "COMPLETED", "CANCELLED"].map((status) => (
+                  <option key={status} value={status}>
+                    {status.replaceAll("_", " ")}
+                  </option>
+                ))}
               </select>
             </label>
-            <label className="space-y-1 text-sm sm:col-span-2">Delivery terms<textarea name="delivery_terms" defaultValue={order.deliveryTerms} rows={2} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></label>
-            <label className="space-y-1 text-sm sm:col-span-2">Payment terms<textarea name="payment_terms" defaultValue={order.paymentTerms} rows={2} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></label>
-            <label className="space-y-1 text-sm sm:col-span-2">Remarks<textarea name="remarks" defaultValue={order.remarks} rows={2} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" /></label>
+        
           </div>
         </section>
 
@@ -524,10 +526,64 @@ function SalesOrderEditDialog({ open, order, onClose, onSaved }: SalesOrderEditD
           <h4 className="font-semibold">Documents</h4>
           <DocumentLinks order={order} />
         </section>
-        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+
+        <section className="space-y-3 border-t border-line pt-4">
+          <h4 className="font-semibold">Line items</h4>
+          <div className="overflow-x-auto rounded-md border border-line">
+            <table className="w-full min-w-[640px] border-collapse text-left text-sm">
+              <thead className="border-b border-line bg-muted/30 text-xs text-muted-foreground">
+                <tr>
+                  <th className="px-3 py-2">#</th>
+                  <th className="px-3 py-2">Module</th>
+                  <th className="px-3 py-2">Description</th>
+                  <th className="px-3 py-2">Requirements</th>
+                  <th className="px-3 py-2 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {order.items.map((item, index) => (
+                  <tr key={item.id ?? `${item.moduleName}-${index}`}>
+                    <td className="px-3 py-3">{index + 1}</td>
+                    <td className="px-3 py-3 font-medium">{item.moduleName || "—"}</td>
+                    <td className="max-w-64 whitespace-pre-wrap px-3 py-3">
+                      {item.description || "—"}
+                    </td>
+                    <td className="max-w-64 whitespace-pre-wrap px-3 py-3">
+                      {item.requirements || "—"}
+                    </td>
+                    <td className="px-3 py-3 text-right">{money(item.amount)}</td>
+                  </tr>
+                ))}
+                {!order.items.length && (
+                  <tr>
+                    <td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">
+                      No line items on the source quotation.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex flex-wrap justify-end gap-5 text-sm">
+            <span>Subtotal: {money(order.subtotal)}</span>
+            <span>Discount: {money(order.discountAmount)}</span>
+            <span>Tax: {money(order.taxAmount)}</span>
+            <strong>Total: {money(order.totalAmount)}</strong>
+          </div>
+        </section>
+
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
         <div className="flex justify-end gap-2 border-t border-line pt-4">
-          <Button type="button" variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button type="submit" disabled={saving}>{saving ? "Saving…" : "Update SO"}</Button>
+          <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={saving}>
+            {saving ? "Saving…" : "Update SO"}
+          </Button>
         </div>
       </form>
     </Modal>
