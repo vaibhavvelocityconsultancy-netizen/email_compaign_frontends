@@ -477,13 +477,6 @@ function TaskFormPage() {
             </select>
           </label>
 
-          <label className="sm:col-span-2">
-            <span className={labelClassName}>Description</span>
-            <Textarea
-              value={values.description}
-              onChange={(event) => updateValue("description", event.target.value)}
-            />
-          </label>
 
           <label className="flex items-center gap-3 sm:col-span-2">
             <input
@@ -534,14 +527,7 @@ function TaskFormPage() {
             </>
           )}
 
-          <label className="sm:col-span-2">
-            <span className={labelClassName}>Remarks</span>
-            <Textarea
-              value={values.remarks}
-              onChange={(event) => updateValue("remarks", event.target.value)}
-            />
-          </label>
-
+          
           <div className="sm:col-span-2">
             <span className={labelClassName}>Attachments</span>
 
@@ -614,6 +600,15 @@ function TaskFormPage() {
               }}
             />
           </div>
+
+          <label className="sm:col-span-2">
+            <span className={labelClassName}>Remarks</span>
+            <Textarea
+              value={values.remarks}
+              onChange={(event) => updateValue("remarks", event.target.value)}
+            />
+          </label>
+
         </div>
 
         {referenceQuery.isError && (

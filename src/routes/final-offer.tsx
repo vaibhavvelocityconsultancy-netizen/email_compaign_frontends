@@ -13,7 +13,7 @@ import {
   generateFinalOffer,
   updateFinalOffer,
   getQuotationById,
-  createCpo,
+  updateQuotationCpo,
 } from "@/lib/quotation-api";
 
 const money = (value: number) =>
@@ -197,15 +197,19 @@ function FinalOfferPage() {
   });
 
   const cpoMutation = useMutation({
-    mutationFn: (quotationId: string) => createCpo(quotationId),
-    onSuccess: async (response) => {
+    mutationFn: (quotationId: string) =>
+      updateQuotationCpo(quotationId, { cpo_created: true }),
+    onSuccess: async (quotation) => {
       setEditingOffer((current) =>
-        current ? { ...current, cpoCreated: response.cpo_created } : current,
+        current ? { ...current, cpoCreated: quotation.cpoCreated } : current,
       );
-      await queryClient.invalidateQueries({ queryKey: ["quotations"] });
-      toast.success(response.message);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["quotations"] }),
+        queryClient.invalidateQueries({ queryKey: ["cpos"] }),
+      ]);
+      toast.success("Quotation marked for CPO processing");
     },
-    onError: (error: Error) => toast.error(error.message || "Could not create CPO"),
+    onError: (error: Error) => toast.error(error.message || "Could not mark quotation for CPO"),
   });
 
   const openEdit = async (offer: Quotation) => {
@@ -529,18 +533,23 @@ function FinalOfferPage() {
             </div>
 
             <div className="flex justify-between gap-2 border-t border-line pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={editingOffer.cpoCreated || cpoMutation.isPending}
-                onClick={() => cpoMutation.mutate(editingOffer.id)}
-              >
-                {editingOffer.cpoCreated
-                  ? "CPO Already Created"
-                  : cpoMutation.isPending
-                    ? "Creating CPO..."
-                    : "CREATE CPO"}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={editingOffer.cpoCreated || cpoMutation.isPending}
+                  onClick={() => cpoMutation.mutate(editingOffer.id)}
+                >
+                  {editingOffer.cpoCreated
+                    ? "Marked for CPO Processing"
+                    : cpoMutation.isPending
+                      ? "Marking..."
+                      : "Mark for CPO Processing"}
+                </Button>
+                <Button asChild type="button" variant="outline">
+                  <Link to="/customer-po">Open CPO list</Link>
+                </Button>
+              </div>
               <div className="flex gap-2">
                 <Button
                   type="button"

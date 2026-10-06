@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CompanyRouteImport } from './routes/company'
 import { Route as CountryRouteImport } from './routes/country'
+import { Route as CustomerPoRouteImport } from './routes/customer-po'
 import { Route as FinalOfferRouteImport } from './routes/final-offer'
 import { Route as LocationRouteImport } from './routes/location'
 import { Route as LoginRouteImport } from './routes/login'
@@ -21,6 +22,7 @@ import { Route as MarketingEmailCampaignRouteImport } from './routes/marketing/e
 import { Route as MarketingLeadsRouteImport } from './routes/marketing/leads'
 import { Route as SalesIndexRouteImport } from './routes/sales/index'
 import { Route as SalesOpportunitiesRouteImport } from './routes/sales/opportunities'
+import { Route as SalesOrdersRouteImport } from './routes/sales/orders'
 import { Route as SalesQuotationsRouteImport } from './routes/sales/quotations'
 import { Route as TasksFormRouteImport } from './routes/tasks/form'
 import { Route as TasksTasksRouteImport } from './routes/tasks/tasks'
@@ -44,6 +46,11 @@ const CompanyRoute = CompanyRouteImport.update({
 const CountryRoute = CountryRouteImport.update({
   id: '/country',
   path: '/country',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CustomerPoRoute = CustomerPoRouteImport.update({
+  id: '/customer-po',
+  path: '/customer-po',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FinalOfferRoute = FinalOfferRouteImport.update({
@@ -89,6 +96,11 @@ const SalesIndexRoute = SalesIndexRouteImport.update({
 const SalesOpportunitiesRoute = SalesOpportunitiesRouteImport.update({
   id: '/sales/opportunities',
   path: '/sales/opportunities',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SalesOrdersRoute = SalesOrdersRouteImport.update({
+  id: '/sales/orders',
+  path: '/sales/orders',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SalesQuotationsRoute = SalesQuotationsRouteImport.update({
@@ -146,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/company': typeof CompanyRoute
   '/country': typeof CountryRoute
+  '/customer-po': typeof CustomerPoRoute
   '/final-offer': typeof FinalOfferRoute
   '/location': typeof LocationRoute
   '/login': typeof LoginRoute
@@ -154,6 +167,7 @@ export interface FileRoutesByFullPath {
   '/marketing/email-campaign': typeof MarketingEmailCampaignRouteWithChildren
   '/marketing/leads': typeof MarketingLeadsRouteWithChildren
   '/sales/opportunities': typeof SalesOpportunitiesRoute
+  '/sales/orders': typeof SalesOrdersRoute
   '/sales/quotations': typeof SalesQuotationsRoute
   '/tasks/form': typeof TasksFormRoute
   '/tasks/tasks': typeof TasksTasksRoute
@@ -169,6 +183,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/company': typeof CompanyRoute
   '/country': typeof CountryRoute
+  '/customer-po': typeof CustomerPoRoute
   '/final-offer': typeof FinalOfferRoute
   '/location': typeof LocationRoute
   '/login': typeof LoginRoute
@@ -176,6 +191,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/marketing/leads': typeof MarketingLeadsRouteWithChildren
   '/sales/opportunities': typeof SalesOpportunitiesRoute
+  '/sales/orders': typeof SalesOrdersRoute
   '/sales/quotations': typeof SalesQuotationsRoute
   '/tasks/form': typeof TasksFormRoute
   '/tasks/tasks': typeof TasksTasksRoute
@@ -192,6 +208,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/company': typeof CompanyRoute
   '/country': typeof CountryRoute
+  '/customer-po': typeof CustomerPoRoute
   '/final-offer': typeof FinalOfferRoute
   '/location': typeof LocationRoute
   '/login': typeof LoginRoute
@@ -200,6 +217,7 @@ export interface FileRoutesById {
   '/marketing/email-campaign': typeof MarketingEmailCampaignRouteWithChildren
   '/marketing/leads': typeof MarketingLeadsRouteWithChildren
   '/sales/opportunities': typeof SalesOpportunitiesRoute
+  '/sales/orders': typeof SalesOrdersRoute
   '/sales/quotations': typeof SalesQuotationsRoute
   '/tasks/form': typeof TasksFormRoute
   '/tasks/tasks': typeof TasksTasksRoute
@@ -217,6 +235,7 @@ export interface FileRouteTypes {
     | '/'
     | '/company'
     | '/country'
+    | '/customer-po'
     | '/final-offer'
     | '/location'
     | '/login'
@@ -225,6 +244,7 @@ export interface FileRouteTypes {
     | '/marketing/email-campaign'
     | '/marketing/leads'
     | '/sales/opportunities'
+    | '/sales/orders'
     | '/sales/quotations'
     | '/tasks/form'
     | '/tasks/tasks'
@@ -240,6 +260,7 @@ export interface FileRouteTypes {
     | '/'
     | '/company'
     | '/country'
+    | '/customer-po'
     | '/final-offer'
     | '/location'
     | '/login'
@@ -247,6 +268,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/marketing/leads'
     | '/sales/opportunities'
+    | '/sales/orders'
     | '/sales/quotations'
     | '/tasks/form'
     | '/tasks/tasks'
@@ -262,6 +284,7 @@ export interface FileRouteTypes {
     | '/'
     | '/company'
     | '/country'
+    | '/customer-po'
     | '/final-offer'
     | '/location'
     | '/login'
@@ -270,6 +293,7 @@ export interface FileRouteTypes {
     | '/marketing/email-campaign'
     | '/marketing/leads'
     | '/sales/opportunities'
+    | '/sales/orders'
     | '/sales/quotations'
     | '/tasks/form'
     | '/tasks/tasks'
@@ -286,12 +310,14 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CompanyRoute: typeof CompanyRoute
   CountryRoute: typeof CountryRoute
+  CustomerPoRoute: typeof CustomerPoRoute
   FinalOfferRoute: typeof FinalOfferRoute
   LocationRoute: typeof LocationRoute
   LoginRoute: typeof LoginRoute
   MarketingRoute: typeof MarketingRouteWithChildren
   RegisterRoute: typeof RegisterRoute
   SalesOpportunitiesRoute: typeof SalesOpportunitiesRoute
+  SalesOrdersRoute: typeof SalesOrdersRoute
   SalesQuotationsRoute: typeof SalesQuotationsRoute
   TasksFormRoute: typeof TasksFormRoute
   TasksTasksRoute: typeof TasksTasksRoute
@@ -319,6 +345,13 @@ declare module '@tanstack/react-router' {
       path: '/country'
       fullPath: '/country'
       preLoaderRoute: typeof CountryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/customer-po': {
+      id: '/customer-po'
+      path: '/customer-po'
+      fullPath: '/customer-po'
+      preLoaderRoute: typeof CustomerPoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/final-offer': {
@@ -382,6 +415,13 @@ declare module '@tanstack/react-router' {
       path: '/sales/opportunities'
       fullPath: '/sales/opportunities'
       preLoaderRoute: typeof SalesOpportunitiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sales/orders': {
+      id: '/sales/orders'
+      path: '/sales/orders'
+      fullPath: '/sales/orders'
+      preLoaderRoute: typeof SalesOrdersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sales/quotations': {
@@ -502,12 +542,14 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CompanyRoute: CompanyRoute,
   CountryRoute: CountryRoute,
+  CustomerPoRoute: CustomerPoRoute,
   FinalOfferRoute: FinalOfferRoute,
   LocationRoute: LocationRoute,
   LoginRoute: LoginRoute,
   MarketingRoute: MarketingRouteWithChildren,
   RegisterRoute: RegisterRoute,
   SalesOpportunitiesRoute: SalesOpportunitiesRoute,
+  SalesOrdersRoute: SalesOrdersRoute,
   SalesQuotationsRoute: SalesQuotationsRoute,
   TasksFormRoute: TasksFormRoute,
   TasksTasksRoute: TasksTasksRoute,

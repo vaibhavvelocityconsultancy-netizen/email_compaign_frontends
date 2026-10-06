@@ -210,8 +210,17 @@ function QuotationsPage() {
 
   const foMutation = useMutation({
     mutationFn: (q: Quotation) => generateFinalOffer(q.id),
-    onSuccess: async () => {
+    onSuccess: async (quotation) => {
       await qc.invalidateQueries({ queryKey: ["quotations"] });
+      setEditing((current) =>
+        current
+          ? {
+              ...current,
+              finalOfferGenerated: quotation.finalOfferGenerated,
+              finalOfferPdf: quotation.finalOfferPdf,
+            }
+          : current,
+      );
       toast.success("Final offer created");
     },
     onError: (e: Error) => toast.error(e.message || "Could not create final offer"),
@@ -428,14 +437,14 @@ function QuotationsPage() {
               size="sm"
               variant="outline"
               className="h-8 gap-1.5"
-              disabled={foMutation.isPending}
+              disabled={foMutation.isPending || editing.finalOfferGenerated}
               onClick={() => setFoModalOpen(true)}
             >
               <FileCheck2 className="size-4" />
               {foMutation.isPending
                 ? "Creating FO..."
                 : editing.finalOfferGenerated
-                  ? "Regenerate FO"
+                  ? "FO already generated"
                   : "Create FO"}
             </Button>
           ) : undefined

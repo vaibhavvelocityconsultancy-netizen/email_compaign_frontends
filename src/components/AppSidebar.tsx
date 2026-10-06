@@ -87,11 +87,11 @@ const MENU_ITEMS: MenuItem[] = [
         label: "Final Offer - FO"
       },
       {
-        to: "/customer-PO",
+        to: "/customer-po",
         label: "Customer PO - CPO"
       },
       {
-        to: "/sales",
+        to: "/sales/orders",
         label: "Sales Order - SO"
       },
       // {
