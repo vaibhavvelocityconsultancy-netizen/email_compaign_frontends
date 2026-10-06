@@ -5,6 +5,7 @@ import {
   ClipboardList,
   Database,
   LayoutDashboard,
+  ShieldCheck,
   ListChecks,
   Megaphone,
   ShoppingCart,
@@ -142,7 +143,7 @@ const MENU_ITEMS: MenuItem[] = [
   {
     key: "User & Roles",
     label: "User & Roles",
-    icon: Database,
+    icon: ShieldCheck,
     items: [
       {
         to: "/user",
@@ -155,9 +156,9 @@ const MENU_ITEMS: MenuItem[] = [
       {
         to: "/access-control",
         label: "Access Control",
-      }
+      },
     ],
-  }
+  },
 ];
 
 export function AppSidebar() {

@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccessControlRouteImport } from './routes/access-control'
 import { Route as CompanyRouteImport } from './routes/company'
 import { Route as CountryRouteImport } from './routes/country'
 import { Route as CustomerPoRouteImport } from './routes/customer-po'
@@ -19,7 +20,9 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as MarketingRouteImport } from './routes/marketing'
 import { Route as OrderDashboardRouteImport } from './routes/order-dashboard'
 import { Route as RegisterRouteImport } from './routes/register'
+import { Route as RolesRouteImport } from './routes/roles'
 import { Route as TasksRouteImport } from './routes/tasks'
+import { Route as UserRouteImport } from './routes/user'
 import { Route as MarketingEmailCampaignRouteImport } from './routes/marketing/email-campaign'
 import { Route as MarketingLeadsRouteImport } from './routes/marketing/leads'
 import { Route as SalesIndexRouteImport } from './routes/sales/index'
@@ -39,6 +42,11 @@ import { Route as MarketingLeadsFormRouteImport } from './routes/marketing/leads
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccessControlRoute = AccessControlRouteImport.update({
+  id: '/access-control',
+  path: '/access-control',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CompanyRoute = CompanyRouteImport.update({
@@ -86,9 +94,19 @@ const RegisterRoute = RegisterRouteImport.update({
   path: '/register',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RolesRoute = RolesRouteImport.update({
+  id: '/roles',
+  path: '/roles',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TasksRoute = TasksRouteImport.update({
   id: '/tasks',
   path: '/tasks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UserRoute = UserRouteImport.update({
+  id: '/user',
+  path: '/user',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MarketingEmailCampaignRoute = MarketingEmailCampaignRouteImport.update({
@@ -174,6 +192,7 @@ const MarketingLeadsFormRoute = MarketingLeadsFormRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/access-control': typeof AccessControlRoute
   '/company': typeof CompanyRoute
   '/country': typeof CountryRoute
   '/customer-po': typeof CustomerPoRoute
@@ -183,7 +202,9 @@ export interface FileRoutesByFullPath {
   '/marketing': typeof MarketingRouteWithChildren
   '/order-dashboard': typeof OrderDashboardRoute
   '/register': typeof RegisterRoute
+  '/roles': typeof RolesRoute
   '/tasks': typeof TasksRouteWithChildren
+  '/user': typeof UserRoute
   '/marketing/email-campaign': typeof MarketingEmailCampaignRouteWithChildren
   '/marketing/leads': typeof MarketingLeadsRouteWithChildren
   '/sales/opportunities': typeof SalesOpportunitiesRoute
@@ -202,6 +223,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/access-control': typeof AccessControlRoute
   '/company': typeof CompanyRoute
   '/country': typeof CountryRoute
   '/customer-po': typeof CustomerPoRoute
@@ -211,6 +233,8 @@ export interface FileRoutesByTo {
   '/marketing': typeof MarketingRouteWithChildren
   '/order-dashboard': typeof OrderDashboardRoute
   '/register': typeof RegisterRoute
+  '/roles': typeof RolesRoute
+  '/user': typeof UserRoute
   '/marketing/leads': typeof MarketingLeadsRouteWithChildren
   '/sales/opportunities': typeof SalesOpportunitiesRoute
   '/sales/orders': typeof SalesOrdersRoute
@@ -229,6 +253,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/access-control': typeof AccessControlRoute
   '/company': typeof CompanyRoute
   '/country': typeof CountryRoute
   '/customer-po': typeof CustomerPoRoute
@@ -238,7 +263,9 @@ export interface FileRoutesById {
   '/marketing': typeof MarketingRouteWithChildren
   '/order-dashboard': typeof OrderDashboardRoute
   '/register': typeof RegisterRoute
+  '/roles': typeof RolesRoute
   '/tasks': typeof TasksRouteWithChildren
+  '/user': typeof UserRoute
   '/marketing/email-campaign': typeof MarketingEmailCampaignRouteWithChildren
   '/marketing/leads': typeof MarketingLeadsRouteWithChildren
   '/sales/opportunities': typeof SalesOpportunitiesRoute
@@ -259,6 +286,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/access-control'
     | '/company'
     | '/country'
     | '/customer-po'
@@ -268,7 +296,9 @@ export interface FileRouteTypes {
     | '/marketing'
     | '/order-dashboard'
     | '/register'
+    | '/roles'
     | '/tasks'
+    | '/user'
     | '/marketing/email-campaign'
     | '/marketing/leads'
     | '/sales/opportunities'
@@ -287,6 +317,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/access-control'
     | '/company'
     | '/country'
     | '/customer-po'
@@ -296,6 +327,8 @@ export interface FileRouteTypes {
     | '/marketing'
     | '/order-dashboard'
     | '/register'
+    | '/roles'
+    | '/user'
     | '/marketing/leads'
     | '/sales/opportunities'
     | '/sales/orders'
@@ -313,6 +346,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/access-control'
     | '/company'
     | '/country'
     | '/customer-po'
@@ -322,7 +356,9 @@ export interface FileRouteTypes {
     | '/marketing'
     | '/order-dashboard'
     | '/register'
+    | '/roles'
     | '/tasks'
+    | '/user'
     | '/marketing/email-campaign'
     | '/marketing/leads'
     | '/sales/opportunities'
@@ -342,6 +378,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccessControlRoute: typeof AccessControlRoute
   CompanyRoute: typeof CompanyRoute
   CountryRoute: typeof CountryRoute
   CustomerPoRoute: typeof CustomerPoRoute
@@ -351,7 +388,9 @@ export interface RootRouteChildren {
   MarketingRoute: typeof MarketingRouteWithChildren
   OrderDashboardRoute: typeof OrderDashboardRoute
   RegisterRoute: typeof RegisterRoute
+  RolesRoute: typeof RolesRoute
   TasksRoute: typeof TasksRouteWithChildren
+  UserRoute: typeof UserRoute
   SalesOpportunitiesRoute: typeof SalesOpportunitiesRoute
   SalesOrdersRoute: typeof SalesOrdersRoute
   SalesQuotationsRoute: typeof SalesQuotationsRoute
@@ -365,6 +404,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/access-control': {
+      id: '/access-control'
+      path: '/access-control'
+      fullPath: '/access-control'
+      preLoaderRoute: typeof AccessControlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/company': {
@@ -430,11 +476,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/roles': {
+      id: '/roles'
+      path: '/roles'
+      fullPath: '/roles'
+      preLoaderRoute: typeof RolesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tasks': {
       id: '/tasks'
       path: '/tasks'
       fullPath: '/tasks'
       preLoaderRoute: typeof TasksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/user': {
+      id: '/user'
+      path: '/user'
+      fullPath: '/user'
+      preLoaderRoute: typeof UserRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/marketing/email-campaign': {
@@ -609,6 +669,7 @@ const TasksRouteWithChildren = TasksRoute._addFileChildren(TasksRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccessControlRoute: AccessControlRoute,
   CompanyRoute: CompanyRoute,
   CountryRoute: CountryRoute,
   CustomerPoRoute: CustomerPoRoute,
@@ -618,7 +679,9 @@ const rootRouteChildren: RootRouteChildren = {
   MarketingRoute: MarketingRouteWithChildren,
   OrderDashboardRoute: OrderDashboardRoute,
   RegisterRoute: RegisterRoute,
+  RolesRoute: RolesRoute,
   TasksRoute: TasksRouteWithChildren,
+  UserRoute: UserRoute,
   SalesOpportunitiesRoute: SalesOpportunitiesRoute,
   SalesOrdersRoute: SalesOrdersRoute,
   SalesQuotationsRoute: SalesQuotationsRoute,
