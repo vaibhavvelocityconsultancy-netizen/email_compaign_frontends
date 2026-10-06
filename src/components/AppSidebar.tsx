@@ -139,6 +139,25 @@ const MENU_ITEMS: MenuItem[] = [
       },
     ],
   },
+  {
+    key: "User & Roles",
+    label: "User & Roles",
+    icon: Database,
+    items: [
+      {
+        to: "/user",
+        label: "User",
+      },
+      {
+        to: "/roles",
+        label: "Roles",
+      },
+      {
+        to: "/access-control",
+        label: "Access Control",
+      }
+    ],
+  }
 ];
 
 export function AppSidebar() {
