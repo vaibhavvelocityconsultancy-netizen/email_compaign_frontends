@@ -1,12 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { MoreHorizontal, Plus, Search, ShieldCheck, UserRound } from "lucide-react";
+import * as React from "react";
+import { Pencil, Plus, ShieldCheck, Trash2, UserRound } from "lucide-react";
+import { toast } from "sonner";
+
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
+import { DataTable, type Column } from "@/components/common/DataTable";
+import { UserFormDialog } from "@/components/users/UserFormDialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { StatusBadge } from "@/components/common/StatusBadge";
-import { DataTable, type Column } from "@/components/common/DataTable";
+import { Card, CardContent } from "@/components/ui/card";
+import { deleteUser, listUsers, type User } from "@/lib/user-api";
 
 export const Route = createFileRoute("/user")({
   head: () => ({
@@ -18,119 +22,140 @@ export const Route = createFileRoute("/user")({
   component: UsersPage,
 });
 
-type User = {
-  name: string;
-  email: string;
-  role: string;
-  team: string;
-  status: string;
-  lastActive: string;
-};
-const users: User[] = [
-  {
-    name: "Aarav Mehta",
-    email: "aarav@vantage.io",
-    role: "Administrator",
-    team: "Operations",
-    status: "active",
-    lastActive: "Just now",
-  },
-  {
-    name: "Maya Patel",
-    email: "maya@vantage.io",
-    role: "Marketing Manager",
-    team: "Marketing",
-    status: "active",
-    lastActive: "12 min ago",
-  },
-  {
-    name: "Noah Williams",
-    email: "noah@vantage.io",
-    role: "Sales Manager",
-    team: "Sales",
-    status: "active",
-    lastActive: "1 hour ago",
-  },
-  {
-    name: "Sophia Chen",
-    email: "sophia@vantage.io",
-    role: "Sales Representative",
-    team: "Sales",
-    status: "pending",
-    lastActive: "Invitation sent",
-  },
-  {
-    name: "Liam Johnson",
-    email: "liam@vantage.io",
-    role: "Viewer",
-    team: "Finance",
-    status: "active",
-    lastActive: "Yesterday",
-  },
-];
-
-const columns: Column<User>[] = [
-  {
-    key: "name",
-    header: "User",
-    sortable: true,
-    cell: (user) => (
-      <div className="flex items-center gap-3">
-        <Avatar className="size-9">
-          <AvatarFallback className="bg-brand-soft text-xs font-semibold text-brand">
-            {user.name
-              .split(" ")
-              .map((part) => part[0])
-              .join("")}
-          </AvatarFallback>
-        </Avatar>
-        <div>
-          <div className="font-medium">{user.name}</div>
-          <div className="text-xs text-muted-foreground">{user.email}</div>
-        </div>
-      </div>
-    ),
-  },
-  {
-    key: "role",
-    header: "Role",
-    sortable: true,
-    filterable: true,
-    cell: (user) => (
-      <Badge variant="outline" className="font-normal">
-        {user.role}
-      </Badge>
-    ),
-  },
-  {
-    key: "team",
-    header: "Team",
-    filterable: true,
-    cell: (user) => <span className="text-sm">{user.team}</span>,
-  },
-  {
-    key: "status",
-    header: "Status",
-    filterable: true,
-    cell: (user) => <StatusBadge status={user.status} />,
-  },
-  {
-    key: "lastActive",
-    header: "Last active",
-    cell: (user) => <span className="text-sm text-muted-foreground">{user.lastActive}</span>,
-  },
-  {
-    key: "actions",
-    header: "",
-    cell: () => (
-      <Button variant="ghost" size="icon" aria-label="More user actions">
-        <MoreHorizontal />
-      </Button>
-    ),
-  },
-];
+const SEARCH_KEYS: (keyof User)[] = ["username", "email", "first_name", "last_name"];
 
 function UsersPage() {
+  const [users, setUsers] = React.useState<User[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [loadError, setLoadError] = React.useState("");
+  const [formOpen, setFormOpen] = React.useState(false);
+  const [editing, setEditing] = React.useState<User | null>(null);
+  const [deleting, setDeleting] = React.useState<User | null>(null);
+  const [deletePending, setDeletePending] = React.useState(false);
+
+  const refresh = React.useCallback(async () => {
+    setLoading(true);
+    setLoadError("");
+    try {
+      setUsers(await listUsers());
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not load users.";
+      setLoadError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const openForm = React.useCallback((user: User | null = null) => {
+    setEditing(user);
+    setFormOpen(true);
+  }, []);
+
+  const confirmDelete = React.useCallback(async () => {
+    if (!deleting) return;
+    setDeletePending(true);
+    try {
+      await deleteUser(deleting.id);
+      toast.success("User deleted.");
+      setDeleting(null);
+      await refresh();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not delete user.");
+    } finally {
+      setDeletePending(false);
+    }
+  }, [deleting, refresh]);
+
+  const columns = React.useMemo<Column<User>[]>(
+    () => [
+      {
+        key: "username",
+        header: "User",
+        cell: (user) => {
+          const fullName = [user.first_name, user.last_name].filter(Boolean).join(" ");
+          const initials = (fullName || user.username)
+            .split(/[\s@._-]+/)
+            .filter(Boolean)
+            .map((part) => part[0])
+            .join("")
+            .slice(0, 2)
+            .toUpperCase();
+          return (
+            <div className="flex items-center gap-3">
+              <Avatar className="size-9">
+                <AvatarFallback className="bg-brand-soft text-xs font-semibold text-brand">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0">
+                <div className="truncate font-medium">{fullName || user.username}</div>
+                <div className="truncate text-xs text-muted-foreground">
+                  {fullName ? `@${user.username} · ` : ""}
+                  {user.email}
+                </div>
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        key: "role",
+        header: "Role",
+        filterValue: (user) => (user.role === null ? "Unassigned" : `Role #${user.role}`),
+        cell: (user) => (
+          <Badge variant="outline" className="font-normal">
+            {user.role === null ? "Unassigned" : `Role #${user.role}`}
+          </Badge>
+        ),
+      },
+      {
+        key: "is_active",
+        header: "Status",
+        filterValue: (user) => (user.is_active ? "Active" : "Inactive"),
+        cell: (user) => (
+          <Badge variant={user.is_active ? "default" : "secondary"}>
+            {user.is_active ? "Active" : "Inactive"}
+          </Badge>
+        ),
+      },
+      {
+        key: "actions",
+        header: "",
+        className: "w-20",
+        cell: (user) => (
+          <div className="flex justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8"
+              aria-label={`Edit ${user.username}`}
+              onClick={() => openForm(user)}
+            >
+              <Pencil className="size-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8 text-destructive hover:text-destructive"
+              aria-label={`Delete ${user.username}`}
+              onClick={() => setDeleting(user)}
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [openForm],
+  );
+
+  const activeCount = users.filter((user) => user.is_active).length;
+
   return (
     <div className="flex flex-col gap-7">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
@@ -139,15 +164,14 @@ function UsersPage() {
             USER & ROLES
           </div>
           <h1 className="mt-1 font-display text-3xl font-bold">Users</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Manage people, roles, and workspace access.
-          </p>
+          <p className="mt-2 text-sm text-muted-foreground">Manage people and workspace access.</p>
         </div>
-        <Button>
-          <Plus data-icon="inline-start" /> Invite user
+        <Button onClick={() => openForm()}>
+          <Plus data-icon="inline-start" /> Add user
         </Button>
       </div>
-      <div className="grid gap-4 sm:grid-cols-3">
+
+      <div className="grid gap-4 sm:grid-cols-2">
         <Card>
           <CardContent className="flex items-center gap-3 p-5">
             <div className="grid size-10 place-items-center rounded-xl bg-brand-soft text-brand">
@@ -155,7 +179,7 @@ function UsersPage() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">TOTAL USERS</p>
-              <p className="font-display text-2xl font-bold">24</p>
+              <p className="font-display text-2xl font-bold">{loading ? "—" : users.length}</p>
             </div>
           </CardContent>
         </Card>
@@ -166,46 +190,45 @@ function UsersPage() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">ACTIVE USERS</p>
-              <p className="font-display text-2xl font-bold">21</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-3 p-5">
-            <div className="grid size-10 place-items-center rounded-xl bg-warn/10 text-warn">
-              <Search />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">PENDING INVITES</p>
-              <p className="font-display text-2xl font-bold">3</p>
+              <p className="font-display text-2xl font-bold">{loading ? "—" : activeCount}</p>
             </div>
           </CardContent>
         </Card>
       </div>
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <CardTitle>Workspace users</CardTitle>
-              <CardDescription>Review account status and assigned roles.</CardDescription>
-            </div>
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input className="pl-9" placeholder="Search users" aria-label="Search users" />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <DataTable
-            data={users}
-            columns={columns}
-            searchKeys={["name", "email", "role", "team"]}
-            searchPlaceholder="Search users"
-            pageSize={10}
-            storageKey="vantage-users"
-          />
-        </CardContent>
-      </Card>
+
+      {loadError && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm"
+        >
+          <span>{loadError}</span>
+          <Button variant="outline" size="sm" onClick={() => void refresh()}>
+            Retry
+          </Button>
+        </div>
+      )}
+
+      <DataTable
+        data={users}
+        columns={columns}
+        searchKeys={SEARCH_KEYS}
+        searchPlaceholder="Search users"
+        emptyMessage={
+          loading ? "Loading users…" : loadError ? "Users could not be loaded." : "No users found."
+        }
+        pageSize={10}
+        storageKey="vantage-users"
+      />
+
+      <UserFormDialog open={formOpen} onOpenChange={setFormOpen} user={editing} onSaved={refresh} />
+      <ConfirmDialog
+        open={deleting !== null}
+        onClose={() => setDeleting(null)}
+        onConfirm={() => void confirmDelete()}
+        title="Delete user"
+        message={`Delete ${deleting?.username ?? "this user"}? This action cannot be undone.`}
+        loading={deletePending}
+      />
     </div>
   );
 }
