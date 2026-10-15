@@ -1,14 +1,13 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  Briefcase,
+  BriefcaseBusiness,
+  CalendarCheck2,
   ChevronDown,
-  ClipboardList,
-  Database,
+  FileText,
   LayoutDashboard,
-  ShieldCheck,
   ListChecks,
-  Megaphone,
-  ShoppingCart,
+  Mail,
+  UserRound,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -37,128 +36,19 @@ type MenuItem = {
 };
 
 const MENU_ITEMS: MenuItem[] = [
+  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, to: "/" },
+  { key: "applications", label: "Applications", icon: BriefcaseBusiness, to: "/applications" },
+  { key: "interviews", label: "Interview pipeline", icon: CalendarCheck2, to: "/interviews" },
+  { key: "campaigns", label: "Job email campaigns", icon: Mail, to: "/marketing/email-campaign" },
   {
-    key: "dashboard",
-    label: "Dashboard",
-    icon: LayoutDashboard,
-    to: "/",
+    key: "templates",
+    label: "Email templates",
+    icon: FileText,
+    to: "/marketing/email-campaign/templates",
   },
-
-  {
-    key: "marketing",
-    label: "Marketing",
-    icon: Megaphone,
-    items: [
-      {
-        to: "/marketing",
-        label: "Marketing Dashboard",
-      },
-      {
-        to: "/marketing/leads",
-        label: "Leads",
-      },
-      {
-        to: "/marketing/email-campaign",
-        label: "Email Campaign",
-      },
-    ],
-  },
-
-  {
-    key: "sales",
-    label: "Sales",
-    icon: Briefcase,
-    items: [
-      {
-        to: "/sales",
-        label: "Sales Dashboard",
-      },
-      {
-        to: "/sales/opportunities",
-        label: "Opportunity",
-      },
-      {
-        to: "/sales/quotations",
-        label: "Quotation",
-      },
-    ],
-  },
-  {
-    key: "Order",
-    label: "Order",
-    icon: ClipboardList,
-    items: [
-      {
-        to: "/order-dashboard",
-        label: "Order Dashboard",
-      },
-      {
-        to: "/final-offer",
-        label: "Final Offer - FO",
-      },
-      {
-        to: "/customer-po",
-        label: "Customer PO - CPO",
-      },
-      {
-        to: "/sales/orders",
-        label: "Sales Order - SO",
-      },
-      // {
-      //   to: "/work-order",
-      //   label: "Works Order - WO"
-      // }
-    ],
-  },
-  {
-    key: "Tasks",
-    label: "Tasks",
-    icon: ListChecks,
-    items: [
-      {
-        to: "/tasks/dashboard",
-        label: "Task Dashboard",
-      },
-      {
-        to: "/tasks",
-        label: "Task List",
-      },
-    ],
-  },
-  {
-    key: "Masters",
-    label: "Masters",
-    icon: Database,
-    items: [
-      {
-        to: "/company",
-        label: "Company",
-      },
-      {
-        to: "/location",
-        label: "Location",
-      },
-    ],
-  },
-  {
-    key: "User & Roles",
-    label: "User & Roles",
-    icon: ShieldCheck,
-    items: [
-      {
-        to: "/user",
-        label: "User",
-      },
-      {
-        to: "/roles",
-        label: "Roles",
-      },
-      {
-        to: "/access-control",
-        label: "Access Control",
-      },
-    ],
-  },
+  { key: "follow-ups", label: "Follow-ups", icon: ListChecks, to: "/follow-ups" },
+  { key: "documents", label: "Resume & documents", icon: FileText, to: "/documents" },
+  { key: "profile", label: "Profile & settings", icon: UserRound, to: "/user" },
 ];
 
 export function AppSidebar() {
@@ -180,9 +70,9 @@ export function AppSidebar() {
           </div>
 
           <div className="leading-none group-data-[collapsible=icon]:hidden">
-            <div className="font-display text-[15px] font-bold text-white">Vantage</div>
+            <div className="font-display text-[15px] font-bold text-white">CareerOS</div>
 
-            <div className="mt-1 font-mono text-[10px] text-white/40">CRM · OPS</div>
+            <div className="mt-1 font-mono text-[10px] text-white/40">JOB SEARCH</div>
           </div>
         </div>
       </SidebarHeader>

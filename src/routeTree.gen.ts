@@ -11,10 +11,14 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccessControlRouteImport } from './routes/access-control'
+import { Route as ApplicationsRouteImport } from './routes/applications'
 import { Route as CompanyRouteImport } from './routes/company'
 import { Route as CountryRouteImport } from './routes/country'
 import { Route as CustomerPoRouteImport } from './routes/customer-po'
+import { Route as DocumentsRouteImport } from './routes/documents'
 import { Route as FinalOfferRouteImport } from './routes/final-offer'
+import { Route as FollowUpsRouteImport } from './routes/follow-ups'
+import { Route as InterviewsRouteImport } from './routes/interviews'
 import { Route as LocationRouteImport } from './routes/location'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MarketingRouteImport } from './routes/marketing'
@@ -49,6 +53,11 @@ const AccessControlRoute = AccessControlRouteImport.update({
   path: '/access-control',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApplicationsRoute = ApplicationsRouteImport.update({
+  id: '/applications',
+  path: '/applications',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CompanyRoute = CompanyRouteImport.update({
   id: '/company',
   path: '/company',
@@ -64,9 +73,24 @@ const CustomerPoRoute = CustomerPoRouteImport.update({
   path: '/customer-po',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DocumentsRoute = DocumentsRouteImport.update({
+  id: '/documents',
+  path: '/documents',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FinalOfferRoute = FinalOfferRouteImport.update({
   id: '/final-offer',
   path: '/final-offer',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FollowUpsRoute = FollowUpsRouteImport.update({
+  id: '/follow-ups',
+  path: '/follow-ups',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InterviewsRoute = InterviewsRouteImport.update({
+  id: '/interviews',
+  path: '/interviews',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LocationRoute = LocationRouteImport.update({
@@ -193,10 +217,14 @@ const MarketingLeadsFormRoute = MarketingLeadsFormRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/access-control': typeof AccessControlRoute
+  '/applications': typeof ApplicationsRoute
   '/company': typeof CompanyRoute
   '/country': typeof CountryRoute
   '/customer-po': typeof CustomerPoRoute
+  '/documents': typeof DocumentsRoute
   '/final-offer': typeof FinalOfferRoute
+  '/follow-ups': typeof FollowUpsRoute
+  '/interviews': typeof InterviewsRoute
   '/location': typeof LocationRoute
   '/login': typeof LoginRoute
   '/marketing': typeof MarketingRouteWithChildren
@@ -224,10 +252,14 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/access-control': typeof AccessControlRoute
+  '/applications': typeof ApplicationsRoute
   '/company': typeof CompanyRoute
   '/country': typeof CountryRoute
   '/customer-po': typeof CustomerPoRoute
+  '/documents': typeof DocumentsRoute
   '/final-offer': typeof FinalOfferRoute
+  '/follow-ups': typeof FollowUpsRoute
+  '/interviews': typeof InterviewsRoute
   '/location': typeof LocationRoute
   '/login': typeof LoginRoute
   '/marketing': typeof MarketingRouteWithChildren
@@ -254,10 +286,14 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/access-control': typeof AccessControlRoute
+  '/applications': typeof ApplicationsRoute
   '/company': typeof CompanyRoute
   '/country': typeof CountryRoute
   '/customer-po': typeof CustomerPoRoute
+  '/documents': typeof DocumentsRoute
   '/final-offer': typeof FinalOfferRoute
+  '/follow-ups': typeof FollowUpsRoute
+  '/interviews': typeof InterviewsRoute
   '/location': typeof LocationRoute
   '/login': typeof LoginRoute
   '/marketing': typeof MarketingRouteWithChildren
@@ -287,10 +323,14 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/access-control'
+    | '/applications'
     | '/company'
     | '/country'
     | '/customer-po'
+    | '/documents'
     | '/final-offer'
+    | '/follow-ups'
+    | '/interviews'
     | '/location'
     | '/login'
     | '/marketing'
@@ -318,10 +358,14 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/access-control'
+    | '/applications'
     | '/company'
     | '/country'
     | '/customer-po'
+    | '/documents'
     | '/final-offer'
+    | '/follow-ups'
+    | '/interviews'
     | '/location'
     | '/login'
     | '/marketing'
@@ -347,10 +391,14 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/access-control'
+    | '/applications'
     | '/company'
     | '/country'
     | '/customer-po'
+    | '/documents'
     | '/final-offer'
+    | '/follow-ups'
+    | '/interviews'
     | '/location'
     | '/login'
     | '/marketing'
@@ -379,10 +427,14 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccessControlRoute: typeof AccessControlRoute
+  ApplicationsRoute: typeof ApplicationsRoute
   CompanyRoute: typeof CompanyRoute
   CountryRoute: typeof CountryRoute
   CustomerPoRoute: typeof CustomerPoRoute
+  DocumentsRoute: typeof DocumentsRoute
   FinalOfferRoute: typeof FinalOfferRoute
+  FollowUpsRoute: typeof FollowUpsRoute
+  InterviewsRoute: typeof InterviewsRoute
   LocationRoute: typeof LocationRoute
   LoginRoute: typeof LoginRoute
   MarketingRoute: typeof MarketingRouteWithChildren
@@ -413,6 +465,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AccessControlRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/applications': {
+      id: '/applications'
+      path: '/applications'
+      fullPath: '/applications'
+      preLoaderRoute: typeof ApplicationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/company': {
       id: '/company'
       path: '/company'
@@ -434,11 +493,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CustomerPoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/documents': {
+      id: '/documents'
+      path: '/documents'
+      fullPath: '/documents'
+      preLoaderRoute: typeof DocumentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/final-offer': {
       id: '/final-offer'
       path: '/final-offer'
       fullPath: '/final-offer'
       preLoaderRoute: typeof FinalOfferRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/follow-ups': {
+      id: '/follow-ups'
+      path: '/follow-ups'
+      fullPath: '/follow-ups'
+      preLoaderRoute: typeof FollowUpsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/interviews': {
+      id: '/interviews'
+      path: '/interviews'
+      fullPath: '/interviews'
+      preLoaderRoute: typeof InterviewsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/location': {
@@ -670,10 +750,14 @@ const TasksRouteWithChildren = TasksRoute._addFileChildren(TasksRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccessControlRoute: AccessControlRoute,
+  ApplicationsRoute: ApplicationsRoute,
   CompanyRoute: CompanyRoute,
   CountryRoute: CountryRoute,
   CustomerPoRoute: CustomerPoRoute,
+  DocumentsRoute: DocumentsRoute,
   FinalOfferRoute: FinalOfferRoute,
+  FollowUpsRoute: FollowUpsRoute,
+  InterviewsRoute: InterviewsRoute,
   LocationRoute: LocationRoute,
   LoginRoute: LoginRoute,
   MarketingRoute: MarketingRouteWithChildren,
