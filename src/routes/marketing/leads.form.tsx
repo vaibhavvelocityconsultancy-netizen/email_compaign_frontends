@@ -487,7 +487,7 @@ function LeadFormPage() {
   }
 
   return (
-    <div className="mx-auto p-11">
+    <div className="mx-auto p-11 bg-white rounded-lg shadow-md max-w-4xl space-y-8">
       <div className="mb-8">
         <Button variant="ghost" size="sm" onClick={goBack} className="-ml-3 mb-3 text-muted-foreground">
           <ArrowLeft /> Leads
@@ -802,7 +802,7 @@ function LeadFormPage() {
           <p className="text-sm text-muted-foreground" aria-live="polite">
             {isDirty ? "You have unsaved changes" : ""}
           </p>
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full justify-end sm:w-auto">
             <Button type="button" variant="outline" onClick={goBack}>Cancel</Button>
             <Button type="submit" disabled={!canSubmit}>
               <Save /> {saveMutation.isPending ? "Saving…" : leadId ? "Save changes" : "Create lead"}

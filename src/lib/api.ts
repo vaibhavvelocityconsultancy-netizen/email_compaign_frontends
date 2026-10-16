@@ -234,10 +234,12 @@ export interface Campaign {
 
 export interface CampaignLead {
   leadId: string;
+  email: string;
   currentStep: number;
   lastEmailStatus: "sent" | "pending" | "completed" | "failed";
   replied: boolean;
   unsubscribed: boolean;
+  unsubscribedAt: string | null;
   completed: boolean;
 }
 
@@ -325,6 +327,7 @@ interface ApiBatchLead {
   current_step: number;
   replied: boolean;
   unsubscribed: boolean;
+  unsubscribed_at: string | null;
   completed: boolean;
   last_email_sent_at: string | null;
 }
@@ -816,6 +819,7 @@ export async function getBatchLeads(id: string): Promise<CampaignLead[]> {
     lastEmailStatus: lead.completed ? "completed" : "pending",
     replied: lead.replied,
     unsubscribed: lead.unsubscribed,
+    unsubscribedAt: lead.unsubscribed_at,
     completed: lead.completed,
   }));
 }

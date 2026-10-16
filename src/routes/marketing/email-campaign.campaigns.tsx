@@ -56,6 +56,7 @@ function CampaignsPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [recipientFilter, setRecipientFilter] = useState<"all" | "subscribed" | "unsubscribed">("all");
   const [toDelete, setToDelete] = useState<Campaign | null>(null);
 
   const campaignsQuery = useQuery({ queryKey: ["campaigns"], queryFn: getBatches });
@@ -70,6 +71,13 @@ function CampaignsPage() {
   const selectedCampaignLogs = useMemo<EmailLog[]>(
     () => emailLogsQuery.data?.filter((log) => log.batchId === selectedCampaign?.id) ?? [],
     [emailLogsQuery.data, selectedCampaign?.id],
+  );
+  const visibleCampaignLeads = useMemo(
+    () => (selectedLeadsQuery.data ?? []).filter((lead) =>
+      recipientFilter === "all" ||
+      (recipientFilter === "unsubscribed" ? lead.unsubscribed : !lead.unsubscribed),
+    ),
+    [selectedLeadsQuery.data, recipientFilter],
   );
 
   useEffect(() => {
@@ -502,7 +510,10 @@ function CampaignsPage() {
 
       <Modal
         open={Boolean(selectedCampaign)}
-        onClose={() => setSelectedCampaign(null)}
+        onClose={() => {
+          setSelectedCampaign(null);
+          setRecipientFilter("all");
+        }}
         title={selectedCampaign?.name ?? "Campaign leads"}
         eyebrow="ENROLLED LEADS"
         wide
@@ -515,6 +526,20 @@ function CampaignsPage() {
           ) : !selectedLeadsQuery.data?.length ? (
             <EmptyState title="No leads assigned" />
           ) : (
+            <>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <span className="text-sm text-muted-foreground">{visibleCampaignLeads.length} recipients</span>
+              <select
+                aria-label="Filter campaign recipients by subscription status"
+                value={recipientFilter}
+                onChange={(event) => setRecipientFilter(event.target.value as typeof recipientFilter)}
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="all">All subscription statuses</option>
+                <option value="subscribed">Subscribed</option>
+                <option value="unsubscribed">Unsubscribed</option>
+              </select>
+            </div>
             <div className="overflow-x-auto rounded-md border border-line">
               <Table>
                 <TableHeader>
@@ -526,21 +551,29 @@ function CampaignsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {selectedLeadsQuery.data.map((campaignLead) => {
+                  {visibleCampaignLeads.map((campaignLead) => {
                     const lead: Lead | undefined = leadById.get(campaignLead.leadId);
                     const status = campaignLead.completed ? "completed" : campaignLead.replied ? "replied" : campaignLead.unsubscribed ? "unsubscribed" : "active";
                     return (
                       <TableRow key={campaignLead.leadId}>
                         <TableCell className="font-medium">{lead ? `Enquiry #${lead.srNo} · ${lead.enquiryFor}` : "Unknown enquiry"}</TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">{(campaignLead as { email?: string }).email ?? "—"}</TableCell>
+                        <TableCell className="font-mono text-xs text-muted-foreground">{campaignLead.email || "—"}</TableCell>
                         <TableCell className="font-mono text-xs">{campaignLead.currentStep}</TableCell>
-                        <TableCell><StatusBadge status={status} /></TableCell>
+                        <TableCell>
+                          <div className="flex flex-col items-start gap-1">
+                            <StatusBadge status={status} />
+                            <span className="text-xs text-muted-foreground">
+                              {campaignLead.unsubscribed ? "Unsubscribed" : "Subscribed"}
+                            </span>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     );
                   })}
                 </TableBody>
               </Table>
             </div>
+            </>
           )}
 
           <div className="mt-6 border-t border-line pt-5">
