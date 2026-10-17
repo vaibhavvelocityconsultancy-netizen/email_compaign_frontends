@@ -1,4 +1,4 @@
-const configuredApiBase = (Reflect.get(import.meta.env, "VITE_API_BASE_URL") as string | undefined)?.replace(/\/+$/, "");
+const configuredApiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/+$/, "");
 const apiBase = configuredApiBase || "/api";
 const accessTokenKey = "vantage.access";
 const refreshTokenKey = "vantage.refresh";
