@@ -250,6 +250,7 @@ export function EntityForm<T extends Record<string, any>>({
   footerActions,
   subHeader,
 }: EntityFormProps<T>) {
+  const scrollable = size === "lg" || size === "full";
   const pendingFilesRef = React.useRef<Record<string, File[]>>({});
   const form = useForm<T>({
     resolver: zodResolver(schema),
@@ -641,7 +642,7 @@ export function EntityForm<T extends Record<string, any>>({
         className={cn(
           "w-[calc(100vw-2rem)] gap-0 p-5 sm:p-6",
           sizeClasses[size],
-          size === "full" && "flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden",
+          scrollable && "flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden",
         )}
       >
         <DialogHeader className="shrink-0">
@@ -675,13 +676,13 @@ export function EntityForm<T extends Record<string, any>>({
             )}
             className={cn(
               "mt-5 space-y-5",
-              size === "full" && "flex min-h-0 flex-1 flex-col overflow-hidden",
+              scrollable && "flex min-h-0 flex-1 flex-col overflow-hidden",
             )}
           >
             <div
               className={cn(
                 "grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5",
-                size === "full" && "min-h-0 flex-1 overflow-y-auto px-1",
+                scrollable && "min-h-0 flex-1 overflow-y-auto px-1",
               )}
             >
               {fields.map(renderField)}
