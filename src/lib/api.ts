@@ -225,6 +225,7 @@ export interface Campaign {
   id: string;
   name: string;
   sequenceId: string;
+  replyToEmail: string;
   leadIds: string[];
   enquiryDateFrom?: string | null;
   enquiryDateTo?: string | null;
@@ -314,6 +315,7 @@ interface ApiBatch {
   id: number;
   name: string;
   sequence: number;
+  reply_to_email: string;
   enquiry_date_from: string | null;
   enquiry_date_to: string | null;
   status: CampaignStatus;
@@ -342,6 +344,11 @@ interface ApiEmailLog {
   subject: string;
   template_name: string | null;
   error: string;
+}
+
+interface SendNowResponse {
+  sent: number;
+  failed: number;
 }
 
 interface ApiLeadsResponse {
@@ -769,6 +776,7 @@ async function mapBatch(batch: ApiBatch): Promise<Campaign> {
     id: String(batch.id),
     name: batch.name,
     sequenceId: String(batch.sequence),
+    replyToEmail: batch.reply_to_email,
     leadIds: batchLeads.map((lead) => String(lead.lead)),
     enquiryDateFrom: batch.enquiry_date_from,
     enquiryDateTo: batch.enquiry_date_to,
@@ -782,12 +790,20 @@ export async function getBatches(): Promise<Campaign[]> {
   return Promise.all(batches.map(mapBatch));
 }
 
-export async function createBatch(data: { name: string; sequenceId: string; leadIds: string[]; enquiryDateFrom?: string; enquiryDateTo?: string }): Promise<Campaign> {
+export async function createBatch(data: {
+  name: string;
+  sequenceId: string;
+  leadIds: string[];
+  replyToEmail?: string;
+  enquiryDateFrom?: string;
+  enquiryDateTo?: string;
+}): Promise<Campaign> {
   const batch = await request<ApiBatch>("/batches/", {
     method: "POST",
     body: JSON.stringify({
       name: data.name,
       sequence: Number(data.sequenceId),
+      reply_to_email: data.replyToEmail || "",
       lead_ids: data.leadIds.map(Number),
       enquiry_date_from: data.enquiryDateFrom || null,
       enquiry_date_to: data.enquiryDateTo || null,
@@ -796,12 +812,23 @@ export async function createBatch(data: { name: string; sequenceId: string; lead
   return mapBatch(batch);
 }
 
-export async function updateBatch(id: string, data: { name: string; sequenceId: string; leadIds: string[]; enquiryDateFrom?: string; enquiryDateTo?: string }): Promise<Campaign> {
+export async function updateBatch(
+  id: string,
+  data: {
+    name: string;
+    sequenceId: string;
+    leadIds: string[];
+    replyToEmail?: string;
+    enquiryDateFrom?: string;
+    enquiryDateTo?: string;
+  },
+): Promise<Campaign> {
   const batch = await request<ApiBatch>(`/batches/${id}/`, {
     method: "PATCH",
     body: JSON.stringify({
       name: data.name,
       sequence: Number(data.sequenceId),
+      reply_to_email: data.replyToEmail || "",
       lead_ids: data.leadIds.map(Number),
       enquiry_date_from: data.enquiryDateFrom || null,
       enquiry_date_to: data.enquiryDateTo || null,
@@ -849,4 +876,17 @@ export async function pauseBatch(id: string): Promise<void> {
 
 export async function resumeBatch(id: string): Promise<void> {
   await request<void>(`/batches/${id}/resume/`, { method: "PATCH" });
+}
+
+export async function sendBatchNow(id: string): Promise<SendNowResponse> {
+  return request<SendNowResponse>(`/batches/${id}/send-now/`, { method: "POST" });
+}
+
+export async function sendBatchLeadNow(
+  batchId: string,
+  leadId: string,
+): Promise<SendNowResponse> {
+  return request<SendNowResponse>(`/batches/${batchId}/leads/${leadId}/send-now/`, {
+    method: "POST",
+  });
 }
