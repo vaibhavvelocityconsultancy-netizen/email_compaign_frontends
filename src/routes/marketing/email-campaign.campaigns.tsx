@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Eye, Megaphone, Pause, Pencil, Play, Plus, Send, Trash2 } from "lucide-react";
+import { Eye, Megaphone, Pause, Pencil, Play, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -22,8 +22,6 @@ import {
   getSequences,
   pauseBatch,
   resumeBatch,
-  sendBatchLeadNow,
-  sendBatchNow,
   updateBatch,
   type Campaign,
   type EmailLog,
@@ -71,23 +69,6 @@ function CampaignsPage() {
     enabled: Boolean(selectedCampaign),
   });
   const emailLogsQuery = useQuery({ queryKey: ["logs"], queryFn: getEmailLogs });
-  const sendNowMutation = useMutation({
-    mutationFn: ({ batchId, leadId }: { batchId: string; leadId?: string }) =>
-      leadId ? sendBatchLeadNow(batchId, leadId) : sendBatchNow(batchId),
-    onSuccess: async (result) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["campaigns"] }),
-        queryClient.invalidateQueries({ queryKey: ["campaign-leads"] }),
-        queryClient.invalidateQueries({ queryKey: ["logs"] }),
-      ]);
-      if (result.failed) {
-        toast.error(`Sent ${result.sent}; ${result.failed} email(s) failed. Check campaign logs.`);
-      } else {
-        toast.success(`${result.sent} email${result.sent === 1 ? "" : "s"} sent now`);
-      }
-    },
-    onError: (error: Error) => toast.error(error.message || "Could not send campaign email"),
-  });
   const selectedCampaignLogs = useMemo<EmailLog[]>(
     () => emailLogsQuery.data?.filter((log) => log.batchId === selectedCampaign?.id) ?? [],
     [emailLogsQuery.data, selectedCampaign?.id],
@@ -206,17 +187,6 @@ function CampaignsPage() {
       headerClassName: "text-right",
       cell: (campaign) => (
         <div className="flex justify-end gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-8"
-            title="Send next email to eligible campaign leads now"
-            aria-label={`Send next email to ${campaign.name} leads now`}
-            disabled={campaign.status !== "active" || sendNowMutation.isPending}
-            onClick={() => sendNowMutation.mutate({ batchId: campaign.id })}
-          >
-            <Send />
-          </Button>
           <Button variant="ghost" size="icon" className="size-8" title="View campaign leads" aria-label="View campaign leads" onClick={() => setSelectedCampaign(campaign)}>
             <Eye />
           </Button>
@@ -245,7 +215,7 @@ function CampaignsPage() {
         </div>
       ),
     },
-  ], [sequenceById, statusMutation, sendNowMutation]);
+  ], [sequenceById, statusMutation]);
 
   const [draftName, setDraftName] = useState("");
   const [draftSequenceId, setDraftSequenceId] = useState("");
@@ -574,17 +544,7 @@ function CampaignsPage() {
           ) : (
             <>
             <div className="mb-3 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-muted-foreground">{visibleCampaignLeads.length} recipients</span>
-                <Button
-                  size="sm"
-                  className="h-9 gap-1.5"
-                  disabled={selectedCampaign?.status !== "active" || sendNowMutation.isPending}
-                  onClick={() => selectedCampaign && sendNowMutation.mutate({ batchId: selectedCampaign.id })}
-                >
-                  <Send className="size-4" /> Send now
-                </Button>
-              </div>
+              <span className="text-sm text-muted-foreground">{visibleCampaignLeads.length} recipients</span>
               <select
                 aria-label="Filter campaign recipients by subscription status"
                 value={recipientFilter}
@@ -604,7 +564,6 @@ function CampaignsPage() {
                     <TableHead>Email</TableHead>
                     <TableHead>Step</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Action</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -623,28 +582,6 @@ function CampaignsPage() {
                               {campaignLead.unsubscribed ? "Unsubscribed" : "Subscribed"}
                             </span>
                           </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 gap-1.5"
-                            disabled={
-                              selectedCampaign?.status !== "active" ||
-                              campaignLead.completed ||
-                              campaignLead.replied ||
-                              campaignLead.unsubscribed ||
-                              !campaignLead.email ||
-                              sendNowMutation.isPending
-                            }
-                            title="Send this lead's next sequence email now"
-                            onClick={() => selectedCampaign && sendNowMutation.mutate({
-                              batchId: selectedCampaign.id,
-                              leadId: campaignLead.leadId,
-                            })}
-                          >
-                            <Send className="size-3.5" /> Send now
-                          </Button>
                         </TableCell>
                       </TableRow>
                     );
