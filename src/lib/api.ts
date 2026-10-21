@@ -233,6 +233,11 @@ export interface Campaign {
   createdAt: string;
 }
 
+export interface AutomaticEmailResult {
+  sent: number;
+  failed: number;
+}
+
 export interface CampaignLead {
   leadId: string;
   email: string;
@@ -320,6 +325,7 @@ interface ApiBatch {
   enquiry_date_to: string | null;
   status: CampaignStatus;
   created_at: string;
+  automatic_email?: AutomaticEmailResult;
 }
 
 interface ApiBatchLead {
@@ -797,8 +803,8 @@ export async function createBatch(data: {
   replyToEmail?: string;
   enquiryDateFrom?: string;
   enquiryDateTo?: string;
-}): Promise<Campaign> {
-  const batch = await request<ApiBatch>("/batches/", {
+}): Promise<{ campaign: Campaign; automaticEmail?: AutomaticEmailResult }> {
+  const response = await request<ApiBatch>("/batches/", {
     method: "POST",
     body: JSON.stringify({
       name: data.name,
@@ -809,7 +815,12 @@ export async function createBatch(data: {
       enquiry_date_to: data.enquiryDateTo || null,
     }),
   });
-  return mapBatch(batch);
+  return {
+    campaign: await mapBatch(response),
+    ...(response.automatic_email
+      ? { automaticEmail: response.automatic_email }
+      : {}),
+  };
 }
 
 export async function updateBatch(
@@ -874,8 +885,19 @@ export async function pauseBatch(id: string): Promise<void> {
   await request<void>(`/batches/${id}/pause/`, { method: "PATCH" });
 }
 
-export async function resumeBatch(id: string): Promise<void> {
-  await request<void>(`/batches/${id}/resume/`, { method: "PATCH" });
+export async function resumeBatch(
+  id: string,
+): Promise<{ status: CampaignStatus; automaticEmail?: AutomaticEmailResult }> {
+  const response = await request<{
+    status: CampaignStatus;
+    automatic_email?: AutomaticEmailResult;
+  }>(`/batches/${id}/resume/`, { method: "PATCH" });
+  return {
+    status: response.status,
+    ...(response.automatic_email
+      ? { automaticEmail: response.automatic_email }
+      : {}),
+  };
 }
 
 export async function sendBatchNow(id: string): Promise<SendNowResponse> {

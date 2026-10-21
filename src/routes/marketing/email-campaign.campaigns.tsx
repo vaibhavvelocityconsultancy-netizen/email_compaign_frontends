@@ -96,10 +96,23 @@ function CampaignsPage() {
       enquiryDateFrom: dateFrom || undefined,
       enquiryDateTo: dateTo || undefined,
     }),
-    onSuccess: async () => {
+    onSuccess: async ({ campaign, automaticEmail }) => {
       await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
       setFormOpen(false);
-      toast.success("Campaign created");
+      if (automaticEmail?.sent) {
+        const failureSummary = automaticEmail.failed
+          ? ` ${automaticEmail.failed} failed.`
+          : "";
+        toast.success(
+          `Campaign created; ${automaticEmail.sent} email${automaticEmail.sent === 1 ? "" : "s"} sent automatically.${failureSummary}`,
+        );
+      } else if (automaticEmail?.failed) {
+        toast.error(
+          `Campaign created, but ${automaticEmail.failed} automatic email${automaticEmail.failed === 1 ? "" : "s"} failed.`,
+        );
+      } else {
+        toast.success(`Campaign "${campaign.name}" created`);
+      }
     },
     onError: (error: Error) => toast.error(error.message || "Could not create campaign"),
   });
@@ -123,11 +136,31 @@ function CampaignsPage() {
   });
 
   const statusMutation = useMutation({
-    mutationFn: ({ campaign, action }: { campaign: Campaign; action: "pause" | "resume" }) =>
-      action === "pause" ? pauseBatch(campaign.id) : resumeBatch(campaign.id),
-    onSuccess: async (_, variables) => {
+    mutationFn: async ({ campaign, action }: { campaign: Campaign; action: "pause" | "resume" }) => {
+      if (action === "pause") {
+        await pauseBatch(campaign.id);
+        return null;
+      }
+      return resumeBatch(campaign.id);
+    },
+    onSuccess: async (result, variables) => {
       await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
-      toast.success(variables.action === "pause" ? "Campaign paused" : "Campaign resumed");
+      if (variables.action === "pause") {
+        toast.success("Campaign paused");
+      } else if (result?.automaticEmail?.sent) {
+        const { sent, failed } = result.automaticEmail;
+        const failureSummary = failed ? ` ${failed} failed.` : "";
+        toast.success(
+          `Campaign resumed; ${sent} email${sent === 1 ? "" : "s"} sent automatically.${failureSummary}`,
+        );
+      } else if (result?.automaticEmail?.failed) {
+        const { failed } = result.automaticEmail;
+        toast.error(
+          `Campaign resumed, but ${failed} automatic email${failed === 1 ? "" : "s"} failed.`,
+        );
+      } else {
+        toast.success("Campaign resumed");
+      }
     },
     onError: (error: Error) => toast.error(error.message || "Could not update campaign"),
   });
