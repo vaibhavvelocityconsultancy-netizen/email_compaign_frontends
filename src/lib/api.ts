@@ -260,6 +260,21 @@ export interface EmailLog {
   error?: string;
 }
 
+export interface InboundReply {
+  id: number;
+  batch_lead: number | null;
+  sender_email: string;
+  recipient_email: string;
+  subject: string;
+  body_plain: string;
+  body_html: string;
+  message_id: string | null;
+  received_at: string;
+  created_at: string;
+  lead: { id: number; name: string; email: string | null } | null;
+  campaign: { id: number; name: string } | null;
+}
+
 interface ApiLead {
   sr_no: number;
   unsubscribed: boolean;
@@ -879,6 +894,10 @@ export async function getEmailLogs(): Promise<EmailLog[]> {
     templateName: log.template_name ?? "",
     ...(log.error ? { error: log.error } : {}),
   }));
+}
+
+export async function getInboundReplies(): Promise<InboundReply[]> {
+  return request<InboundReply[]>("/inbound-replies/");
 }
 
 export async function getRecentEmailLogs(): Promise<EmailLog[]> {

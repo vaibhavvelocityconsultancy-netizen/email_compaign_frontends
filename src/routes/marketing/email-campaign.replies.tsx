@@ -1,0 +1,160 @@
+import { useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { useState } from "react";
+
+import { Button } from "@/components/ui/button";
+import { getInboundReplies } from "@/lib/api";
+
+const PAGE_SIZE = 10;
+
+export const Route = createFileRoute("/marketing/email-campaign/replies")({
+  head: () => ({
+    meta: [
+      { title: "Incoming Replies — Vantage CRM" },
+      { name: "description", content: "Read replies to email campaigns." },
+    ],
+  }),
+  component: IncomingRepliesPage,
+});
+
+function IncomingRepliesPage() {
+  const repliesQuery = useQuery({
+    queryKey: ["inbound-replies"],
+    queryFn: getInboundReplies,
+  });
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [page, setPage] = useState(0);
+  const replies = repliesQuery.data ?? [];
+  const pageCount = Math.max(1, Math.ceil(replies.length / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount - 1);
+  const pageReplies = replies.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
+  const selectedReply = replies.find((reply) => reply.id === selectedId) ?? pageReplies[0] ?? null;
+
+  return (
+    <section className="space-y-5">
+      <header className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="font-mono text-[11px] tracking-wide text-muted-foreground">COMMUNICATION</p>
+          <h1 className="mt-1 font-display text-3xl font-bold tracking-tight">Incoming Replies</h1>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => void repliesQuery.refetch()}
+          disabled={repliesQuery.isFetching}
+        >
+          <RefreshCw className={`mr-2 size-4 ${repliesQuery.isFetching ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
+      </header>
+
+      {repliesQuery.isLoading ? (
+        <p className="rounded-lg border border-line p-6 text-sm text-muted-foreground">
+          Loading incoming replies…
+        </p>
+      ) : repliesQuery.isError ? (
+        <div className="rounded-lg border border-destructive/40 p-6">
+          <p className="text-sm text-destructive">
+            Could not load incoming replies. Please try again.
+          </p>
+          <Button className="mt-3" variant="outline" onClick={() => void repliesQuery.refetch()}>
+            Try again
+          </Button>
+        </div>
+      ) : replies.length === 0 ? (
+        <p className="rounded-lg border border-line p-8 text-center text-sm text-muted-foreground">
+          No incoming replies yet.
+        </p>
+      ) : (
+        <div className="grid min-h-[28rem] gap-4 lg:grid-cols-[minmax(18rem,0.8fr)_minmax(0,1.6fr)]">
+          <div className="flex min-h-0 flex-col rounded-lg border border-line">
+            <div className="min-h-0 flex-1 divide-y divide-line overflow-y-auto">
+              {pageReplies.map((reply) => {
+                const isSelected = selectedReply?.id === reply.id;
+                return (
+                  <button
+                    key={reply.id}
+                    type="button"
+                    onClick={() => setSelectedId(reply.id)}
+                    className={`block w-full px-4 py-3 text-left transition-colors hover:bg-muted/50 ${
+                      isSelected ? "bg-muted/60" : ""
+                    }`}
+                  >
+                    <span className="flex items-start justify-between gap-3">
+                      <span className="truncate text-sm font-medium">{reply.sender_email}</span>
+                      <time className="shrink-0 font-mono text-[10px] text-muted-foreground">
+                        {new Date(reply.received_at).toLocaleDateString()}
+                      </time>
+                    </span>
+                    <span className="mt-1 block truncate text-sm">
+                      {reply.subject || "(no subject)"}
+                    </span>
+                    <span className="mt-1 block truncate text-xs text-muted-foreground">
+                      {reply.lead?.name ?? "Unmatched sender"}
+                      {reply.campaign ? ` · ${reply.campaign.name}` : ""}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex items-center justify-between border-t border-line px-3 py-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Previous page"
+                onClick={() => setPage((current) => Math.max(0, current - 1))}
+                disabled={currentPage === 0}
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                Page {currentPage + 1} of {pageCount}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label="Next page"
+                onClick={() => setPage((current) => Math.min(pageCount - 1, current + 1))}
+                disabled={currentPage >= pageCount - 1}
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+          </div>
+
+          {selectedReply && (
+            <article className="min-w-0 rounded-lg border border-line p-5">
+              <div className="border-b border-line pb-4">
+                <h2 className="break-words text-xl font-semibold">
+                  {selectedReply.subject || "(no subject)"}
+                </h2>
+                <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-[5rem_minmax(0,1fr)]">
+                  <dt className="text-muted-foreground">From</dt>
+                  <dd className="break-all">{selectedReply.sender_email}</dd>
+                  <dt className="text-muted-foreground">To</dt>
+                  <dd className="break-all">{selectedReply.recipient_email || "—"}</dd>
+                  <dt className="text-muted-foreground">Received</dt>
+                  <dd>{new Date(selectedReply.received_at).toLocaleString()}</dd>
+                  <dt className="text-muted-foreground">Lead</dt>
+                  <dd>
+                    {selectedReply.lead
+                      ? `${selectedReply.lead.name || selectedReply.lead.email} · ${selectedReply.lead.email ?? ""}`
+                      : "Unmatched sender"}
+                  </dd>
+                  <dt className="text-muted-foreground">Campaign</dt>
+                  <dd>{selectedReply.campaign?.name ?? "—"}</dd>
+                </dl>
+              </div>
+              <div className="max-h-[24rem] overflow-y-auto pt-4">
+                <h3 className="mb-2 text-sm font-medium">Message</h3>
+                <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-6">
+                  {selectedReply.body_plain || "(No plain-text body)"}
+                </pre>
+              </div>
+            </article>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}

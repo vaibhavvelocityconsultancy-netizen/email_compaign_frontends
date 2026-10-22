@@ -337,7 +337,7 @@ function LeadsPage() {
       <Modal open={importOpen} onClose={() => setImportOpen(false)} title="Upload Leads" eyebrow="IMPORT LEADS">
         <div className="space-y-3 p-5">
           <p className="text-xs text-muted-foreground">
-            Missing columns or values are allowed. Blank dates stay empty, while source and status default to Other and enquiry type defaults to Lead. Unrecognized source or status values also default to Other.
+            CSV files with commas or tabs and Excel files are supported. Missing columns or values are allowed. Enquiry date defaults to today if blank or missing; source and status default to Other.
           </p>
           <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-line bg-background px-4 py-8 text-center transition-colors hover:border-brand">
             <Upload className="size-5 text-muted-foreground" />

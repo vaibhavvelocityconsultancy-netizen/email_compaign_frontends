@@ -35,6 +35,7 @@ import { Route as TasksFormRouteImport } from './routes/tasks/form'
 import { Route as MarketingEmailCampaignIndexRouteImport } from './routes/marketing/email-campaign.index'
 import { Route as MarketingEmailCampaignCampaignsRouteImport } from './routes/marketing/email-campaign.campaigns'
 import { Route as MarketingEmailCampaignLogsRouteImport } from './routes/marketing/email-campaign.logs'
+import { Route as MarketingEmailCampaignRepliesRouteImport } from './routes/marketing/email-campaign.replies'
 import { Route as MarketingEmailCampaignSequencesRouteImport } from './routes/marketing/email-campaign.sequences'
 import { Route as MarketingEmailCampaignTemplatesRouteImport } from './routes/marketing/email-campaign.templates'
 import { Route as MarketingLeadsFormRouteImport } from './routes/marketing/leads.form'
@@ -172,6 +173,12 @@ const MarketingEmailCampaignLogsRoute =
     path: '/logs',
     getParentRoute: () => MarketingEmailCampaignRoute,
   } as any)
+const MarketingEmailCampaignRepliesRoute =
+  MarketingEmailCampaignRepliesRouteImport.update({
+    id: '/replies',
+    path: '/replies',
+    getParentRoute: () => MarketingEmailCampaignRoute,
+  } as any)
 const MarketingEmailCampaignSequencesRoute =
   MarketingEmailCampaignSequencesRouteImport.update({
     id: '/sequences',
@@ -216,6 +223,7 @@ export interface FileRoutesByFullPath {
   '/tasks/': typeof TasksIndexRoute
   '/marketing/email-campaign/campaigns': typeof MarketingEmailCampaignCampaignsRoute
   '/marketing/email-campaign/logs': typeof MarketingEmailCampaignLogsRoute
+  '/marketing/email-campaign/replies': typeof MarketingEmailCampaignRepliesRoute
   '/marketing/email-campaign/sequences': typeof MarketingEmailCampaignSequencesRoute
   '/marketing/email-campaign/templates': typeof MarketingEmailCampaignTemplatesRoute
   '/marketing/leads/form': typeof MarketingLeadsFormRoute
@@ -245,6 +253,7 @@ export interface FileRoutesByTo {
   '/tasks': typeof TasksIndexRoute
   '/marketing/email-campaign/campaigns': typeof MarketingEmailCampaignCampaignsRoute
   '/marketing/email-campaign/logs': typeof MarketingEmailCampaignLogsRoute
+  '/marketing/email-campaign/replies': typeof MarketingEmailCampaignRepliesRoute
   '/marketing/email-campaign/sequences': typeof MarketingEmailCampaignSequencesRoute
   '/marketing/email-campaign/templates': typeof MarketingEmailCampaignTemplatesRoute
   '/marketing/leads/form': typeof MarketingLeadsFormRoute
@@ -277,6 +286,7 @@ export interface FileRoutesById {
   '/tasks/': typeof TasksIndexRoute
   '/marketing/email-campaign/campaigns': typeof MarketingEmailCampaignCampaignsRoute
   '/marketing/email-campaign/logs': typeof MarketingEmailCampaignLogsRoute
+  '/marketing/email-campaign/replies': typeof MarketingEmailCampaignRepliesRoute
   '/marketing/email-campaign/sequences': typeof MarketingEmailCampaignSequencesRoute
   '/marketing/email-campaign/templates': typeof MarketingEmailCampaignTemplatesRoute
   '/marketing/leads/form': typeof MarketingLeadsFormRoute
@@ -310,6 +320,7 @@ export interface FileRouteTypes {
     | '/tasks/'
     | '/marketing/email-campaign/campaigns'
     | '/marketing/email-campaign/logs'
+    | '/marketing/email-campaign/replies'
     | '/marketing/email-campaign/sequences'
     | '/marketing/email-campaign/templates'
     | '/marketing/leads/form'
@@ -339,6 +350,7 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/marketing/email-campaign/campaigns'
     | '/marketing/email-campaign/logs'
+    | '/marketing/email-campaign/replies'
     | '/marketing/email-campaign/sequences'
     | '/marketing/email-campaign/templates'
     | '/marketing/leads/form'
@@ -370,6 +382,7 @@ export interface FileRouteTypes {
     | '/tasks/'
     | '/marketing/email-campaign/campaigns'
     | '/marketing/email-campaign/logs'
+    | '/marketing/email-campaign/replies'
     | '/marketing/email-campaign/sequences'
     | '/marketing/email-campaign/templates'
     | '/marketing/leads/form'
@@ -581,6 +594,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MarketingEmailCampaignLogsRouteImport
       parentRoute: typeof MarketingEmailCampaignRoute
     }
+    '/marketing/email-campaign/replies': {
+      id: '/marketing/email-campaign/replies'
+      path: '/replies'
+      fullPath: '/marketing/email-campaign/replies'
+      preLoaderRoute: typeof MarketingEmailCampaignRepliesRouteImport
+      parentRoute: typeof MarketingEmailCampaignRoute
+    }
     '/marketing/email-campaign/sequences': {
       id: '/marketing/email-campaign/sequences'
       path: '/sequences'
@@ -608,6 +628,7 @@ declare module '@tanstack/react-router' {
 interface MarketingEmailCampaignRouteChildren {
   MarketingEmailCampaignCampaignsRoute: typeof MarketingEmailCampaignCampaignsRoute
   MarketingEmailCampaignLogsRoute: typeof MarketingEmailCampaignLogsRoute
+  MarketingEmailCampaignRepliesRoute: typeof MarketingEmailCampaignRepliesRoute
   MarketingEmailCampaignSequencesRoute: typeof MarketingEmailCampaignSequencesRoute
   MarketingEmailCampaignTemplatesRoute: typeof MarketingEmailCampaignTemplatesRoute
   MarketingEmailCampaignIndexRoute: typeof MarketingEmailCampaignIndexRoute
@@ -617,6 +638,7 @@ const MarketingEmailCampaignRouteChildren: MarketingEmailCampaignRouteChildren =
   {
     MarketingEmailCampaignCampaignsRoute: MarketingEmailCampaignCampaignsRoute,
     MarketingEmailCampaignLogsRoute: MarketingEmailCampaignLogsRoute,
+    MarketingEmailCampaignRepliesRoute: MarketingEmailCampaignRepliesRoute,
     MarketingEmailCampaignSequencesRoute: MarketingEmailCampaignSequencesRoute,
     MarketingEmailCampaignTemplatesRoute: MarketingEmailCampaignTemplatesRoute,
     MarketingEmailCampaignIndexRoute: MarketingEmailCampaignIndexRoute,
