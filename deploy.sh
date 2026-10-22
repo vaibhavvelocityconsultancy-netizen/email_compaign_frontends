@@ -1,28 +1,33 @@
+cd /home/sharpe36/email_frontend_git
+
 cat > deploy.sh <<'EOF'
 #!/bin/bash
 set -Eeuo pipefail
 
 PROJECT_DIR="/home/sharpe36/email_frontend_git"
 
+trap 'echo "ERROR: Deployment failed at line $LINENO. Check the output above."' ERR
+
 cd "$PROJECT_DIR"
 
-echo "================================"
-echo "Starting frontend deployment..."
-echo "================================"
+echo "======================================"
+echo "Starting frontend deployment"
+echo "======================================"
 
-echo ""
-echo "[1/2] Pulling latest code from GitHub..."
+echo "[1/2] Pulling latest code..."
 git pull --ff-only origin main
 
-echo ""
 echo "[2/2] Building frontend..."
 RAYON_NUM_THREADS=1 npm run build
 
-echo ""
-echo "================================"
-echo "Deployment build completed!"
-echo "================================"
-echo "If required, restart the Node.js app in cPanel."
+test -f .output/server/index.mjs || {
+    echo "ERROR: Production server file is missing."
+    exit 1
+}
+
+echo "======================================"
+echo "SUCCESS: Frontend build completed!"
+echo "======================================"
 EOF
 
-chmod +x deploy.sh
+bash deploy.sh
