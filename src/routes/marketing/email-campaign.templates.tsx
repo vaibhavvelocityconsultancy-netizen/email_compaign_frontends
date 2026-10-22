@@ -67,6 +67,13 @@ const pickNewFile = (value: unknown): File | undefined =>
 const waStatusClass = (s?: string) =>
   s === "approved" ? "text-emerald-600" : s === "rejected" ? "text-bad" : "text-muted-foreground";
 
+const formatEmailBody = (body: string) =>
+  body
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s*>\s?/, ""))
+    .join("\n")
+    .trim();
+
 // `hidden` receives the form; read the live channel value from it
 type HiddenForm = UseFormReturn<Record<string, unknown>>;
 const hideForWhatsApp = (form: HiddenForm) => form.watch("channel") === "whatsapp";
@@ -363,7 +370,9 @@ function TemplatesPage() {
               <div className="rounded-xl border border-line bg-background p-5">
                 <div className="font-display text-base font-semibold">{preview.subject}</div>
                 <div className="my-4 h-px bg-line" />
-                <div className="text-sm whitespace-pre-wrap">{preview.body}</div>
+                <div className="text-sm leading-6 whitespace-pre-wrap">
+                  {formatEmailBody(preview.body)}
+                </div>
                 <div className="mt-6 text-sm whitespace-pre-wrap text-muted-foreground">{preview.signature}</div>
               </div>
             )}

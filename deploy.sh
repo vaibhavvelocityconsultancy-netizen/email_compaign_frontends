@@ -1,38 +1,52 @@
+
 cd /home/sharpe36/email_frontend_git
 
 cat > deploy.sh <<'EOF'
 #!/bin/bash
-set -Eeuo pipefail
+set -eu
 
-PROJECT_DIR="/home/sharpe36/email_frontend_git"
-cd "$PROJECT_DIR"
+cd /home/sharpe36/email_frontend_git
 
-trap 'echo ""; echo "ERROR: Deployment failed. Check the output above."; exit 1' ERR
+echo "=== 1. Pulling latest code ==="
+git pull --ff-only
 
-echo ""
-echo "======================================"
-echo "   FRONTEND DEPLOYMENT"
-echo "======================================"
-
-echo ""
-echo "[1/2] Pulling latest code from GitHub..."
-git pull --ff-only origin main
-
-echo ""
-echo "[2/2] Building production frontend..."
+echo "=== 2. Building production frontend ==="
 RAYON_NUM_THREADS=1 npm run build
 
-if [ ! -f .output/server/index.mjs ]; then
-    echo "ERROR: Production server file is missing."
-    exit 1
+echo "=== 3. Checking build output ==="
+test -f .output/server/index.mjs
+test -d .output/public/assets
+test -L /home/sharpe36/public_html/vc_email_crm/assets
+
+echo "=== 4. Restarting Passenger ==="
+mkdir -p tmp
+touch tmp/restart.txt
+
+echo "=== 5. Waiting for application ==="
+sleep 5
+
+echo "=== 6. Checking live login page ==="
+HTML=$(curl -fsS --compressed \
+  https://sharpefforts.com/vc_email_crm/login)
+
+JS=$(printf '%s' "$HTML" |
+  grep -aoE 'assets/[^" ]+\.js' |
+  head -n 1 || true)
+
+if [ -z "$JS" ]; then
+  echo "ERROR: No JavaScript asset found in live HTML."
+  exit 1
 fi
 
-echo ""
-echo "======================================"
-echo "   BUILD COMPLETED SUCCESSFULLY"
-echo "======================================"
-echo "If required, restart the Node.js app in cPanel."
-echo ""
+echo "Checking asset: $JS"
+
+if curl -fsSI \
+  "https://sharpefforts.com/vc_email_crm/$JS" >/dev/null; then
+  echo "SUCCESS: Latest deployment is responding and the asset loads."
+else
+  echo "ERROR: Asset returned an unsuccessful response."
+  exit 1
+fi
 EOF
 
-bash deploy.sh
+chmod +x deploy.sh
