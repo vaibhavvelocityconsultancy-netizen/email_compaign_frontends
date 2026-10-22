@@ -7,14 +7,19 @@ set -Eeuo pipefail
 PROJECT_DIR="/home/sharpe36/email_frontend_git"
 cd "$PROJECT_DIR"
 
+trap 'echo ""; echo "ERROR: Deployment failed. Check the output above."; exit 1' ERR
+
+echo ""
 echo "======================================"
-echo "Starting frontend deployment"
+echo "   FRONTEND DEPLOYMENT"
 echo "======================================"
 
-echo "[1/2] Pulling latest code..."
+echo ""
+echo "[1/2] Pulling latest code from GitHub..."
 git pull --ff-only origin main
 
-echo "[2/2] Building frontend..."
+echo ""
+echo "[2/2] Building production frontend..."
 RAYON_NUM_THREADS=1 npm run build
 
 if [ ! -f .output/server/index.mjs ]; then
@@ -22,10 +27,12 @@ if [ ! -f .output/server/index.mjs ]; then
     exit 1
 fi
 
+echo ""
 echo "======================================"
-echo "SUCCESS: Frontend build completed!"
+echo "   BUILD COMPLETED SUCCESSFULLY"
 echo "======================================"
+echo "If required, restart the Node.js app in cPanel."
+echo ""
 EOF
 
-echo "Script created. Starting deployment..."
-bash -x deploy.sh
+bash deploy.sh

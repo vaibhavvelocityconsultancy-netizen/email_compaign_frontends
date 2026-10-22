@@ -44,7 +44,7 @@ export default function LoginPage({
 
   return (
     <AuthLayout
-      title="Sign in"
+      title="s in"
       subtitle="Enter your details to open your workspace."
       footer={
         <span>
