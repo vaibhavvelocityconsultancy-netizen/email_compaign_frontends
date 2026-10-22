@@ -67,6 +67,7 @@ export type LogStatus =
 export interface Lead {
   id: string;
   srNo: number;
+  unsubscribed: boolean;
   enquiryFor: string;
   enquiryDate: string;
   companyId: number | null;
@@ -227,8 +228,6 @@ export interface Campaign {
   sequenceId: string;
   replyToEmail: string;
   leadIds: string[];
-  enquiryDateFrom?: string | null;
-  enquiryDateTo?: string | null;
   status: CampaignStatus;
   createdAt: string;
 }
@@ -263,6 +262,7 @@ export interface EmailLog {
 
 interface ApiLead {
   sr_no: number;
+  unsubscribed: boolean;
   company: number | null;
   contact: number | null;
   company_name: string;
@@ -319,10 +319,8 @@ interface ApiSequenceStep {
 interface ApiBatch {
   id: number;
   name: string;
-  sequence: number;
+  sequence: number | null;
   reply_to_email: string;
-  enquiry_date_from: string | null;
-  enquiry_date_to: string | null;
   status: CampaignStatus;
   created_at: string;
   automatic_email?: AutomaticEmailResult;
@@ -367,6 +365,7 @@ interface ApiImportResponse {
   total_rows: number;
   duplicates: number;
   invalid: number;
+  row_errors?: Array<{ row: number; errors: Record<string, string[]> }>;
 }
 
 function makeApiUrl(path: string): URL {
@@ -498,6 +497,7 @@ function mapLead(lead: ApiLead): Lead {
   return {
     id: String(lead.sr_no),
     srNo: lead.sr_no,
+    unsubscribed: lead.unsubscribed,
     enquiryFor: lead.enquiry_for,
     enquiryDate: lead.enquiry_date,
     companyId: lead.company,
@@ -567,6 +567,14 @@ export async function updateLead(id: string, data: LeadInput): Promise<Lead> {
   const lead = await request<ApiLead>(`/leads/${id}/`, {
     method: "PATCH",
     body: JSON.stringify(data),
+  });
+  return mapLead(lead);
+}
+
+export async function updateLeadStatus(id: string, status: LeadStatus): Promise<Lead> {
+  const lead = await request<ApiLead>(`/leads/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify({ status: status.toUpperCase() }),
   });
   return mapLead(lead);
 }
@@ -781,11 +789,9 @@ async function mapBatch(batch: ApiBatch): Promise<Campaign> {
   return {
     id: String(batch.id),
     name: batch.name,
-    sequenceId: String(batch.sequence),
+    sequenceId: batch.sequence === null ? "" : String(batch.sequence),
     replyToEmail: batch.reply_to_email,
     leadIds: batchLeads.map((lead) => String(lead.lead)),
-    enquiryDateFrom: batch.enquiry_date_from,
-    enquiryDateTo: batch.enquiry_date_to,
     status: batch.status,
     createdAt: batch.created_at,
   };
@@ -798,21 +804,17 @@ export async function getBatches(): Promise<Campaign[]> {
 
 export async function createBatch(data: {
   name: string;
-  sequenceId: string;
+  sequenceId?: string;
   leadIds: string[];
   replyToEmail?: string;
-  enquiryDateFrom?: string;
-  enquiryDateTo?: string;
 }): Promise<{ campaign: Campaign; automaticEmail?: AutomaticEmailResult }> {
   const response = await request<ApiBatch>("/batches/", {
     method: "POST",
     body: JSON.stringify({
       name: data.name,
-      sequence: Number(data.sequenceId),
+      ...(data.sequenceId ? { sequence: Number(data.sequenceId) } : {}),
       reply_to_email: data.replyToEmail || "",
       lead_ids: data.leadIds.map(Number),
-      enquiry_date_from: data.enquiryDateFrom || null,
-      enquiry_date_to: data.enquiryDateTo || null,
     }),
   });
   return {
@@ -827,22 +829,20 @@ export async function updateBatch(
   id: string,
   data: {
     name: string;
-    sequenceId: string;
+    sequenceId?: string | null;
     leadIds: string[];
     replyToEmail?: string;
-    enquiryDateFrom?: string;
-    enquiryDateTo?: string;
   },
 ): Promise<Campaign> {
   const batch = await request<ApiBatch>(`/batches/${id}/`, {
     method: "PATCH",
     body: JSON.stringify({
       name: data.name,
-      sequence: Number(data.sequenceId),
+      ...(data.sequenceId !== undefined
+        ? { sequence: data.sequenceId ? Number(data.sequenceId) : null }
+        : {}),
       reply_to_email: data.replyToEmail || "",
       lead_ids: data.leadIds.map(Number),
-      enquiry_date_from: data.enquiryDateFrom || null,
-      enquiry_date_to: data.enquiryDateTo || null,
     }),
   });
   return mapBatch(batch);
@@ -881,6 +881,21 @@ export async function getEmailLogs(): Promise<EmailLog[]> {
   }));
 }
 
+export async function getRecentEmailLogs(): Promise<EmailLog[]> {
+  const logs = await request<ApiEmailLog[]>("/email-logs/?limit=50");
+  return logs.map((log) => ({
+    id: String(log.id),
+    batchId: String(log.batch),
+    leadId: String(log.lead),
+    step: log.step_number,
+    status: log.status,
+    sentAt: log.sent_at,
+    subject: log.subject,
+    templateName: log.template_name ?? "",
+    ...(log.error ? { error: log.error } : {}),
+  }));
+}
+
 export async function pauseBatch(id: string): Promise<void> {
   await request<void>(`/batches/${id}/pause/`, { method: "PATCH" });
 }
@@ -900,8 +915,16 @@ export async function resumeBatch(
   };
 }
 
-export async function sendBatchNow(id: string): Promise<SendNowResponse> {
-  return request<SendNowResponse>(`/batches/${id}/send-now/`, { method: "POST" });
+export async function sendBatchNow(
+  id: string,
+  data: { templateId: string },
+): Promise<SendNowResponse> {
+  return request<SendNowResponse>(`/batches/${id}/send-now/`, {
+    method: "POST",
+    body: JSON.stringify({
+      template: Number(data.templateId),
+    }),
+  });
 }
 
 export async function sendBatchLeadNow(

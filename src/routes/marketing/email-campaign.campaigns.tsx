@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Eye, Megaphone, Pause, Pencil, Play, Plus, Trash2 } from "lucide-react";
+import { Eye, Megaphone, Pause, Pencil, Play, Plus, Send, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -14,18 +14,22 @@ import { Modal } from "@/components/common/Modal";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import {
   createBatch,
+  createTemplate,
   deleteBatch,
   getBatchLeads,
   getBatches,
   getEmailLogs,
   getLeads,
   getSequences,
+  getTemplates,
   pauseBatch,
   resumeBatch,
+  sendBatchNow,
   updateBatch,
   type Campaign,
   type EmailLog,
   type Lead,
+  type MessageTemplate,
 } from "@/lib/api";
 
 export const Route = createFileRoute("/marketing/email-campaign/campaigns")({
@@ -43,7 +47,7 @@ export const Route = createFileRoute("/marketing/email-campaign/campaigns")({
 
 const campaignSchema = z.object({
   name: z.string().trim().min(1, "Campaign name is required"),
-  sequenceId: z.number().int().positive("Choose a sequence"),
+  sequenceId: z.number().int().positive().optional(),
   leadIds: z.array(z.number().int().positive()).min(1, "Choose at least one lead"),
 });
 
@@ -59,10 +63,19 @@ function CampaignsPage() {
   const [recipientFilter, setRecipientFilter] = useState<"all" | "subscribed" | "unsubscribed">("all");
   const [toDelete, setToDelete] = useState<Campaign | null>(null);
   const [draftReplyToEmail, setDraftReplyToEmail] = useState("");
+  const [sendingCampaign, setSendingCampaign] = useState<Campaign | null>(null);
+  const [sendTemplateId, setSendTemplateId] = useState("");
+  const [createTemplateOpen, setCreateTemplateOpen] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState("");
+  const [newTemplateSubject, setNewTemplateSubject] = useState("");
+  const [newTemplateBody, setNewTemplateBody] = useState("");
+  const [newTemplateSignature, setNewTemplateSignature] = useState("");
 
   const campaignsQuery = useQuery({ queryKey: ["campaigns"], queryFn: getBatches });
   const leadsQuery = useQuery({ queryKey: ["leads"], queryFn: getLeads });
   const sequencesQuery = useQuery({ queryKey: ["sequences"], queryFn: getSequences });
+  const templatesQuery = useQuery({ queryKey: ["templates"], queryFn: getTemplates });
+  const emailTemplates = (templatesQuery.data ?? []).filter((template) => template.channel === "email");
   const selectedLeadsQuery = useQuery({
     queryKey: ["campaign-leads", selectedCampaign?.id],
     queryFn: () => getBatchLeads(selectedCampaign!.id),
@@ -90,11 +103,9 @@ function CampaignsPage() {
   const createMutation = useMutation({
     mutationFn: (values: CampaignFormValues) => createBatch({
       name: values.name,
-      sequenceId: String(values.sequenceId),
+      ...(values.sequenceId ? { sequenceId: String(values.sequenceId) } : {}),
       leadIds: values.leadIds.map(String),
       replyToEmail: draftReplyToEmail.trim(),
-      enquiryDateFrom: dateFrom || undefined,
-      enquiryDateTo: dateTo || undefined,
     }),
     onSuccess: async ({ campaign, automaticEmail }) => {
       await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
@@ -120,11 +131,9 @@ function CampaignsPage() {
   const editMutation = useMutation({
     mutationFn: ({ campaign, values }: { campaign: Campaign; values: CampaignFormValues }) => updateBatch(campaign.id, {
       name: values.name,
-      sequenceId: String(values.sequenceId),
+      sequenceId: values.sequenceId ? String(values.sequenceId) : null,
       leadIds: values.leadIds.map(String),
       replyToEmail: draftReplyToEmail.trim(),
-      enquiryDateFrom: dateFrom || undefined,
-      enquiryDateTo: dateTo || undefined,
     }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
@@ -175,6 +184,48 @@ function CampaignsPage() {
     onError: (error: Error) => toast.error(error.message || "Could not delete campaign"),
   });
 
+  const sendMutation = useMutation({
+    mutationFn: ({ campaign, templateId }: {
+      campaign: Campaign;
+      templateId: string;
+    }) => sendBatchNow(campaign.id, { templateId }),
+    onSuccess: async (result, variables) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["campaigns"] }),
+        queryClient.invalidateQueries({ queryKey: ["logs"] }),
+        queryClient.invalidateQueries({ queryKey: ["campaign-leads", variables.campaign.id] }),
+      ]);
+      setSendingCampaign(null);
+      if (result.failed) {
+        toast.error(`Sent ${result.sent} email${result.sent === 1 ? "" : "s"}; ${result.failed} failed`);
+      } else {
+        toast.success(`${result.sent} email${result.sent === 1 ? "" : "s"} sent`);
+      }
+    },
+    onError: (error: Error) => toast.error(error.message || "Could not send campaign"),
+  });
+
+  const createSendTemplateMutation = useMutation({
+    mutationFn: () => createTemplate({
+      channel: "email",
+      name: newTemplateName.trim(),
+      subject: newTemplateSubject.trim(),
+      body: newTemplateBody.trim(),
+      signature: newTemplateSignature.trim(),
+    }),
+    onSuccess: async (template: MessageTemplate) => {
+      await queryClient.invalidateQueries({ queryKey: ["templates"] });
+      setSendTemplateId(template.id);
+      setCreateTemplateOpen(false);
+      setNewTemplateName("");
+      setNewTemplateSubject("");
+      setNewTemplateBody("");
+      setNewTemplateSignature("");
+      toast.success("Email template created and selected");
+    },
+    onError: (error: Error) => toast.error(error.message || "Could not create email template"),
+  });
+
   const leads = leadsQuery.data ?? [];
   const sequences = sequencesQuery.data ?? [];
   const leadById = useMemo(() => new Map(leads.map((lead) => [lead.id, lead])), [leads]);
@@ -189,8 +240,8 @@ function CampaignsPage() {
     {
       key: "sequenceId",
       header: "Sequence",
-      filterValue: (campaign) => sequenceById.get(campaign.sequenceId)?.name ?? "Unknown",
-      cell: (campaign) => <span className="text-muted-foreground">{sequenceById.get(campaign.sequenceId)?.name ?? "Unknown sequence"}</span>,
+      filterValue: (campaign) => sequenceById.get(campaign.sequenceId)?.name ?? "One-time",
+      cell: (campaign) => <span className="text-muted-foreground">{sequenceById.get(campaign.sequenceId)?.name ?? "One-time send"}</span>,
     },
     {
       key: "leadIds",
@@ -205,11 +256,11 @@ function CampaignsPage() {
       cell: (campaign) => <StatusBadge status={campaign.status} />,
     },
     {
-      key: "enquiryDateFrom",
+      key: "createdAt",
       header: "Created",
       filterType: "date",
-      filterValue: (campaign) => campaign.enquiryDateFrom,
-      cell: (campaign) => <span className="font-mono text-[11px] text-muted-foreground">{campaign.enquiryDateFrom ? new Date(campaign.enquiryDateFrom).toLocaleDateString() : "—"}</span>,
+      filterValue: (campaign) => campaign.createdAt,
+      cell: (campaign) => <span className="font-mono text-[11px] text-muted-foreground">{new Date(campaign.createdAt).toLocaleDateString()}</span>,
     },
     {
       key: "actions",
@@ -228,6 +279,21 @@ function CampaignsPage() {
             setFormOpen(true);
           }}>
             <Pencil />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-8"
+            title="Send campaign email"
+            aria-label={`Send campaign email for ${campaign.name}`}
+            disabled={campaign.status !== "active"}
+            onClick={() => {
+              setSendingCampaign(campaign);
+              setSendTemplateId("");
+              setCreateTemplateOpen(false);
+            }}
+          >
+            <Send />
           </Button>
           {campaign.status !== "completed" && (
             <Button
@@ -256,28 +322,26 @@ function CampaignsPage() {
   const [leadSearch, setLeadSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [enquiryDateFilter, setEnquiryDateFilter] = useState("");
+  const [followupDateFilter, setFollowupDateFilter] = useState("");
 
   useEffect(() => {
     if (!formOpen) return;
 
     if (editingCampaign) {
       setDraftName(editingCampaign.name);
-      setDraftSequenceId(String(editingCampaign.sequenceId));
+      setDraftSequenceId(editingCampaign.sequenceId);
       setDraftReplyToEmail(editingCampaign.replyToEmail);
       setDraftLeadIds(editingCampaign.leadIds.map((leadId) => Number(leadId)));
-      setDateFrom(editingCampaign.enquiryDateFrom ?? "");
-      setDateTo(editingCampaign.enquiryDateTo ?? "");
     } else {
       setDraftName("");
       setDraftSequenceId("");
       setDraftReplyToEmail("");
       setDraftLeadIds([]);
-      setDateFrom("");
-      setDateTo("");
     }
 
+    setEnquiryDateFilter("");
+    setFollowupDateFilter("");
     setLeadSearch("");
     setStatusFilter("all");
     setSourceFilter("all");
@@ -290,13 +354,12 @@ function CampaignsPage() {
       const matchesStatus = statusFilter === "all" || lead.status === statusFilter;
       const matchesSource = sourceFilter === "all" || lead.source === sourceFilter;
 
-      const leadCreated = new Date(`${lead.enquiryDate}T00:00:00`);
-      const matchesFrom = !dateFrom || leadCreated >= new Date(dateFrom);
-      const matchesTo = !dateTo || leadCreated <= new Date(`${dateTo}T23:59:59`);
+      const matchesEnquiryDate = !enquiryDateFilter || lead.enquiryDate === enquiryDateFilter;
+      const matchesFollowupDate = !followupDateFilter || lead.followupDate === followupDateFilter;
 
-      return matchesSearch && matchesStatus && matchesSource && matchesFrom && matchesTo;
+      return matchesSearch && matchesStatus && matchesSource && matchesEnquiryDate && matchesFollowupDate;
     });
-  }, [leads, leadSearch, statusFilter, sourceFilter, dateFrom, dateTo]);
+  }, [leads, leadSearch, statusFilter, sourceFilter, enquiryDateFilter, followupDateFilter]);
 
   const toggleLead = (leadId: number) => {
     setDraftLeadIds((current) => current.includes(leadId)
@@ -316,18 +379,13 @@ function CampaignsPage() {
     setDraftLeadIds((current) => Array.from(new Set([...current, ...visibleIds])));
   };
 
-  const canCreate = sequences.length > 0 && leads.length > 0;
+  const canCreate = leads.length > 0;
 
   const handleCreateCampaign = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!draftName.trim()) {
       toast.error("Campaign name is required");
-      return;
-    }
-
-    if (!draftSequenceId) {
-      toast.error("Please choose a sequence");
       return;
     }
 
@@ -338,7 +396,7 @@ function CampaignsPage() {
 
     const values = {
       name: draftName.trim(),
-      sequenceId: Number(draftSequenceId),
+      ...(draftSequenceId ? { sequenceId: Number(draftSequenceId) } : {}),
       leadIds: draftLeadIds,
     };
 
@@ -349,7 +407,7 @@ function CampaignsPage() {
 
     createMutation.mutate({
       name: values.name,
-      sequenceId: Number(values.sequenceId),
+      ...(values.sequenceId ? { sequenceId: Number(values.sequenceId) } : {}),
       leadIds: values.leadIds.map(Number),
     });
   };
@@ -370,17 +428,17 @@ function CampaignsPage() {
           searchKeys={["name"]}
           searchPlaceholder="Search campaigns..."
           storageKey="campaigns"
-          emptyMessage={campaignsQuery.isLoading ? "Loading campaigns…" : "No campaigns yet. Create one to enroll leads in a sequence."}
+          emptyMessage={campaignsQuery.isLoading ? "Loading campaigns…" : "No campaigns yet. Create one to enroll leads."}
           toolbarActions={(
-            <Button size="sm" className="h-9 gap-1.5" disabled={!canCreate} title={!canCreate ? "Create a lead and sequence first" : undefined} onClick={() => setFormOpen(true)}>
+            <Button size="sm" className="h-9 gap-1.5" disabled={!canCreate} title={!canCreate ? "Create a lead first" : undefined} onClick={() => setFormOpen(true)}>
               <Plus className="size-4" /> New campaign
             </Button>
           )}
         />
         {campaignsQuery.isError && <p className="mt-2 text-sm text-destructive">{campaignsQuery.error.message}</p>}
-        {!canCreate && !leadsQuery.isLoading && !sequencesQuery.isLoading && (
+        {!canCreate && !leadsQuery.isLoading && (
           <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-            <Megaphone className="size-4" /> Add at least one lead and one sequence before launching a campaign.
+            <Megaphone className="size-4" /> Add at least one lead before creating a campaign. A sequence is optional.
           </p>
         )}
       </div>
@@ -407,13 +465,13 @@ function CampaignsPage() {
             </div>
 
             <div className="md:col-span-1">
-              <label className="mb-2 block text-sm font-medium text-foreground">Sequence</label>
+              <label className="mb-2 block text-sm font-medium text-foreground">Sequence <span className="text-muted-foreground">(optional)</span></label>
               <select
                 value={draftSequenceId}
                 onChange={(event) => setDraftSequenceId(event.target.value)}
                 className="h-12 w-full appearance-none rounded-xl border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-[#2f80ed]"
               >
-                <option value="">Select sequence</option>
+                <option value="">No sequence — send a template manually</option>
                 {sequences.map((sequence) => (
                   <option key={sequence.id} value={sequence.id}>
                     {sequence.name}
@@ -475,20 +533,20 @@ function CampaignsPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-muted-foreground">Enquiry Date From</label>
+                  <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-muted-foreground">Enquiry Date</label>
                   <input
                     type="date"
-                    value={dateFrom}
-                    onChange={(event) => setDateFrom(event.target.value)}
+                    value={enquiryDateFilter}
+                    onChange={(event) => setEnquiryDateFilter(event.target.value)}
                     className="h-12 w-full rounded-xl border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-[#2f80ed]"
                   />
                 </div>
                 <div>
-                  <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-muted-foreground">Enquiry Date To</label>
+                  <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-muted-foreground">Follow-up Date</label>
                   <input
                     type="date"
-                    value={dateTo}
-                    onChange={(event) => setDateTo(event.target.value)}
+                    value={followupDateFilter}
+                    onChange={(event) => setFollowupDateFilter(event.target.value)}
                     className="h-12 w-full rounded-xl border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-[#2f80ed]"
                   />
                 </div>
@@ -552,6 +610,124 @@ function CampaignsPage() {
             </Button>
             <Button type="submit" disabled={createMutation.isPending || editMutation.isPending || !draftLeadIds.length} className="h-11 px-6">
               {editMutation.isPending ? "Saving..." : createMutation.isPending ? "Creating..." : editingCampaign ? `Save Campaign (${draftLeadIds.length} leads)` : `Start Campaign (${draftLeadIds.length} leads)`}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={Boolean(sendingCampaign)}
+        onClose={() => {
+          setSendingCampaign(null);
+          setCreateTemplateOpen(false);
+        }}
+        title={`Send ${sendingCampaign?.name ?? "campaign"}`}
+        eyebrow="SEND CAMPAIGN EMAIL"
+      >
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!sendingCampaign || !sendTemplateId) {
+              toast.error("Choose an email template");
+              return;
+            }
+            sendMutation.mutate({
+              campaign: sendingCampaign,
+              templateId: sendTemplateId,
+            });
+          }}
+          className="space-y-4 p-5"
+        >
+          <div>
+            <label className="mb-2 block text-sm font-medium text-foreground">Email template</label>
+            <select
+              required
+              value={sendTemplateId}
+              onChange={(event) => setSendTemplateId(event.target.value)}
+              className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm"
+            >
+              <option value="">Select email template</option>
+              {emailTemplates.map((template) => (
+                <option key={template.id} value={template.id}>{template.name}</option>
+              ))}
+            </select>
+            {templatesQuery.isError && (
+              <p className="mt-1 text-xs text-destructive">{templatesQuery.error.message}</p>
+            )}
+          </div>
+
+          <div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setCreateTemplateOpen((open) => !open)}
+            >
+              <Plus className="size-4" /> {createTemplateOpen ? "Cancel new template" : "Create new template"}
+            </Button>
+          </div>
+
+          {createTemplateOpen && (
+            <div className="space-y-3 rounded-lg border border-line bg-background/50 p-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium">Template name</label>
+                <input
+                  required
+                  value={newTemplateName}
+                  onChange={(event) => setNewTemplateName(event.target.value)}
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Subject</label>
+                <input
+                  required
+                  value={newTemplateSubject}
+                  onChange={(event) => setNewTemplateSubject(event.target.value)}
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Email body</label>
+                <textarea
+                  required
+                  rows={5}
+                  value={newTemplateBody}
+                  onChange={(event) => setNewTemplateBody(event.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">Signature <span className="text-muted-foreground">(optional)</span></label>
+                <textarea
+                  rows={2}
+                  value={newTemplateSignature}
+                  onChange={(event) => setNewTemplateSignature(event.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                disabled={
+                  createSendTemplateMutation.isPending ||
+                  !newTemplateName.trim() ||
+                  !newTemplateSubject.trim() ||
+                  !newTemplateBody.trim()
+                }
+                onClick={() => createSendTemplateMutation.mutate()}
+              >
+                {createSendTemplateMutation.isPending ? "Creating…" : "Create and select template"}
+              </Button>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 border-t border-line pt-4">
+            <Button type="button" variant="outline" onClick={() => setSendingCampaign(null)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={sendMutation.isPending || !sendTemplateId}>
+              <Send /> {sendMutation.isPending ? "Sending…" : "Send"}
             </Button>
           </div>
         </form>
