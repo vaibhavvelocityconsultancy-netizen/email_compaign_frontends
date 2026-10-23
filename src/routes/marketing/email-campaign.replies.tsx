@@ -12,7 +12,7 @@ export const Route = createFileRoute("/marketing/email-campaign/replies")({
   head: () => ({
     meta: [
       { title: "Incoming Replies — Vantage CRM" },
-      { name: "description", content: "Read replies to email campaigns." },
+      { name: "description", content: "View email campaign reply status and timestamps." },
     ],
   }),
   component: IncomingRepliesPage,
@@ -30,7 +30,6 @@ function IncomingRepliesPage() {
   const currentPage = Math.min(page, pageCount - 1);
   const pageReplies = replies.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
   const selectedReply = replies.find((reply) => reply.id === selectedId) ?? pageReplies[0] ?? null;
-
   return (
     <section className="space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
@@ -87,7 +86,7 @@ function IncomingRepliesPage() {
                       </time>
                     </span>
                     <span className="mt-1 block truncate text-sm">
-                      {reply.subject || "(no subject)"}
+                      {reply.status === "replied" ? "Replied" : reply.status}
                     </span>
                     <span className="mt-1 block truncate text-xs text-muted-foreground">
                       {reply.lead?.name ?? "Unmatched sender"}
@@ -125,14 +124,10 @@ function IncomingRepliesPage() {
           {selectedReply && (
             <article className="min-w-0 rounded-lg border border-line p-5">
               <div className="border-b border-line pb-4">
-                <h2 className="break-words text-xl font-semibold">
-                  {selectedReply.subject || "(no subject)"}
-                </h2>
+                <h2 className="break-words text-xl font-semibold">Replied</h2>
                 <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-[5rem_minmax(0,1fr)]">
                   <dt className="text-muted-foreground">From</dt>
                   <dd className="break-all">{selectedReply.sender_email}</dd>
-                  <dt className="text-muted-foreground">To</dt>
-                  <dd className="break-all">{selectedReply.recipient_email || "—"}</dd>
                   <dt className="text-muted-foreground">Received</dt>
                   <dd>{new Date(selectedReply.received_at).toLocaleString()}</dd>
                   <dt className="text-muted-foreground">Lead</dt>
@@ -144,12 +139,6 @@ function IncomingRepliesPage() {
                   <dt className="text-muted-foreground">Campaign</dt>
                   <dd>{selectedReply.campaign?.name ?? "—"}</dd>
                 </dl>
-              </div>
-              <div className="max-h-[24rem] overflow-y-auto pt-4">
-                <h3 className="mb-2 text-sm font-medium">Message</h3>
-                <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-6">
-                  {selectedReply.body_plain || "(No plain-text body)"}
-                </pre>
               </div>
             </article>
           )}

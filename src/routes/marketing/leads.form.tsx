@@ -533,7 +533,21 @@ function LeadFormPage() {
             {leadId ? `Edit enquiry${leadQuery.data?.srNo ? ` #${leadQuery.data.srNo}` : ""}` : "New enquiry"}
           </h1>
         </div>
-        <Button type="button" variant="outline" onClick={downloadLeadCsvTemplate}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            void downloadLeadCsvTemplate()
+              .then(() => {
+                toast.success("Lead import template downloaded.");
+              })
+              .catch((error: unknown) => {
+                toast.error(
+                  error instanceof Error ? error.message : "Could not download template.",
+                );
+              });
+          }}
+        >
           <Download /> Download template
         </Button>
       </div>

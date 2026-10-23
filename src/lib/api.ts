@@ -262,15 +262,9 @@ export interface EmailLog {
 
 export interface InboundReply {
   id: number;
-  batch_lead: number | null;
+  status: LogStatus;
   sender_email: string;
-  recipient_email: string;
-  subject: string;
-  body_plain: string;
-  body_html: string;
-  message_id: string | null;
   received_at: string;
-  created_at: string;
   lead: { id: number; name: string; email: string | null } | null;
   campaign: { id: number; name: string } | null;
 }
@@ -678,6 +672,12 @@ export async function importLeads(file: File): Promise<ApiImportResponse> {
   const form = new FormData();
   form.append("file", file);
   return request<ApiImportResponse>("/leads/import-csv/", { method: "POST", body: form });
+}
+
+export async function createSampleLeads(): Promise<{ created: number; existing: number }> {
+  return request<{ created: number; existing: number }>("/leads/sample-data/", {
+    method: "POST",
+  });
 }
 
 export async function getTemplates(): Promise<MessageTemplate[]> {

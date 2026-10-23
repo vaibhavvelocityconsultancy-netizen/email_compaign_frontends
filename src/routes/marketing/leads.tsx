@@ -1,6 +1,6 @@
 import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ChevronDown, Download, Pencil, Plus, Trash2, Upload } from "lucide-react";
 import { deleteLead, getLeads, importLeads, updateLeadStatus, type Lead, type LeadStatus } from "../../lib/api";
@@ -101,6 +101,13 @@ function LeadsPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Lead | null>(null);
+  const [selectedLeads, setSelectedLeads] = useState<Lead[]>([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [selectionResetKey, setSelectionResetKey] = useState(0);
+
+  const handleSelectionChange = useCallback((selected: Lead[]) => {
+    setSelectedLeads(selected);
+  }, []);
 
   const updateStatusMut = useMutation({
     mutationFn: ({ lead, nextStatus }: { lead: Lead; nextStatus: LeadStatus }) =>
@@ -152,9 +159,30 @@ function LeadsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["leads"] });
       setDeleteTarget(null);
+      setSelectedLeads([]);
+      setSelectionResetKey((key) => key + 1);
       toast.success("Lead removed");
     },
     onError: (e: Error) => toast.error(e.message || "Unable to remove lead"),
+  });
+
+  const bulkDeleteMut = useMutation({
+    mutationFn: async (leads: Lead[]) =>
+      Promise.allSettled(leads.map((lead) => deleteLead(lead.id))),
+    onSuccess: (results) => {
+      const deleted = results.filter((result) => result.status === "fulfilled").length;
+      const failed = results.length - deleted;
+      void qc.invalidateQueries({ queryKey: ["leads"] });
+      setBulkDeleteOpen(false);
+      setSelectedLeads([]);
+      setSelectionResetKey((key) => key + 1);
+      if (failed) {
+        toast.error(`Deleted ${deleted} leads; ${failed} could not be deleted.`);
+      } else {
+        toast.success(`${deleted} leads permanently deleted.`);
+      }
+    },
+    onError: (error: Error) => toast.error(error.message || "Unable to delete selected leads"),
   });
 
   const openCreate = () => navigate({ to: "/marketing/leads/form", search: { leadId: undefined } });
@@ -256,7 +284,17 @@ function LeadsPage() {
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={downloadLeadCsvTemplate}
+            onClick={() => {
+              void downloadLeadCsvTemplate()
+                .then(() => {
+                  toast.success("Lead import template downloaded.");
+                })
+                .catch((error: unknown) => {
+                  toast.error(
+                    error instanceof Error ? error.message : "Could not download template.",
+                  );
+                });
+            }}
             className="flex h-9 items-center gap-1.5 rounded-lg border border-line bg-surface px-4 text-sm font-medium transition-colors hover:bg-background"
           >
             <Download className="size-4" /> Download template
@@ -290,6 +328,23 @@ function LeadsPage() {
         <DataTable<Lead>
           data={filtered}
           columns={columns}
+          selectable
+          onSelectionChange={handleSelectionChange}
+          selectionResetKey={selectionResetKey}
+          selectionSummary={selectedLeads.length > 0 ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-surface px-4 py-3">
+              <span className="text-sm">{selectedLeads.length} leads selected</span>
+              <button
+                type="button"
+                onClick={() => setBulkDeleteOpen(true)}
+                disabled={bulkDeleteMut.isPending || deleteLeadMut.isPending}
+                className="flex h-9 items-center gap-1.5 rounded-lg bg-destructive px-4 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:opacity-50"
+              >
+                <Trash2 className="size-4" />
+                Delete selected
+              </button>
+            </div>
+          ) : null}
           searchKeys={[
             "id",
             "companyName",
@@ -365,8 +420,17 @@ function LeadsPage() {
         onClose={() => setDeleteTarget(null)}
         onConfirm={() => deleteTarget && deleteLeadMut.mutate(deleteTarget)}
         title="Remove lead?"
-        message={`Remove enquiry #${deleteTarget?.srNo ?? ""} from the active leads list? Existing campaign history will be preserved.`}
+        message={`Permanently delete enquiry #${deleteTarget?.srNo ?? ""}? This action cannot be undone, and related campaign history may also be deleted.`}
         loading={deleteLeadMut.isPending}
+      />
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        onConfirm={() => bulkDeleteMut.mutate(selectedLeads)}
+        title="Delete selected leads?"
+        message={`Permanently delete ${selectedLeads.length} selected leads? This action cannot be undone, and related campaign history may also be deleted.`}
+        confirmLabel={bulkDeleteMut.isPending ? "Deleting…" : `Delete ${selectedLeads.length} leads`}
+        loading={bulkDeleteMut.isPending}
       />
     </div>
   );

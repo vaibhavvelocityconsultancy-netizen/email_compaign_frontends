@@ -18,8 +18,69 @@ const CSV_TEMPLATE_HEADERS = [
   "is_opportunity",
 ];
 
-export function downloadLeadCsvTemplate() {
-  const content = `\uFEFF${CSV_TEMPLATE_HEADERS.join(",")}\r\n`;
+const CSV_TEMPLATE_ROWS = [
+  [
+    "Sample Company One",
+    "123 Example Road",
+    "Mumbai",
+    "Maharashtra",
+    "400001",
+    "India",
+    "",
+    "Aarav Mehta",
+    "Purchase Manager",
+    "",
+    "aarav.mehta@example.com",
+    "2026-01-15",
+    "WEBSITE",
+    "NEW",
+    "",
+    "",
+    "false",
+  ],
+  [
+    "Sample Company Two",
+    "45 Demo Street",
+    "Pune",
+    "Maharashtra",
+    "411001",
+    "India",
+    "",
+    "Diya Sharma",
+    "Operations Manager",
+    "",
+    "diya.sharma@example.com",
+    "2026-02-10",
+    "OTHER",
+    "NEW",
+    "",
+    "",
+    "false",
+  ],
+  [
+    "Sample Company Three",
+    "8 Test Industrial Estate",
+    "Ahmedabad",
+    "Gujarat",
+    "380001",
+    "India",
+    "",
+    "Kabir Patel",
+    "Business Owner",
+    "",
+    "kabir.patel@example.com",
+    "2026-03-05",
+    "REFERENCE",
+    "NEW",
+    "",
+    "",
+    "false",
+  ],
+];
+
+export async function downloadLeadCsvTemplate(): Promise<void> {
+  const rows = [CSV_TEMPLATE_HEADERS, ...CSV_TEMPLATE_ROWS];
+  const content = `\uFEFF${rows.map((row) => row.join(",")).join("\r\n")}\r\n`;
   const url = URL.createObjectURL(new Blob([content], { type: "text/csv;charset=utf-8" }));
   const anchor = document.createElement("a");
   anchor.href = url;

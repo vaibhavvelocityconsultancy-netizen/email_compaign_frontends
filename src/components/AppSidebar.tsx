@@ -140,25 +140,25 @@ const MENU_ITEMS: MenuItem[] = [
       },
     ],
   },
-  {
-    key: "User & Roles",
-    label: "User & Roles",
-    icon: ShieldCheck,
-    items: [
-      {
-        to: "/user",
-        label: "User",
-      },
-      {
-        to: "/roles",
-        label: "Roles",
-      },
-      {
-        to: "/access-control",
-        label: "Access Control",
-      },
-    ],
-  },
+  // {
+  //   key: "User & Roles",
+  //   label: "User & Roles",
+  //   icon: ShieldCheck,
+  //   items: [
+  //     {
+  //       to: "/user",
+  //       label: "User",
+  //     },
+  //     {
+  //       to: "/roles",
+  //       label: "Roles",
+  //     },
+  //     {
+  //       to: "/access-control",
+  //       label: "Access Control",
+  //     },
+  //   ],
+  // },
 ];
 
 export function AppSidebar() {
