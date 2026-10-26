@@ -14,6 +14,7 @@ import { Route as AccessControlRouteImport } from './routes/access-control'
 import { Route as CompanyRouteImport } from './routes/company'
 import { Route as CountryRouteImport } from './routes/country'
 import { Route as CustomerPoRouteImport } from './routes/customer-po'
+import { Route as EmailSettingsRouteImport } from './routes/email-settings'
 import { Route as FinalOfferRouteImport } from './routes/final-offer'
 import { Route as LocationRouteImport } from './routes/location'
 import { Route as LoginRouteImport } from './routes/login'
@@ -63,6 +64,11 @@ const CountryRoute = CountryRouteImport.update({
 const CustomerPoRoute = CustomerPoRouteImport.update({
   id: '/customer-po',
   path: '/customer-po',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmailSettingsRoute = EmailSettingsRouteImport.update({
+  id: '/email-settings',
+  path: '/email-settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FinalOfferRoute = FinalOfferRouteImport.update({
@@ -203,6 +209,7 @@ export interface FileRoutesByFullPath {
   '/company': typeof CompanyRoute
   '/country': typeof CountryRoute
   '/customer-po': typeof CustomerPoRoute
+  '/email-settings': typeof EmailSettingsRoute
   '/final-offer': typeof FinalOfferRoute
   '/location': typeof LocationRoute
   '/login': typeof LoginRoute
@@ -235,6 +242,7 @@ export interface FileRoutesByTo {
   '/company': typeof CompanyRoute
   '/country': typeof CountryRoute
   '/customer-po': typeof CustomerPoRoute
+  '/email-settings': typeof EmailSettingsRoute
   '/final-offer': typeof FinalOfferRoute
   '/location': typeof LocationRoute
   '/login': typeof LoginRoute
@@ -266,6 +274,7 @@ export interface FileRoutesById {
   '/company': typeof CompanyRoute
   '/country': typeof CountryRoute
   '/customer-po': typeof CustomerPoRoute
+  '/email-settings': typeof EmailSettingsRoute
   '/final-offer': typeof FinalOfferRoute
   '/location': typeof LocationRoute
   '/login': typeof LoginRoute
@@ -300,6 +309,7 @@ export interface FileRouteTypes {
     | '/company'
     | '/country'
     | '/customer-po'
+    | '/email-settings'
     | '/final-offer'
     | '/location'
     | '/login'
@@ -332,6 +342,7 @@ export interface FileRouteTypes {
     | '/company'
     | '/country'
     | '/customer-po'
+    | '/email-settings'
     | '/final-offer'
     | '/location'
     | '/login'
@@ -362,6 +373,7 @@ export interface FileRouteTypes {
     | '/company'
     | '/country'
     | '/customer-po'
+    | '/email-settings'
     | '/final-offer'
     | '/location'
     | '/login'
@@ -395,6 +407,7 @@ export interface RootRouteChildren {
   CompanyRoute: typeof CompanyRoute
   CountryRoute: typeof CountryRoute
   CustomerPoRoute: typeof CustomerPoRoute
+  EmailSettingsRoute: typeof EmailSettingsRoute
   FinalOfferRoute: typeof FinalOfferRoute
   LocationRoute: typeof LocationRoute
   LoginRoute: typeof LoginRoute
@@ -445,6 +458,13 @@ declare module '@tanstack/react-router' {
       path: '/customer-po'
       fullPath: '/customer-po'
       preLoaderRoute: typeof CustomerPoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/email-settings': {
+      id: '/email-settings'
+      path: '/email-settings'
+      fullPath: '/email-settings'
+      preLoaderRoute: typeof EmailSettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/final-offer': {
@@ -695,6 +715,7 @@ const rootRouteChildren: RootRouteChildren = {
   CompanyRoute: CompanyRoute,
   CountryRoute: CountryRoute,
   CustomerPoRoute: CustomerPoRoute,
+  EmailSettingsRoute: EmailSettingsRoute,
   FinalOfferRoute: FinalOfferRoute,
   LocationRoute: LocationRoute,
   LoginRoute: LoginRoute,

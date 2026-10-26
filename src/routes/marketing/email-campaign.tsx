@@ -13,7 +13,7 @@ export const Route = createFileRoute("/marketing/email-campaign")({
 });
 
 const TABS = [
-  { to: "/marketing/email-campaign/replies", label: "Incoming Replies" },
+  // { to: "/marketing/email-campaign/replies", label: "Incoming Replies" },
   { to: "/marketing/email-campaign/templates", label: "Templates" },
   { to: "/marketing/email-campaign/sequences", label: "Sequences" },
 ] as const;

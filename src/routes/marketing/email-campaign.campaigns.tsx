@@ -1,9 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Eye, Megaphone, Pause, Pencil, Play, Plus, Send, Trash2 } from "lucide-react";
+import { Eye, Megaphone, Pause, Pencil, Play, Plus, Send, Settings, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -19,6 +19,7 @@ import {
   getBatchLeads,
   getBatches,
   getEmailLogs,
+  getEmailCampaignSettings,
   getLeads,
   getSequences,
   getTemplates,
@@ -26,6 +27,7 @@ import {
   resumeBatch,
   sendBatchNow,
   updateBatch,
+  updateEmailCampaignSettings,
   type Campaign,
   type EmailLog,
   type Lead,
@@ -62,7 +64,9 @@ function CampaignsPage() {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [recipientFilter, setRecipientFilter] = useState<"all" | "subscribed" | "unsubscribed">("all");
   const [toDelete, setToDelete] = useState<Campaign | null>(null);
-  const [draftReplyToEmail, setDraftReplyToEmail] = useState("");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [draftGlobalReplyTo, setDraftGlobalReplyTo] = useState("");
+  const settingsDraftInitialized = useRef(false);
   const [sendingCampaign, setSendingCampaign] = useState<Campaign | null>(null);
   const [sendTemplateId, setSendTemplateId] = useState("");
   const [createTemplateOpen, setCreateTemplateOpen] = useState(false);
@@ -75,6 +79,10 @@ function CampaignsPage() {
   const leadsQuery = useQuery({ queryKey: ["leads"], queryFn: getLeads });
   const sequencesQuery = useQuery({ queryKey: ["sequences"], queryFn: getSequences });
   const templatesQuery = useQuery({ queryKey: ["templates"], queryFn: getTemplates });
+  const emailCampaignSettingsQuery = useQuery({
+    queryKey: ["email-campaign-settings"],
+    queryFn: getEmailCampaignSettings,
+  });
   const emailTemplates = (templatesQuery.data ?? []).filter((template) => template.channel === "email");
   const selectedLeadsQuery = useQuery({
     queryKey: ["campaign-leads", selectedCampaign?.id],
@@ -82,6 +90,17 @@ function CampaignsPage() {
     enabled: Boolean(selectedCampaign),
   });
   const emailLogsQuery = useQuery({ queryKey: ["logs"], queryFn: getEmailLogs });
+  const updateEmailSettingsMutation = useMutation({
+    mutationFn: updateEmailCampaignSettings,
+    onSuccess: async (settings) => {
+      queryClient.setQueryData(["email-campaign-settings"], settings);
+      setDraftGlobalReplyTo(settings.replyToEmail);
+      settingsDraftInitialized.current = true;
+      setSettingsOpen(false);
+      toast.success("Global reply-to email saved");
+    },
+    onError: (error: Error) => toast.error(error.message || "Could not save reply-to email"),
+  });
   const selectedCampaignLogs = useMemo<EmailLog[]>(
     () => emailLogsQuery.data?.filter((log) => log.batchId === selectedCampaign?.id) ?? [],
     [emailLogsQuery.data, selectedCampaign?.id],
@@ -105,7 +124,6 @@ function CampaignsPage() {
       name: values.name,
       ...(values.sequenceId ? { sequenceId: String(values.sequenceId) } : {}),
       leadIds: values.leadIds.map(String),
-      replyToEmail: draftReplyToEmail.trim(),
     }),
     onSuccess: async ({ campaign, automaticEmail }) => {
       await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
@@ -133,7 +151,6 @@ function CampaignsPage() {
       name: values.name,
       sequenceId: values.sequenceId ? String(values.sequenceId) : null,
       leadIds: values.leadIds.map(String),
-      replyToEmail: draftReplyToEmail.trim(),
     }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
@@ -331,12 +348,10 @@ function CampaignsPage() {
     if (editingCampaign) {
       setDraftName(editingCampaign.name);
       setDraftSequenceId(editingCampaign.sequenceId);
-      setDraftReplyToEmail(editingCampaign.replyToEmail);
       setDraftLeadIds(editingCampaign.leadIds.map((leadId) => Number(leadId)));
     } else {
       setDraftName("");
       setDraftSequenceId("");
-      setDraftReplyToEmail("");
       setDraftLeadIds([]);
     }
 
@@ -346,6 +361,17 @@ function CampaignsPage() {
     setStatusFilter("all");
     setSourceFilter("all");
   }, [formOpen, editingCampaign]);
+
+  useEffect(() => {
+    if (
+      settingsOpen &&
+      !settingsDraftInitialized.current &&
+      emailCampaignSettingsQuery.data
+    ) {
+      setDraftGlobalReplyTo(emailCampaignSettingsQuery.data.replyToEmail);
+      settingsDraftInitialized.current = true;
+    }
+  }, [settingsOpen, emailCampaignSettingsQuery.data]);
 
   const filteredLeads = useMemo(() => {
     return leads.filter((lead) => {
@@ -430,9 +456,27 @@ function CampaignsPage() {
           storageKey="campaigns"
           emptyMessage={campaignsQuery.isLoading ? "Loading campaigns…" : "No campaigns yet. Create one to enroll leads."}
           toolbarActions={(
-            <Button size="sm" className="h-9 gap-1.5" disabled={!canCreate} title={!canCreate ? "Create a lead first" : undefined} onClick={() => setFormOpen(true)}>
-              <Plus className="size-4" /> New campaign
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-9 gap-1.5"
+                title="Global email settings"
+                onClick={() => {
+                  settingsDraftInitialized.current = false;
+                  if (emailCampaignSettingsQuery.data) {
+                    setDraftGlobalReplyTo(emailCampaignSettingsQuery.data.replyToEmail);
+                    settingsDraftInitialized.current = true;
+                  }
+                  setSettingsOpen(true);
+                }}
+              >
+                <Settings className="size-4" /> Reply-to settings
+              </Button>
+              <Button size="sm" className="h-9 gap-1.5" disabled={!canCreate} title={!canCreate ? "Create a lead first" : undefined} onClick={() => setFormOpen(true)}>
+                <Plus className="size-4" /> New campaign
+              </Button>
+            </div>
           )}
         />
         {campaignsQuery.isError && <p className="mt-2 text-sm text-destructive">{campaignsQuery.error.message}</p>}
@@ -442,6 +486,71 @@ function CampaignsPage() {
           </p>
         )}
       </div>
+
+      <Modal
+        open={settingsOpen}
+        onClose={() => {
+          settingsDraftInitialized.current = false;
+          setSettingsOpen(false);
+        }}
+        title="Global reply-to email"
+        eyebrow="EMAIL CAMPAIGN SETTINGS"
+      >
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            updateEmailSettingsMutation.mutate({
+              replyToEmail: draftGlobalReplyTo.trim(),
+            });
+          }}
+        >
+          <div className="space-y-3 p-5">
+            <p className="text-sm text-muted-foreground">
+              This address will receive replies for all email campaigns. It stays saved until you change it here.
+            </p>
+            {emailCampaignSettingsQuery.isError && (
+              <p role="alert" className="text-sm text-destructive">
+                {emailCampaignSettingsQuery.error.message}
+              </p>
+            )}
+            <label className="grid gap-1.5 text-sm font-medium">
+              Reply-to email
+              <input
+                type="email"
+                required
+                autoComplete="email"
+                value={draftGlobalReplyTo}
+                onChange={(event) => setDraftGlobalReplyTo(event.target.value)}
+                disabled={emailCampaignSettingsQuery.isLoading || updateEmailSettingsMutation.isPending}
+                className="h-10 rounded-md border border-input bg-background px-3 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+                placeholder="replies@example.com"
+              />
+            </label>
+            {emailCampaignSettingsQuery.isLoading && (
+              <p className="text-xs text-muted-foreground">Loading saved setting…</p>
+            )}
+          </div>
+          <div className="flex justify-end gap-2 border-t border-line bg-background/50 px-5 py-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setSettingsOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={
+                emailCampaignSettingsQuery.isLoading ||
+                emailCampaignSettingsQuery.isError ||
+                updateEmailSettingsMutation.isPending
+              }
+            >
+              {updateEmailSettingsMutation.isPending ? "Saving…" : "Save setting"}
+            </Button>
+          </div>
+        </form>
+      </Modal>
 
       <Modal
         open={formOpen}
@@ -479,17 +588,6 @@ function CampaignsPage() {
                 ))}
               </select>
             </div>
-          </div>
-
-          <div className="mt-4">
-            <label className="mb-2 block text-sm font-medium text-foreground">Reply-to email</label>
-            <input
-              type="email"
-              value={draftReplyToEmail}
-              onChange={(event) => setDraftReplyToEmail(event.target.value)}
-              className="h-12 w-full rounded-xl border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-[#2f80ed]"
-              placeholder="Replies go to the default sender if blank"
-            />
           </div>
 
           <div className="mt-6 space-y-4">

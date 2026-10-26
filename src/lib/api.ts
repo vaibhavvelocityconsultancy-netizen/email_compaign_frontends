@@ -9,6 +9,7 @@ export interface AuthUser {
   email: string;
   first_name: string;
   last_name: string;
+  is_superuser: boolean;
 }
 
 interface AuthResponse {
@@ -230,6 +231,11 @@ export interface Campaign {
   leadIds: string[];
   status: CampaignStatus;
   createdAt: string;
+}
+
+export interface EmailCampaignSettings {
+  replyToEmail: string;
+  updatedAt: string;
 }
 
 export interface AutomaticEmailResult {
@@ -821,14 +827,12 @@ export async function createBatch(data: {
   name: string;
   sequenceId?: string;
   leadIds: string[];
-  replyToEmail?: string;
 }): Promise<{ campaign: Campaign; automaticEmail?: AutomaticEmailResult }> {
   const response = await request<ApiBatch>("/batches/", {
     method: "POST",
     body: JSON.stringify({
       name: data.name,
       ...(data.sequenceId ? { sequence: Number(data.sequenceId) } : {}),
-      reply_to_email: data.replyToEmail || "",
       lead_ids: data.leadIds.map(Number),
     }),
   });
@@ -846,7 +850,6 @@ export async function updateBatch(
     name: string;
     sequenceId?: string | null;
     leadIds: string[];
-    replyToEmail?: string;
   },
 ): Promise<Campaign> {
   const batch = await request<ApiBatch>(`/batches/${id}/`, {
@@ -856,11 +859,44 @@ export async function updateBatch(
       ...(data.sequenceId !== undefined
         ? { sequence: data.sequenceId ? Number(data.sequenceId) : null }
         : {}),
-      reply_to_email: data.replyToEmail || "",
       lead_ids: data.leadIds.map(Number),
     }),
   });
   return mapBatch(batch);
+}
+
+interface ApiEmailCampaignSettings {
+  reply_to_email: string;
+  updated_at: string;
+}
+
+function mapEmailCampaignSettings(
+  campaignSettings: ApiEmailCampaignSettings,
+): EmailCampaignSettings {
+  return {
+    replyToEmail: campaignSettings.reply_to_email,
+    updatedAt: campaignSettings.updated_at,
+  };
+}
+
+export async function getEmailCampaignSettings(): Promise<EmailCampaignSettings> {
+  const campaignSettings = await request<ApiEmailCampaignSettings>(
+    "/email-campaign-settings/",
+  );
+  return mapEmailCampaignSettings(campaignSettings);
+}
+
+export async function updateEmailCampaignSettings(data: {
+  replyToEmail: string;
+}): Promise<EmailCampaignSettings> {
+  const campaignSettings = await request<ApiEmailCampaignSettings>(
+    "/email-campaign-settings/",
+    {
+      method: "PATCH",
+      body: JSON.stringify({ reply_to_email: data.replyToEmail }),
+    },
+  );
+  return mapEmailCampaignSettings(campaignSettings);
 }
 
 export async function getBatchLeads(id: string): Promise<CampaignLead[]> {
