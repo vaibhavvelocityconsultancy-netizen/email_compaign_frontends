@@ -821,6 +821,7 @@ export async function getBatches(): Promise<Campaign[]> {
 export async function createBatch(data: {
   name: string;
   sequenceId?: string;
+  templateId?: string;
   leadIds: string[];
 }): Promise<{ campaign: Campaign; automaticEmail?: AutomaticEmailResult }> {
   const response = await request<ApiBatch>("/batches/", {
@@ -828,6 +829,7 @@ export async function createBatch(data: {
     body: JSON.stringify({
       name: data.name,
       ...(data.sequenceId ? { sequence: Number(data.sequenceId) } : {}),
+      ...(data.templateId ? { template: Number(data.templateId) } : {}),
       lead_ids: data.leadIds.map(Number),
     }),
   });

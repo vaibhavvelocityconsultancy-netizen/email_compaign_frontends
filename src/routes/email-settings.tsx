@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth";
+import { request } from "@/lib/api";
 import {
   getOwnTenantMailgunSettings,
   getTenantMailgunSettings,
@@ -27,6 +28,22 @@ export const Route = createFileRoute("/email-settings")({
   component: EmailSettingsPage,
 });
 
+type UnsubscribeSettings = {
+  unsubscribe_company_name: string;
+  unsubscribe_support_email: string;
+  unsubscribe_company_address: string;
+  unsubscribe_brand_color: string;
+  unsubscribe_logo_url: string;
+};
+
+const emptyUnsubscribeSettings: UnsubscribeSettings = {
+  unsubscribe_company_name: "",
+  unsubscribe_support_email: "",
+  unsubscribe_company_address: "",
+  unsubscribe_brand_color: "#1f5eff",
+  unsubscribe_logo_url: "",
+};
+
 function EmailSettingsPage() {
   const { user } = useAuth();
   const isSuperUser = Boolean(user?.is_superuser);
@@ -41,6 +58,9 @@ function EmailSettingsPage() {
   const [loadingTenants, setLoadingTenants] = React.useState(true);
   const [loadingSettings, setLoadingSettings] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
+  const [unsubscribeSettings, setUnsubscribeSettings] = React.useState<UnsubscribeSettings>(emptyUnsubscribeSettings);
+  const [savingUnsubscribe, setSavingUnsubscribe] = React.useState(false);
+  const [unsubscribeDialogOpen, setUnsubscribeDialogOpen] = React.useState(false);
 
   React.useEffect(() => {
     if (!isSuperUser) {
@@ -139,6 +159,37 @@ function EmailSettingsPage() {
       active = false;
     };
   }, [selectedTenantId, isSuperUser]);
+
+  React.useEffect(() => {
+    if (!user?.id || isSuperUser) return;
+    let active = true;
+    request<UnsubscribeSettings & { reply_to_email: string; updated_at: string }>("/email-campaign-settings/")
+      .then((result) => {
+        if (active) setUnsubscribeSettings({ ...emptyUnsubscribeSettings, ...result });
+      })
+      .catch((error: unknown) => {
+        if (active) toast.error(error instanceof Error ? error.message : "Could not load unsubscribe page settings.");
+      });
+    return () => { active = false; };
+  }, [user?.id, isSuperUser]);
+
+  async function handleSaveUnsubscribe(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSavingUnsubscribe(true);
+    try {
+      const saved = await request<UnsubscribeSettings>("/email-campaign-settings/", {
+        method: "PATCH",
+        body: JSON.stringify(unsubscribeSettings),
+      });
+      setUnsubscribeSettings({ ...emptyUnsubscribeSettings, ...saved });
+      toast.success("Unsubscribe page settings saved.");
+      setUnsubscribeDialogOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not save unsubscribe page settings.");
+    } finally {
+      setSavingUnsubscribe(false);
+    }
+  }
 
   async function handleSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -331,6 +382,46 @@ function EmailSettingsPage() {
           )}
         </CardContent>
       </Card>
+      {!isSuperUser && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Unsubscribe page</CardTitle>
+            <CardDescription>Customize the page shown when someone clicks unsubscribe in your emails.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button type="button" variant="outline" onClick={() => setUnsubscribeDialogOpen(true)}>Configure unsubscribe page</Button>
+            {unsubscribeDialogOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setUnsubscribeDialogOpen(false); }}>
+            <section className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-background p-6 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="unsubscribe-dialog-title">
+            <h2 id="unsubscribe-dialog-title" className="text-lg font-semibold">Configure unsubscribe page</h2>
+            <p className="mb-5 mt-1 text-sm text-muted-foreground">These details appear to recipients who click the unsubscribe link.</p>
+            <form className="grid gap-5" onSubmit={handleSaveUnsubscribe}>
+              <label className="grid gap-2 text-sm font-medium" htmlFor="unsubscribe-company-name">Company name
+                <Input id="unsubscribe-company-name" value={unsubscribeSettings.unsubscribe_company_name} onChange={(event) => setUnsubscribeSettings((current) => ({ ...current, unsubscribe_company_name: event.target.value }))} />
+              </label>
+              <label className="grid gap-2 text-sm font-medium" htmlFor="unsubscribe-support-email">Support email
+                <Input id="unsubscribe-support-email" type="email" value={unsubscribeSettings.unsubscribe_support_email} onChange={(event) => setUnsubscribeSettings((current) => ({ ...current, unsubscribe_support_email: event.target.value }))} />
+              </label>
+              <label className="grid gap-2 text-sm font-medium" htmlFor="unsubscribe-company-address">Company address
+                <Input id="unsubscribe-company-address" value={unsubscribeSettings.unsubscribe_company_address} onChange={(event) => setUnsubscribeSettings((current) => ({ ...current, unsubscribe_company_address: event.target.value }))} />
+              </label>
+              <label className="grid gap-2 text-sm font-medium" htmlFor="unsubscribe-brand-color">Brand color
+                <div className="flex gap-2"><Input id="unsubscribe-brand-color-picker" aria-label="Choose brand color" type="color" className="w-16 p-1" value={/^#[0-9a-fA-F]{6}$/.test(unsubscribeSettings.unsubscribe_brand_color) ? unsubscribeSettings.unsubscribe_brand_color : "#1f5eff"} onChange={(event) => setUnsubscribeSettings((current) => ({ ...current, unsubscribe_brand_color: event.target.value }))} /><Input id="unsubscribe-brand-color" value={unsubscribeSettings.unsubscribe_brand_color} placeholder="#1f5eff" onChange={(event) => setUnsubscribeSettings((current) => ({ ...current, unsubscribe_brand_color: event.target.value }))} /></div>
+              </label>
+              <label className="grid gap-2 text-sm font-medium" htmlFor="unsubscribe-logo-url">Logo URL (optional, HTTPS)
+                <Input id="unsubscribe-logo-url" type="url" value={unsubscribeSettings.unsubscribe_logo_url} onChange={(event) => setUnsubscribeSettings((current) => ({ ...current, unsubscribe_logo_url: event.target.value }))} placeholder="https://example.com/logo.png" />
+              </label>
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setUnsubscribeDialogOpen(false)}>Cancel</Button>
+                <Button type="submit" disabled={savingUnsubscribe}><Save />{savingUnsubscribe ? "Saving…" : "Save"}</Button>
+              </div>
+            </form>
+            </section>
+            </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

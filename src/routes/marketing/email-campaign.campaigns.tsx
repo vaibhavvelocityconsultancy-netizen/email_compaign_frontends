@@ -48,6 +48,7 @@ export const Route = createFileRoute("/marketing/email-campaign/campaigns")({
 const campaignSchema = z.object({
   name: z.string().trim().min(1, "Campaign name is required"),
   sequenceId: z.number().int().positive().optional(),
+  templateId: z.number().int().positive().optional(),
   leadIds: z.array(z.number().int().positive()).min(1, "Choose at least one lead"),
 });
 
@@ -103,6 +104,7 @@ function CampaignsPage() {
     mutationFn: (values: CampaignFormValues) => createBatch({
       name: values.name,
       ...(values.sequenceId ? { sequenceId: String(values.sequenceId) } : {}),
+      ...(values.templateId ? { templateId: String(values.templateId) } : {}),
       leadIds: values.leadIds.map(String),
     }),
     onSuccess: async ({ campaign, automaticEmail }) => {
@@ -315,6 +317,7 @@ function CampaignsPage() {
 
   const [draftName, setDraftName] = useState("");
   const [draftSequenceId, setDraftSequenceId] = useState("");
+  const [draftTemplateId, setDraftTemplateId] = useState("");
   const [draftLeadIds, setDraftLeadIds] = useState<number[]>([]);
   const [leadSearch, setLeadSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -328,10 +331,12 @@ function CampaignsPage() {
     if (editingCampaign) {
       setDraftName(editingCampaign.name);
       setDraftSequenceId(editingCampaign.sequenceId);
+      setDraftTemplateId("");
       setDraftLeadIds(editingCampaign.leadIds.map((leadId) => Number(leadId)));
     } else {
       setDraftName("");
       setDraftSequenceId("");
+      setDraftTemplateId("");
       setDraftLeadIds([]);
     }
 
@@ -392,6 +397,7 @@ function CampaignsPage() {
     const values = {
       name: draftName.trim(),
       ...(draftSequenceId ? { sequenceId: Number(draftSequenceId) } : {}),
+      ...(!draftSequenceId && draftTemplateId ? { templateId: Number(draftTemplateId) } : {}),
       leadIds: draftLeadIds,
     };
 
@@ -403,6 +409,7 @@ function CampaignsPage() {
     createMutation.mutate({
       name: values.name,
       ...(values.sequenceId ? { sequenceId: Number(values.sequenceId) } : {}),
+      ...(values.templateId ? { templateId: Number(values.templateId) } : {}),
       leadIds: values.leadIds.map(Number),
     });
   };
@@ -465,7 +472,10 @@ function CampaignsPage() {
               <label className="mb-2 block text-sm font-medium text-foreground">Sequence <span className="text-muted-foreground">(optional)</span></label>
               <select
                 value={draftSequenceId}
-                onChange={(event) => setDraftSequenceId(event.target.value)}
+                onChange={(event) => {
+                  setDraftSequenceId(event.target.value);
+                  setDraftTemplateId("");
+                }}
                 className="h-12 w-full appearance-none rounded-xl border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-[#2f80ed]"
               >
                 <option value="">No sequence — send a template manually</option>
@@ -476,6 +486,21 @@ function CampaignsPage() {
                 ))}
               </select>
             </div>
+            {!draftSequenceId && !editingCampaign && (
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-sm font-medium text-foreground">Email template <span className="text-muted-foreground">(optional; sends immediately when selected)</span></label>
+                <select
+                  value={draftTemplateId}
+                  onChange={(event) => setDraftTemplateId(event.target.value)}
+                  className="h-12 w-full appearance-none rounded-xl border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-[#2f80ed]"
+                >
+                  <option value="">Create without sending</option>
+                  {emailTemplates.map((template) => (
+                    <option key={template.id} value={template.id}>{template.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           <div className="mt-6 space-y-4">
