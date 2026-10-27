@@ -15,11 +15,13 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import {
   createBatch,
   createTemplate,
+  createLeadCategory,
   deleteBatch,
   getBatchLeads,
   getBatches,
   getEmailLogs,
   getLeads,
+  getLeadCategories,
   getSequences,
   getTemplates,
   pauseBatch,
@@ -47,6 +49,7 @@ export const Route = createFileRoute("/marketing/email-campaign/campaigns")({
 
 const campaignSchema = z.object({
   name: z.string().trim().min(1, "Campaign name is required"),
+  categoryId: z.number().int().positive().optional(),
   sequenceId: z.number().int().positive().optional(),
   templateId: z.number().int().positive().optional(),
   leadIds: z.array(z.number().int().positive()).min(1, "Choose at least one lead"),
@@ -65,17 +68,29 @@ function CampaignsPage() {
   const [toDelete, setToDelete] = useState<Campaign | null>(null);
   const [sendingCampaign, setSendingCampaign] = useState<Campaign | null>(null);
   const [sendTemplateId, setSendTemplateId] = useState("");
+  const [draftCategoryId, setDraftCategoryId] = useState("");
+  const [categoryNameDraft, setCategoryNameDraft] = useState("");
+  const [showCategoryCreator, setShowCategoryCreator] = useState(false);
+  const [newTemplateCategoryId, setNewTemplateCategoryId] = useState("");
   const [createTemplateOpen, setCreateTemplateOpen] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState("");
   const [newTemplateSubject, setNewTemplateSubject] = useState("");
   const [newTemplateBody, setNewTemplateBody] = useState("");
   const [newTemplateSignature, setNewTemplateSignature] = useState("");
+  const [draftTemplateId, setDraftTemplateId] = useState("");
 
   const campaignsQuery = useQuery({ queryKey: ["campaigns"], queryFn: getBatches });
   const leadsQuery = useQuery({ queryKey: ["leads"], queryFn: getLeads });
+  const categoriesQuery = useQuery({ queryKey: ["lead-categories"], queryFn: getLeadCategories });
   const sequencesQuery = useQuery({ queryKey: ["sequences"], queryFn: getSequences });
   const templatesQuery = useQuery({ queryKey: ["templates"], queryFn: getTemplates });
   const emailTemplates = (templatesQuery.data ?? []).filter((template) => template.channel === "email");
+  const categoryTemplates = emailTemplates.filter(
+    (template) => !draftCategoryId || String(template.categoryId ?? "") === draftCategoryId,
+  );
+  const sendCampaignTemplates = emailTemplates.filter(
+    (template) => !sendingCampaign?.categoryId || String(template.categoryId ?? "") === sendingCampaign.categoryId,
+  );
   const selectedLeadsQuery = useQuery({
     queryKey: ["campaign-leads", selectedCampaign?.id],
     queryFn: () => getBatchLeads(selectedCampaign!.id),
@@ -103,6 +118,7 @@ function CampaignsPage() {
   const createMutation = useMutation({
     mutationFn: (values: CampaignFormValues) => createBatch({
       name: values.name,
+      ...(values.categoryId ? { categoryId: String(values.categoryId) } : {}),
       ...(values.sequenceId ? { sequenceId: String(values.sequenceId) } : {}),
       ...(values.templateId ? { templateId: String(values.templateId) } : {}),
       leadIds: values.leadIds.map(String),
@@ -131,6 +147,7 @@ function CampaignsPage() {
   const editMutation = useMutation({
     mutationFn: ({ campaign, values }: { campaign: Campaign; values: CampaignFormValues }) => updateBatch(campaign.id, {
       name: values.name,
+      categoryId: values.categoryId ? String(values.categoryId) : null,
       sequenceId: values.sequenceId ? String(values.sequenceId) : null,
       leadIds: values.leadIds.map(String),
     }),
@@ -208,6 +225,7 @@ function CampaignsPage() {
     mutationFn: () => createTemplate({
       channel: "email",
       name: newTemplateName.trim(),
+      categoryId: newTemplateCategoryId ? Number(newTemplateCategoryId) : null,
       subject: newTemplateSubject.trim(),
       body: newTemplateBody.trim(),
       signature: newTemplateSignature.trim(),
@@ -220,9 +238,23 @@ function CampaignsPage() {
       setNewTemplateSubject("");
       setNewTemplateBody("");
       setNewTemplateSignature("");
+      setNewTemplateCategoryId("");
       toast.success("Email template created and selected");
     },
     onError: (error: Error) => toast.error(error.message || "Could not create email template"),
+  });
+
+  const createCategoryMutation = useMutation({
+    mutationFn: () => createLeadCategory(categoryNameDraft.trim()),
+    onSuccess: async (category) => {
+      await queryClient.invalidateQueries({ queryKey: ["lead-categories"] });
+      setDraftCategoryId(String(category.id));
+      setCategoryNameDraft("");
+      setShowCategoryCreator(false);
+      setDraftTemplateId("");
+      toast.success(`Category "${category.name}" is ready.`);
+    },
+    onError: (error: Error) => toast.error(error.message || "Could not create category"),
   });
 
   const leads = leadsQuery.data ?? [];
@@ -241,6 +273,12 @@ function CampaignsPage() {
       header: "Sequence",
       filterValue: (campaign) => sequenceById.get(campaign.sequenceId)?.name ?? "One-time",
       cell: (campaign) => <span className="text-muted-foreground">{sequenceById.get(campaign.sequenceId)?.name ?? "One-time send"}</span>,
+    },
+    {
+      key: "categoryId",
+      header: "Category",
+      filterValue: (campaign) => categoriesQuery.data?.find((category) => String(category.id) === campaign.categoryId)?.name ?? "",
+      cell: (campaign) => <span className="text-muted-foreground">{categoriesQuery.data?.find((category) => String(category.id) === campaign.categoryId)?.name ?? "—"}</span>,
     },
     {
       key: "leadIds",
@@ -289,6 +327,7 @@ function CampaignsPage() {
             onClick={() => {
               setSendingCampaign(campaign);
               setSendTemplateId("");
+              setNewTemplateCategoryId(campaign.categoryId);
               setCreateTemplateOpen(false);
             }}
           >
@@ -313,11 +352,10 @@ function CampaignsPage() {
         </div>
       ),
     },
-  ], [sequenceById, statusMutation]);
+  ], [categoriesQuery.data, sequenceById, statusMutation]);
 
   const [draftName, setDraftName] = useState("");
   const [draftSequenceId, setDraftSequenceId] = useState("");
-  const [draftTemplateId, setDraftTemplateId] = useState("");
   const [draftLeadIds, setDraftLeadIds] = useState<number[]>([]);
   const [leadSearch, setLeadSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -330,11 +368,13 @@ function CampaignsPage() {
 
     if (editingCampaign) {
       setDraftName(editingCampaign.name);
+      setDraftCategoryId(editingCampaign.categoryId);
       setDraftSequenceId(editingCampaign.sequenceId);
       setDraftTemplateId("");
       setDraftLeadIds(editingCampaign.leadIds.map((leadId) => Number(leadId)));
     } else {
       setDraftName("");
+      setDraftCategoryId("");
       setDraftSequenceId("");
       setDraftTemplateId("");
       setDraftLeadIds([]);
@@ -345,6 +385,8 @@ function CampaignsPage() {
     setLeadSearch("");
     setStatusFilter("all");
     setSourceFilter("all");
+    setShowCategoryCreator(false);
+    setCategoryNameDraft("");
   }, [formOpen, editingCampaign]);
 
   const filteredLeads = useMemo(() => {
@@ -353,13 +395,14 @@ function CampaignsPage() {
       const matchesSearch = !searchText || String(lead.srNo).includes(searchText) || lead.enquiryFor.toLowerCase().includes(searchText) || lead.companyName.toLowerCase().includes(searchText) || lead.contactName.toLowerCase().includes(searchText);
       const matchesStatus = statusFilter === "all" || lead.status === statusFilter;
       const matchesSource = sourceFilter === "all" || lead.source === sourceFilter;
+      const matchesCategory = !draftCategoryId || String(lead.categoryId ?? "") === draftCategoryId;
 
       const matchesEnquiryDate = !enquiryDateFilter || lead.enquiryDate === enquiryDateFilter;
       const matchesFollowupDate = !followupDateFilter || lead.followupDate === followupDateFilter;
 
-      return matchesSearch && matchesStatus && matchesSource && matchesEnquiryDate && matchesFollowupDate;
+      return matchesSearch && matchesStatus && matchesSource && matchesCategory && matchesEnquiryDate && matchesFollowupDate;
     });
-  }, [leads, leadSearch, statusFilter, sourceFilter, enquiryDateFilter, followupDateFilter]);
+  }, [leads, leadSearch, statusFilter, sourceFilter, draftCategoryId, enquiryDateFilter, followupDateFilter]);
 
   const toggleLead = (leadId: number) => {
     setDraftLeadIds((current) => current.includes(leadId)
@@ -396,6 +439,7 @@ function CampaignsPage() {
 
     const values = {
       name: draftName.trim(),
+      ...(draftCategoryId ? { categoryId: Number(draftCategoryId) } : {}),
       ...(draftSequenceId ? { sequenceId: Number(draftSequenceId) } : {}),
       ...(!draftSequenceId && draftTemplateId ? { templateId: Number(draftTemplateId) } : {}),
       leadIds: draftLeadIds,
@@ -408,6 +452,7 @@ function CampaignsPage() {
 
     createMutation.mutate({
       name: values.name,
+      ...(values.categoryId ? { categoryId: String(values.categoryId) } : {}),
       ...(values.sequenceId ? { sequenceId: Number(values.sequenceId) } : {}),
       ...(values.templateId ? { templateId: Number(values.templateId) } : {}),
       leadIds: values.leadIds.map(Number),
@@ -469,6 +514,36 @@ function CampaignsPage() {
             </div>
 
             <div className="md:col-span-1">
+              <label className="mb-2 block text-sm font-medium text-foreground">Category</label>
+              <div className="flex gap-2">
+                <select
+                  value={draftCategoryId}
+                  onChange={(event) => {
+                    setDraftCategoryId(event.target.value);
+                    setDraftTemplateId("");
+                  }}
+                  className="h-12 min-w-0 flex-1 appearance-none rounded-xl border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-[#2f80ed]"
+                >
+                  <option value="">All categories</option>
+                  {(categoriesQuery.data ?? []).map((category) => (
+                    <option key={category.id} value={category.id}>{category.name}</option>
+                  ))}
+                </select>
+                <button type="button" className="rounded-xl border border-input px-3 text-sm" onClick={() => setShowCategoryCreator((open) => !open)}>
+                  Add
+                </button>
+              </div>
+              {showCategoryCreator && (
+                <div className="mt-2 flex gap-2">
+                  <input value={categoryNameDraft} onChange={(event) => setCategoryNameDraft(event.target.value)} placeholder="e.g. Doctor" className="h-10 min-w-0 flex-1 rounded-lg border border-input bg-background px-3 text-sm" />
+                  <button type="button" disabled={createCategoryMutation.isPending || !categoryNameDraft.trim()} onClick={() => createCategoryMutation.mutate()} className="rounded-lg border border-input px-3 text-sm disabled:opacity-50">
+                    {createCategoryMutation.isPending ? "Adding…" : "Save"}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="md:col-span-1">
               <label className="mb-2 block text-sm font-medium text-foreground">Sequence <span className="text-muted-foreground">(optional)</span></label>
               <select
                 value={draftSequenceId}
@@ -495,7 +570,7 @@ function CampaignsPage() {
                   className="h-12 w-full appearance-none rounded-xl border border-input bg-background px-3 text-sm text-foreground outline-none focus:border-[#2f80ed]"
                 >
                   <option value="">Create without sending</option>
-                  {emailTemplates.map((template) => (
+                  {categoryTemplates.map((template) => (
                     <option key={template.id} value={template.id}>{template.name}</option>
                   ))}
                 </select>
@@ -578,7 +653,7 @@ function CampaignsPage() {
             </button>
           </div>
 
-          <div className="mt-4 space-y-2 rounded-xl border border-line bg-background/40 p-1">
+          <div className="mt-4 max-h-[420px] space-y-2 overflow-y-auto rounded-xl border border-line bg-background/40 p-1">
             {filteredLeads.length === 0 ? (
               <div className="flex min-h-[120px] items-center justify-center text-sm text-muted-foreground">
                 No leads match the current filters.
@@ -602,7 +677,7 @@ function CampaignsPage() {
                       />
                       <div>
                         <div className="text-sm font-semibold uppercase text-foreground">{lead.companyName || `Enquiry #${lead.srNo}`} · {lead.enquiryFor}</div>
-                        <div className="text-sm text-muted-foreground">{leadDate}{lead.contactName ? ` · ${lead.contactName}` : ""}</div>
+                        <div className="text-sm text-muted-foreground">{leadDate}{lead.contactName ? ` · ${lead.contactName}` : ""}{lead.categoryName ? ` · ${lead.categoryName}` : ""}</div>
                       </div>
                     </div>
 
@@ -658,7 +733,7 @@ function CampaignsPage() {
               className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm"
             >
               <option value="">Select email template</option>
-              {emailTemplates.map((template) => (
+              {sendCampaignTemplates.map((template) => (
                 <option key={template.id} value={template.id}>{template.name}</option>
               ))}
             </select>
@@ -680,6 +755,19 @@ function CampaignsPage() {
 
           {createTemplateOpen && (
             <div className="space-y-3 rounded-lg border border-line bg-background/50 p-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium">Category</label>
+                <select
+                  value={newTemplateCategoryId}
+                  onChange={(event) => setNewTemplateCategoryId(event.target.value)}
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="">Uncategorized</option>
+                  {(categoriesQuery.data ?? []).map((category) => (
+                    <option key={category.id} value={category.id}>{category.name}</option>
+                  ))}
+                </select>
+              </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">Template name</label>
                 <input

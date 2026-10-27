@@ -138,6 +138,10 @@ const MENU_ITEMS: MenuItem[] = [
         to: "/location",
         label: "Location",
       },
+      {
+        to: "/lead-categories",
+        label: "Lead Categories",
+      },
     ],
   },
   // {

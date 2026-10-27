@@ -10,6 +10,8 @@ import {
   createTemplate,
   updateTemplate,
   deleteTemplate,
+  getLeadCategories,
+  createLeadCategory,
   type MessageTemplate,
   type Channel,
 } from "../../lib/api";
@@ -41,6 +43,7 @@ const templateSchema = z
   .object({
     channel: z.enum(["email", "whatsapp"]),
     name: z.string().trim().min(1, "Name is required"),
+    categoryId: z.string().optional(),
     subject: z.string().optional(),
     body: z.string().trim().min(1, "Body is required"),
     signature: z.string().optional(),
@@ -82,12 +85,15 @@ const hideForEmail = (form: HiddenForm) => form.watch("channel") !== "whatsapp";
 function TemplatesPage() {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ["templates"], queryFn: getTemplates });
+  const { data: categories = [] } = useQuery({ queryKey: ["lead-categories"], queryFn: getLeadCategories });
 
   const [tab, setTab] = useState<Channel>("email");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<MessageTemplate | null>(null);
   const [preview, setPreview] = useState<MessageTemplate | null>(null);
   const [toDelete, setToDelete] = useState<MessageTemplate | null>(null);
+  const [categoryCreateOpen, setCategoryCreateOpen] = useState(false);
+  const [categoryNameDraft, setCategoryNameDraft] = useState("");
 
   const all = data ?? [];
   const filtered = useMemo(() => all.filter((t) => (t.channel ?? "email") === tab), [all, tab]);
@@ -117,6 +123,7 @@ function TemplatesPage() {
       const payload = {
         channel: values.channel,
         name: values.name,
+        categoryId: values.categoryId && values.categoryId !== "none" ? Number(values.categoryId) : null,
         body: values.body,
         subject: isEmail ? values.subject ?? "" : "",
         signature: isEmail ? values.signature ?? "" : "",
@@ -134,6 +141,17 @@ function TemplatesPage() {
       toast.success(editing ? "Template updated" : "Template created");
     },
     onError: (e: Error) => toast.error(e.message || "Could not save template"),
+  });
+
+  const addCategory = useMutation({
+    mutationFn: () => createLeadCategory(categoryNameDraft.trim()),
+    onSuccess: async (category) => {
+      await qc.invalidateQueries({ queryKey: ["lead-categories"] });
+      setCategoryNameDraft("");
+      setCategoryCreateOpen(false);
+      toast.success(`Category "${category.name}" added. Select it in the template form.`);
+    },
+    onError: (error: Error) => toast.error(error.message || "Could not add category"),
   });
 
   const remove = useMutation({
@@ -181,6 +199,7 @@ function TemplatesPage() {
     if (tab === "email") {
       return [
         nameCol,
+        { key: "categoryName", header: "Category", cell: (t) => <span className="text-muted-foreground">{t.categoryName || "Uncategorized"}</span> },
         { key: "subject", header: "Subject", cell: (t) => <span className="text-muted-foreground">{t.subject}</span> },
         createdCol,
         actionsCol,
@@ -223,6 +242,18 @@ function TemplatesPage() {
         description: editing ? "Channel can't be changed after creation." : undefined,
       }),
       fieldPresets.text("name", "Name", { required: true, placeholder: "Follow Up Day 0", colSpan: 2 }),
+      {
+        ...fieldPresets.select("categoryId", "Category", [
+          { value: "none", label: "Uncategorized" },
+          ...categories.map((category) => ({ value: String(category.id), label: category.name })),
+        ]),
+        headerActions: (
+          <Button type="button" size="sm" variant="ghost" className="h-7 px-2" onClick={() => setCategoryCreateOpen(true)}>
+            <Plus className="size-3.5" /> Add
+          </Button>
+        ),
+        hidden: hideForWhatsApp,
+      },
 
       // Email only
       {
@@ -269,7 +300,7 @@ function TemplatesPage() {
         description: editing?.attachmentName ? `Current: ${editing.attachmentName}` : undefined,
       }),
     ],
-    [editing, tab],
+    [categories, editing, tab],
   );
 
   const defaultValues = useMemo<Partial<TemplateFormValues>>(
@@ -278,14 +309,15 @@ function TemplatesPage() {
         ? {
             channel: editing.channel ?? "email",
             name: editing.name,
+            categoryId: editing.categoryId == null ? "none" : String(editing.categoryId),
             subject: editing.subject,
             body: editing.body,
             signature: editing.signature,
             waTemplateName: editing.waTemplateName,
             waLanguage: editing.waLanguage || "en",
           }
-        : { channel: tab, waLanguage: "en" },
-    [editing, tab],
+        : { channel: tab, categoryId: "none", waLanguage: "en" },
+    [categories, editing, tab],
   );
 
   const tabLabel = tab === "email" ? "email" : "WhatsApp";
@@ -324,11 +356,11 @@ function TemplatesPage() {
               ? "Loading templates…"
               : `No ${tabLabel} templates yet. Create your first one to build a sequence.`
           }
-          toolbarActions={
+          toolbarActions={(
             <Button size="sm" className="h-9 gap-1.5" onClick={openCreate}>
               <Plus className="size-4" /> Create Template
             </Button>
-          }
+          )}
         />
       </div>
 
@@ -345,6 +377,34 @@ function TemplatesPage() {
         size="lg"
         onSubmit={(values) => save.mutate(values)}
       />
+
+      <Modal
+        open={categoryCreateOpen}
+        onClose={() => setCategoryCreateOpen(false)}
+        title="Add category"
+        eyebrow="TEMPLATE CATEGORY"
+      >
+        <div className="space-y-4 p-5">
+          <p className="text-sm text-muted-foreground">The new category will also be available for leads, campaigns, and CSV imports.</p>
+          <form
+            className="flex gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (categoryNameDraft.trim()) addCategory.mutate();
+            }}
+          >
+            <input
+              value={categoryNameDraft}
+              onChange={(event) => setCategoryNameDraft(event.target.value)}
+              placeholder="e.g. Doctor"
+              className="h-10 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm"
+            />
+            <Button type="submit" disabled={!categoryNameDraft.trim() || addCategory.isPending}>
+              {addCategory.isPending ? "Adding…" : "Add category"}
+            </Button>
+          </form>
+        </div>
+      </Modal>
 
       <Modal
         open={!!preview}

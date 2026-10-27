@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowLeft, Download, Save, Target } from "lucide-react";
+import { ArrowLeft, Download, Plus, Save } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,8 @@ import {
   createLead,
   updateLead,
   getLeadOptions,
+  getLeadCategories,
+  createLeadCategory,
   type LeadChoiceOption,
   type LeadInput,
 } from "@/lib/api";
@@ -105,7 +107,7 @@ function emptyLead(): LeadFormValues {
     status: "NEW",
     followup_date: null,
     followup_remarks: "",
-    is_opportunity: false,
+    category: null,
   };
 }
 
@@ -239,6 +241,8 @@ function LeadFormPage() {
   const [countryOptions, setCountryOptions] = useState<Array<{ id: number; name: string }>>([]);
   const [stateOptions, setStateOptions] = useState<Array<{ id: number; name: string; country: number }>>([]);
   const [cityOptions, setCityOptions] = useState<Array<{ id: number; name: string; state: number }>>([]);
+  const [categoryNameDraft, setCategoryNameDraft] = useState("");
+  const [categoryCreatorOpen, setCategoryCreatorOpen] = useState(false);
   // Snapshot of the last loaded values, used to show "Unsaved changes".
   const [baseline, setBaseline] = useState(() => JSON.stringify(emptyLead()));
 
@@ -250,6 +254,10 @@ function LeadFormPage() {
   const leadOptionsQuery = useQuery({
     queryKey: ["lead-options"],
     queryFn: getLeadOptions,
+  });
+  const categoriesQuery = useQuery({
+    queryKey: ["lead-categories"],
+    queryFn: getLeadCategories,
   });
 
   const leadOptions = leadOptionsQuery.data ?? FALLBACK_LEAD_OPTIONS;
@@ -313,7 +321,7 @@ function LeadFormPage() {
         status: lead.status.toUpperCase(),
         followup_date: lead.followupDate,
         followup_remarks: lead.followupRemarks,
-        is_opportunity: lead.isOpportunity,
+        category: lead.categoryId,
       };
       setForm(loaded);
       setCompanySearch(lead.companyName ?? "");
@@ -486,6 +494,18 @@ function LeadFormPage() {
       await navigate({ to: "/marketing/leads" });
     },
     onError: (error: Error) => toast.error(error.message || "Unable to save lead"),
+  });
+
+  const createCategoryMutation = useMutation({
+    mutationFn: () => createLeadCategory(categoryNameDraft.trim()),
+    onSuccess: async (category) => {
+      await queryClient.invalidateQueries({ queryKey: ["lead-categories"] });
+      setForm((current) => ({ ...current, category: category.id }));
+      setCategoryNameDraft("");
+      setCategoryCreatorOpen(false);
+      toast.success(`Category "${category.name}" is ready.`);
+    },
+    onError: (error: Error) => toast.error(error.message || "Could not create category"),
   });
 
   const update = <K extends keyof LeadFormValues>(key: K, value: LeadFormValues[K]) =>
@@ -741,7 +761,7 @@ function LeadFormPage() {
           title="Enquiry"
           description="What came in, where from, and when to follow up."
         >
-          {/* Date, source, status in one row; opportunity toggle under it */}
+          {/* Enquiry details */}
           <Group title="Enquiry details" cols={3}>
             <Field label="Enquiry date" required>
               <input
@@ -770,23 +790,41 @@ function LeadFormPage() {
                 ))}
               </select>
             </Field>
-
-            <button
-              type="button"
-              aria-pressed={form.is_opportunity}
-              onClick={() => update("is_opportunity", !form.is_opportunity)}
-              className={`flex w-full items-start gap-3 rounded-md border p-3.5 text-left transition-colors sm:col-span-3 ${
-                form.is_opportunity
-                  ? "border-brand bg-brand/10 text-foreground"
-                  : "border-line hover:bg-muted/40"
-              }`}
-            >
-              <Target className={`mt-0.5 size-5 shrink-0 ${form.is_opportunity ? "text-brand" : "text-muted-foreground"}`} />
-              <span className="grid gap-0.5 text-sm">
-                <span className="font-medium">Mark as opportunity</span>
-                <span className="text-xs text-muted-foreground">Use this once the enquiry looks like a real deal.</span>
-              </span>
-            </button>
+            <Field label="Category">
+              <div className="flex gap-2">
+                <select
+                  value={form.category ?? ""}
+                  onChange={(event) => update("category", event.target.value ? Number(event.target.value) : null)}
+                  className={controlClass}
+                >
+                  <option value="">No category</option>
+                  {(categoriesQuery.data ?? []).map((category) => (
+                    <option key={category.id} value={category.id}>{category.name}</option>
+                  ))}
+                </select>
+                <Button type="button" variant="outline" size="icon" aria-label="Add category" onClick={() => setCategoryCreatorOpen((open) => !open)}>
+                  <Plus className="size-4" />
+                </Button>
+              </div>
+              {categoryCreatorOpen && (
+                <div className="mt-2 flex gap-2">
+                  <input
+                    value={categoryNameDraft}
+                    onChange={(event) => setCategoryNameDraft(event.target.value)}
+                    placeholder="e.g. Doctor"
+                    className={controlClass}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={createCategoryMutation.isPending || !categoryNameDraft.trim()}
+                    onClick={() => createCategoryMutation.mutate()}
+                  >
+                    {createCategoryMutation.isPending ? "Adding…" : "Add"}
+                  </Button>
+                </div>
+              )}
+            </Field>
           </Group>
 
           {/* Follow-up: date + shortcuts, then remarks */}

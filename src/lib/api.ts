@@ -79,6 +79,8 @@ export interface Lead {
   companyPincode: string;
   companyCountry: string;
   companyGstNumber: string;
+  categoryId: number | null;
+  categoryName: string;
   contactId: number | null;
   contactName: string;
   contactDesignation: string;
@@ -110,7 +112,13 @@ export interface LeadInput {
   status: string;
   followup_date: string | null;
   followup_remarks: string;
-  is_opportunity: boolean;
+  category: number | null;
+}
+
+export interface LeadCategory {
+  id: number;
+  name: string;
+  created_at: string;
 }
 
 export type OpportunityStatus =
@@ -185,6 +193,8 @@ export interface MessageTemplate {
   id: string;
   channel: Channel;
   name: string;
+  categoryId: number | null;
+  categoryName: string;
   subject: string;
   body: string;
   signature: string;
@@ -226,6 +236,7 @@ export interface SequenceInput {
 export interface Campaign {
   id: string;
   name: string;
+  categoryId: string;
   sequenceId: string;
   replyToEmail: string;
   leadIds: string[];
@@ -282,6 +293,8 @@ interface ApiLead {
   company_pincode: string;
   company_country: string;
   company_gst_number: string;
+  category: number | null;
+  category_name: string;
   contact_name: string;
   contact_designation: string;
   contact_mobile: string;
@@ -300,6 +313,8 @@ interface ApiTemplate {
   id: number;
   channel: Channel;
   name: string;
+  category: number | null;
+  category_name: string;
   subject: string;
   body: string;
   signature: string;
@@ -329,6 +344,8 @@ interface ApiSequenceStep {
 interface ApiBatch {
   id: number;
   name: string;
+  category: number | null;
+  category_name: string;
   sequence: number | null;
   reply_to_email: string;
   status: CampaignStatus;
@@ -518,6 +535,8 @@ function mapLead(lead: ApiLead): Lead {
     companyPincode: lead.company_pincode,
     companyCountry: lead.company_country,
     companyGstNumber: lead.company_gst_number,
+    categoryId: lead.category,
+    categoryName: lead.category_name,
     contactId: lead.contact,
     contactName: lead.contact_name,
     contactDesignation: lead.contact_designation,
@@ -539,6 +558,8 @@ function mapTemplate(template: ApiTemplate): MessageTemplate {
     id: String(template.id),
     channel: template.channel ?? "email",
     name: template.name,
+    categoryId: template.category,
+    categoryName: template.category_name,
     subject: template.subject,
     body: template.body,
     signature: template.signature,
@@ -563,6 +584,17 @@ export async function getLead(id: string): Promise<Lead> {
 
 export async function getLeadOptions(): Promise<LeadOptionsResponse> {
   return request<LeadOptionsResponse>("/lead-options/");
+}
+
+export function getLeadCategories(): Promise<LeadCategory[]> {
+  return request<LeadCategory[]>("/lead-categories/");
+}
+
+export function createLeadCategory(name: string): Promise<LeadCategory> {
+  return request<LeadCategory>("/lead-categories/", {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
 }
 
 export async function createLead(data: LeadInput): Promise<Lead> {
@@ -689,6 +721,7 @@ export async function getTemplates(): Promise<MessageTemplate[]> {
 export interface TemplateInput {
   channel: Channel;
   name: string;
+  categoryId?: number | null;
   subject: string;
   body: string;
   signature: string;
@@ -702,6 +735,9 @@ function templateForm(data: TemplateInput): FormData {
   const form = new FormData();
   form.append("channel", data.channel);
   form.append("name", data.name);
+  if (data.categoryId !== undefined) {
+    form.append("category", data.categoryId === null ? "" : String(data.categoryId));
+  }
   form.append("subject", data.subject);
   form.append("body", data.body);
   form.append("signature", data.signature);
@@ -805,6 +841,7 @@ async function mapBatch(batch: ApiBatch): Promise<Campaign> {
   return {
     id: String(batch.id),
     name: batch.name,
+    categoryId: batch.category === null ? "" : String(batch.category),
     sequenceId: batch.sequence === null ? "" : String(batch.sequence),
     replyToEmail: batch.reply_to_email,
     leadIds: batchLeads.map((lead) => String(lead.lead)),
@@ -820,6 +857,7 @@ export async function getBatches(): Promise<Campaign[]> {
 
 export async function createBatch(data: {
   name: string;
+  categoryId?: string;
   sequenceId?: string;
   templateId?: string;
   leadIds: string[];
@@ -828,6 +866,7 @@ export async function createBatch(data: {
     method: "POST",
     body: JSON.stringify({
       name: data.name,
+      ...(data.categoryId ? { category: Number(data.categoryId) } : {}),
       ...(data.sequenceId ? { sequence: Number(data.sequenceId) } : {}),
       ...(data.templateId ? { template: Number(data.templateId) } : {}),
       lead_ids: data.leadIds.map(Number),
@@ -845,6 +884,7 @@ export async function updateBatch(
   id: string,
   data: {
     name: string;
+    categoryId?: string | null;
     sequenceId?: string | null;
     leadIds: string[];
   },
@@ -853,6 +893,9 @@ export async function updateBatch(
     method: "PATCH",
     body: JSON.stringify({
       name: data.name,
+      ...(data.categoryId !== undefined
+        ? { category: data.categoryId ? Number(data.categoryId) : null }
+        : {}),
       ...(data.sequenceId !== undefined
         ? { sequence: data.sequenceId ? Number(data.sequenceId) : null }
         : {}),

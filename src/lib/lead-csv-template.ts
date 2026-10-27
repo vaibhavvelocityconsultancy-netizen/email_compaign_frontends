@@ -10,12 +10,12 @@ const CSV_TEMPLATE_HEADERS = [
   "contact_designation",
   "contact_mobile",
   "contact_email",
+  "category",
   "enquiry_date",
   "source",
   "status",
   "followup_date",
   "followup_remarks",
-  "is_opportunity",
 ];
 
 const CSV_TEMPLATE_ROWS = [
@@ -31,12 +31,12 @@ const CSV_TEMPLATE_ROWS = [
     "Purchase Manager",
     "",
     "aarav.mehta@example.com",
+    "Doctor",
     "2026-01-15",
     "WEBSITE",
     "NEW",
     "",
     "",
-    "false",
   ],
   [
     "Sample Company Two",
@@ -50,12 +50,12 @@ const CSV_TEMPLATE_ROWS = [
     "Operations Manager",
     "",
     "diya.sharma@example.com",
+    "Operations",
     "2026-02-10",
     "OTHER",
     "NEW",
     "",
     "",
-    "false",
   ],
   [
     "Sample Company Three",
@@ -69,12 +69,12 @@ const CSV_TEMPLATE_ROWS = [
     "Business Owner",
     "",
     "kabir.patel@example.com",
+    "Doctor",
     "2026-03-05",
     "REFERENCE",
     "NEW",
     "",
     "",
-    "false",
   ],
 ];
 

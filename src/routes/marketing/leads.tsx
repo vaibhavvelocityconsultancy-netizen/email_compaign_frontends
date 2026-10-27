@@ -197,13 +197,26 @@ function LeadsPage() {
     {
       key: "contactName",
       header: "Contact",
-      filterValue: (lead) => lead.contactName,
+      filterValue: (lead) => [lead.contactName, lead.contactMobile, lead.contactEmail].join(" "),
       cell: (lead) => (
         <div>
           <div>{lead.contactName || "—"}</div>
-          {lead.contactMobile && <div className="font-mono text-[11px] text-muted-foreground">{lead.contactMobile}</div>}
+          {lead.contactMobile && (
+            <div className="font-mono text-[11px] text-muted-foreground">
+              {lead.contactMobile}
+            </div>
+          )}
+          <div className="font-mono text-[11px] text-muted-foreground">
+            {lead.contactEmail || "No email"}
+          </div>
         </div>
       ),
+    },
+    {
+      key: "categoryName",
+      header: "Category",
+      filterValue: (lead) => lead.categoryName,
+      cell: (lead) => lead.categoryName || "—",
     },
     {
       key: "enquiryDate",
@@ -392,7 +405,8 @@ function LeadsPage() {
       <Modal open={importOpen} onClose={() => setImportOpen(false)} title="Upload Leads" eyebrow="IMPORT LEADS">
         <div className="space-y-3 p-5">
           <p className="text-xs text-muted-foreground">
-            CSV files with commas or tabs and Excel files are supported. Missing columns or values are allowed. Enquiry date defaults to today if blank or missing; source and status default to Other.
+            CSV files with commas or tabs and Excel files are supported. Missing columns or values are allowed. Contact email is optional; leads without one are imported and marked “No email.”
+            Enquiry date defaults to today if blank or missing; source and status default to Other.
           </p>
           <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-line bg-background px-4 py-8 text-center transition-colors hover:border-brand">
             <Upload className="size-5 text-muted-foreground" />

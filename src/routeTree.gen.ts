@@ -16,6 +16,7 @@ import { Route as CountryRouteImport } from './routes/country'
 import { Route as CustomerPoRouteImport } from './routes/customer-po'
 import { Route as EmailSettingsRouteImport } from './routes/email-settings'
 import { Route as FinalOfferRouteImport } from './routes/final-offer'
+import { Route as LeadCategoriesRouteImport } from './routes/lead-categories'
 import { Route as LocationRouteImport } from './routes/location'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MarketingRouteImport } from './routes/marketing'
@@ -74,6 +75,11 @@ const EmailSettingsRoute = EmailSettingsRouteImport.update({
 const FinalOfferRoute = FinalOfferRouteImport.update({
   id: '/final-offer',
   path: '/final-offer',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LeadCategoriesRoute = LeadCategoriesRouteImport.update({
+  id: '/lead-categories',
+  path: '/lead-categories',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LocationRoute = LocationRouteImport.update({
@@ -211,6 +217,7 @@ export interface FileRoutesByFullPath {
   '/customer-po': typeof CustomerPoRoute
   '/email-settings': typeof EmailSettingsRoute
   '/final-offer': typeof FinalOfferRoute
+  '/lead-categories': typeof LeadCategoriesRoute
   '/location': typeof LocationRoute
   '/login': typeof LoginRoute
   '/marketing': typeof MarketingRouteWithChildren
@@ -244,6 +251,7 @@ export interface FileRoutesByTo {
   '/customer-po': typeof CustomerPoRoute
   '/email-settings': typeof EmailSettingsRoute
   '/final-offer': typeof FinalOfferRoute
+  '/lead-categories': typeof LeadCategoriesRoute
   '/location': typeof LocationRoute
   '/login': typeof LoginRoute
   '/marketing': typeof MarketingRouteWithChildren
@@ -276,6 +284,7 @@ export interface FileRoutesById {
   '/customer-po': typeof CustomerPoRoute
   '/email-settings': typeof EmailSettingsRoute
   '/final-offer': typeof FinalOfferRoute
+  '/lead-categories': typeof LeadCategoriesRoute
   '/location': typeof LocationRoute
   '/login': typeof LoginRoute
   '/marketing': typeof MarketingRouteWithChildren
@@ -311,6 +320,7 @@ export interface FileRouteTypes {
     | '/customer-po'
     | '/email-settings'
     | '/final-offer'
+    | '/lead-categories'
     | '/location'
     | '/login'
     | '/marketing'
@@ -344,6 +354,7 @@ export interface FileRouteTypes {
     | '/customer-po'
     | '/email-settings'
     | '/final-offer'
+    | '/lead-categories'
     | '/location'
     | '/login'
     | '/marketing'
@@ -375,6 +386,7 @@ export interface FileRouteTypes {
     | '/customer-po'
     | '/email-settings'
     | '/final-offer'
+    | '/lead-categories'
     | '/location'
     | '/login'
     | '/marketing'
@@ -409,6 +421,7 @@ export interface RootRouteChildren {
   CustomerPoRoute: typeof CustomerPoRoute
   EmailSettingsRoute: typeof EmailSettingsRoute
   FinalOfferRoute: typeof FinalOfferRoute
+  LeadCategoriesRoute: typeof LeadCategoriesRoute
   LocationRoute: typeof LocationRoute
   LoginRoute: typeof LoginRoute
   MarketingRoute: typeof MarketingRouteWithChildren
@@ -472,6 +485,13 @@ declare module '@tanstack/react-router' {
       path: '/final-offer'
       fullPath: '/final-offer'
       preLoaderRoute: typeof FinalOfferRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lead-categories': {
+      id: '/lead-categories'
+      path: '/lead-categories'
+      fullPath: '/lead-categories'
+      preLoaderRoute: typeof LeadCategoriesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/location': {
@@ -717,6 +737,7 @@ const rootRouteChildren: RootRouteChildren = {
   CustomerPoRoute: CustomerPoRoute,
   EmailSettingsRoute: EmailSettingsRoute,
   FinalOfferRoute: FinalOfferRoute,
+  LeadCategoriesRoute: LeadCategoriesRoute,
   LocationRoute: LocationRoute,
   LoginRoute: LoginRoute,
   MarketingRoute: MarketingRouteWithChildren,
