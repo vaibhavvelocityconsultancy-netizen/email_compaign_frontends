@@ -197,7 +197,7 @@ function LeadsPage() {
     {
       key: "contactName",
       header: "Contact",
-      filterValue: (lead) => [lead.contactName, lead.contactMobile, lead.contactEmail].join(" "),
+      filterValue: (lead) => [lead.contactName, lead.contactMobile].join(" "),
       cell: (lead) => (
         <div>
           <div>{lead.contactName || "—"}</div>
@@ -206,10 +206,17 @@ function LeadsPage() {
               {lead.contactMobile}
             </div>
           )}
-          <div className="font-mono text-[11px] text-muted-foreground">
-            {lead.contactEmail || "No email"}
-          </div>
         </div>
+      ),
+    },
+    {
+      key: "contactEmail",
+      header: "Email",
+      filterValue: (lead) => lead.contactEmail,
+      cell: (lead) => (
+        <span className="font-mono text-[11px] text-muted-foreground">
+          {lead.contactEmail || "No email"}
+        </span>
       ),
     },
     {
@@ -405,7 +412,7 @@ function LeadsPage() {
       <Modal open={importOpen} onClose={() => setImportOpen(false)} title="Upload Leads" eyebrow="IMPORT LEADS">
         <div className="space-y-3 p-5">
           <p className="text-xs text-muted-foreground">
-            CSV files with commas or tabs and Excel files are supported. Missing columns or values are allowed. Contact email is optional; leads without one are imported and marked “No email.”
+            CSV files with commas or tabs and Excel files are supported. Company name is optional, but every row must have a valid contact email. Rows with a missing or invalid email are skipped.
             Enquiry date defaults to today if blank or missing; source and status default to Other.
           </p>
           <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-line bg-background px-4 py-8 text-center transition-colors hover:border-brand">

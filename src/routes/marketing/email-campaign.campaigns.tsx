@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Eye, Megaphone, Pause, Pencil, Play, Plus, Send, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Megaphone, Pause, Pencil, Play, Plus, Send, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -56,6 +56,15 @@ const campaignSchema = z.object({
 });
 
 type CampaignFormValues = z.infer<typeof campaignSchema>;
+const LEAD_PICKER_PAGE_SIZE = 5;
+
+function templatesForCategory(
+  templates: MessageTemplate[],
+  categoryId: string | null | undefined,
+): MessageTemplate[] {
+  if (!categoryId) return templates;
+  return templates.filter((template) => String(template.categoryId ?? "") === categoryId);
+}
 
 function CampaignsPage() {
   const queryClient = useQueryClient();
@@ -85,11 +94,10 @@ function CampaignsPage() {
   const sequencesQuery = useQuery({ queryKey: ["sequences"], queryFn: getSequences });
   const templatesQuery = useQuery({ queryKey: ["templates"], queryFn: getTemplates });
   const emailTemplates = (templatesQuery.data ?? []).filter((template) => template.channel === "email");
-  const categoryTemplates = emailTemplates.filter(
-    (template) => !draftCategoryId || String(template.categoryId ?? "") === draftCategoryId,
-  );
-  const sendCampaignTemplates = emailTemplates.filter(
-    (template) => !sendingCampaign?.categoryId || String(template.categoryId ?? "") === sendingCampaign.categoryId,
+  const categoryTemplates = templatesForCategory(emailTemplates, draftCategoryId);
+  const sendCampaignTemplates = templatesForCategory(
+    emailTemplates,
+    sendingCampaign?.categoryId,
   );
   const selectedLeadsQuery = useQuery({
     queryKey: ["campaign-leads", selectedCampaign?.id],
@@ -362,6 +370,7 @@ function CampaignsPage() {
   const [sourceFilter, setSourceFilter] = useState("all");
   const [enquiryDateFilter, setEnquiryDateFilter] = useState("");
   const [followupDateFilter, setFollowupDateFilter] = useState("");
+  const [leadPage, setLeadPage] = useState(0);
 
   useEffect(() => {
     if (!formOpen) return;
@@ -385,14 +394,19 @@ function CampaignsPage() {
     setLeadSearch("");
     setStatusFilter("all");
     setSourceFilter("all");
+    setLeadPage(0);
     setShowCategoryCreator(false);
     setCategoryNameDraft("");
   }, [formOpen, editingCampaign]);
 
+  useEffect(() => {
+    setLeadPage(0);
+  }, [leadSearch, statusFilter, sourceFilter, draftCategoryId, enquiryDateFilter, followupDateFilter]);
+
   const filteredLeads = useMemo(() => {
     return leads.filter((lead) => {
       const searchText = leadSearch.trim().toLowerCase();
-      const matchesSearch = !searchText || String(lead.srNo).includes(searchText) || lead.enquiryFor.toLowerCase().includes(searchText) || lead.companyName.toLowerCase().includes(searchText) || lead.contactName.toLowerCase().includes(searchText);
+      const matchesSearch = !searchText || String(lead.srNo).includes(searchText) || lead.enquiryFor.toLowerCase().includes(searchText) || lead.companyName.toLowerCase().includes(searchText) || lead.contactName.toLowerCase().includes(searchText) || lead.contactEmail.toLowerCase().includes(searchText);
       const matchesStatus = statusFilter === "all" || lead.status === statusFilter;
       const matchesSource = sourceFilter === "all" || lead.source === sourceFilter;
       const matchesCategory = !draftCategoryId || String(lead.categoryId ?? "") === draftCategoryId;
@@ -403,6 +417,12 @@ function CampaignsPage() {
       return matchesSearch && matchesStatus && matchesSource && matchesCategory && matchesEnquiryDate && matchesFollowupDate;
     });
   }, [leads, leadSearch, statusFilter, sourceFilter, draftCategoryId, enquiryDateFilter, followupDateFilter]);
+  const pageCount = Math.max(1, Math.ceil(filteredLeads.length / LEAD_PICKER_PAGE_SIZE));
+  const currentLeadPage = Math.min(leadPage, pageCount - 1);
+  const pageLeads = filteredLeads.slice(
+    currentLeadPage * LEAD_PICKER_PAGE_SIZE,
+    (currentLeadPage + 1) * LEAD_PICKER_PAGE_SIZE,
+  );
 
   const toggleLead = (leadId: number) => {
     setDraftLeadIds((current) => current.includes(leadId)
@@ -574,6 +594,13 @@ function CampaignsPage() {
                     <option key={template.id} value={template.id}>{template.name}</option>
                   ))}
                 </select>
+                {!templatesQuery.isLoading && categoryTemplates.length === 0 && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {draftCategoryId
+                      ? "No email templates are available for this category."
+                      : "No email templates are available."}
+                  </p>
+                )}
               </div>
             )}
           </div>
@@ -653,42 +680,94 @@ function CampaignsPage() {
             </button>
           </div>
 
-          <div className="mt-4 max-h-[420px] space-y-2 overflow-y-auto rounded-xl border border-line bg-background/40 p-1">
+          <div className="mt-4 overflow-x-auto rounded-xl border border-line bg-background/40">
             {filteredLeads.length === 0 ? (
               <div className="flex min-h-[120px] items-center justify-center text-sm text-muted-foreground">
                 No leads match the current filters.
               </div>
             ) : (
-              filteredLeads.map((lead) => {
-                const checked = draftLeadIds.includes(Number(lead.id));
-                const leadDate = new Date(`${lead.enquiryDate}T00:00:00`).toLocaleDateString("en-GB");
-
-                return (
-                  <label
-                    key={lead.id}
-                    className={`flex cursor-pointer items-center justify-between gap-4 rounded-xl border px-4 py-3 transition-colors ${checked ? "border-line bg-muted/30" : "border-transparent hover:bg-muted/20"}`}
-                  >
-                    <div className="flex items-center gap-3">
+              <table className="w-full min-w-[760px] text-left text-sm">
+                <thead className="border-b border-line bg-muted/30 text-xs text-muted-foreground">
+                  <tr>
+                    <th scope="col" className="w-10 px-3 py-3">
                       <input
                         type="checkbox"
-                        checked={checked}
-                        onChange={() => toggleLead(Number(lead.id))}
+                        checked={filteredLeads.length > 0 && filteredLeads.every((lead) => draftLeadIds.includes(Number(lead.id)))}
+                        onChange={toggleSelectAll}
+                        aria-label="Select all filtered leads"
                         className="h-4 w-4 rounded border-input text-[#2f80ed] focus:ring-[#2f80ed]"
                       />
-                      <div>
-                        <div className="text-sm font-semibold uppercase text-foreground">{lead.companyName || `Enquiry #${lead.srNo}`} · {lead.enquiryFor}</div>
-                        <div className="text-sm text-muted-foreground">{leadDate}{lead.contactName ? ` · ${lead.contactName}` : ""}{lead.categoryName ? ` · ${lead.categoryName}` : ""}</div>
-                      </div>
-                    </div>
-
-                    <span className="rounded-md border border-input bg-background px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                      {lead.status}
-                    </span>
-                  </label>
-                );
-              })
+                    </th>
+                    <th scope="col" className="px-3 py-3 font-medium">Company</th>
+                    <th scope="col" className="px-3 py-3 font-medium">Contact</th>
+                    <th scope="col" className="px-3 py-3 font-medium">Email</th>
+                    <th scope="col" className="px-3 py-3 font-medium">Category</th>
+                    <th scope="col" className="px-3 py-3 font-medium">Status</th>
+                    <th scope="col" className="px-3 py-3 font-medium">Enquiry date</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {pageLeads.map((lead) => {
+                    const checked = draftLeadIds.includes(Number(lead.id));
+                    const leadDate = lead.enquiryDate
+                      ? new Date(`${lead.enquiryDate}T00:00:00`).toLocaleDateString("en-GB")
+                      : "—";
+                    return (
+                      <tr key={lead.id} className={checked ? "bg-muted/30" : "hover:bg-muted/20"}>
+                        <td className="px-3 py-3">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleLead(Number(lead.id))}
+                            aria-label={`Select ${lead.contactName || lead.companyName || `lead ${lead.srNo}`}`}
+                            className="h-4 w-4 rounded border-input text-[#2f80ed] focus:ring-[#2f80ed]"
+                          />
+                        </td>
+                        <td className="px-3 py-3 font-medium">{lead.companyName || `Enquiry #${lead.srNo}`}</td>
+                        <td className="px-3 py-3">{lead.contactName || "—"}</td>
+                        <td className="px-3 py-3">{lead.contactEmail || "No email"}</td>
+                        <td className="px-3 py-3">{lead.categoryName || "—"}</td>
+                        <td className="px-3 py-3 capitalize">{lead.status}</td>
+                        <td className="px-3 py-3 whitespace-nowrap">{leadDate}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             )}
           </div>
+          {filteredLeads.length > 0 && (
+            <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+              <span>
+                Showing {currentLeadPage * LEAD_PICKER_PAGE_SIZE + 1}–
+                {Math.min((currentLeadPage + 1) * LEAD_PICKER_PAGE_SIZE, filteredLeads.length)}
+                {" "}of {filteredLeads.length} leads
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setLeadPage((page) => Math.max(0, page - 1))}
+                  disabled={currentLeadPage === 0}
+                  aria-label="Previous lead page"
+                >
+                  <ChevronLeft className="size-4" /> Previous
+                </Button>
+                <span>Page {currentLeadPage + 1} of {pageCount}</span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setLeadPage((page) => Math.min(pageCount - 1, page + 1))}
+                  disabled={currentLeadPage >= pageCount - 1}
+                  aria-label="Next lead page"
+                >
+                  Next <ChevronRight className="size-4" />
+                </Button>
+              </div>
+            </div>
+          )}
 
           <div className="mt-6 flex justify-end gap-3">
             <Button type="button" variant="outline" onClick={() => setFormOpen(false)} className="h-11 px-6">
@@ -733,6 +812,13 @@ function CampaignsPage() {
               className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm"
             >
               <option value="">Select email template</option>
+              {!templatesQuery.isLoading && sendCampaignTemplates.length === 0 && (
+                <option value="" disabled>
+                  {sendingCampaign?.categoryId
+                    ? "No templates for this category"
+                    : "No email templates available"}
+                </option>
+              )}
               {sendCampaignTemplates.map((template) => (
                 <option key={template.id} value={template.id}>{template.name}</option>
               ))}
