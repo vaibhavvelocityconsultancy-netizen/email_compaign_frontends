@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { MailgunWebhookHelper } from "@/components/MailgunWebhookHelper";
 import { useAuth } from "@/lib/auth";
 import { request } from "@/lib/api";
 import {
@@ -227,8 +228,6 @@ function EmailSettingsPage() {
         saved = await saveOwnTenantMailgunSettings(input);
       }
       setSettings(saved);
-      setApiKey("");
-      setWebhookSigningKey("");
       if (isSuperUser) {
         setTenants((current) =>
           current.map((tenant) =>
@@ -420,6 +419,9 @@ function EmailSettingsPage() {
           )}
         </CardContent>
       </Card>
+
+      <MailgunWebhookHelper />
+
       {isSuperUser && (
         <Card>
           <CardHeader>
