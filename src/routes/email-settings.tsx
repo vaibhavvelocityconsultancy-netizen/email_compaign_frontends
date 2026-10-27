@@ -33,7 +33,7 @@ type UnsubscribeSettings = {
   unsubscribe_support_email: string;
   unsubscribe_company_address: string;
   unsubscribe_brand_color: string;
-  unsubscribe_logo_url: string;
+  unsubscribe_logo: string | null;
 };
 
 const emptyUnsubscribeSettings: UnsubscribeSettings = {
@@ -41,7 +41,7 @@ const emptyUnsubscribeSettings: UnsubscribeSettings = {
   unsubscribe_support_email: "",
   unsubscribe_company_address: "",
   unsubscribe_brand_color: "#1f5eff",
-  unsubscribe_logo_url: "",
+  unsubscribe_logo: null,
 };
 
 function EmailSettingsPage() {
@@ -59,6 +59,7 @@ function EmailSettingsPage() {
   const [loadingSettings, setLoadingSettings] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [unsubscribeSettings, setUnsubscribeSettings] = React.useState<UnsubscribeSettings>(emptyUnsubscribeSettings);
+  const [unsubscribeLogoFile, setUnsubscribeLogoFile] = React.useState<File | null>(null);
   const [savingUnsubscribe, setSavingUnsubscribe] = React.useState(false);
   const [unsubscribeDialogOpen, setUnsubscribeDialogOpen] = React.useState(false);
 
@@ -161,9 +162,15 @@ function EmailSettingsPage() {
   }, [selectedTenantId, isSuperUser]);
 
   React.useEffect(() => {
-    if (!user?.id || isSuperUser) return;
+    if (!isSuperUser || selectedTenantId === null) {
+      setUnsubscribeSettings(emptyUnsubscribeSettings);
+      setUnsubscribeLogoFile(null);
+      return;
+    }
     let active = true;
-    request<UnsubscribeSettings & { reply_to_email: string; updated_at: string }>("/email-campaign-settings/")
+    setUnsubscribeSettings(emptyUnsubscribeSettings);
+    setUnsubscribeLogoFile(null);
+    request<UnsubscribeSettings & { reply_to_email: string; updated_at: string }>(`/email-campaign-settings/?tenant_id=${selectedTenantId}`)
       .then((result) => {
         if (active) setUnsubscribeSettings({ ...emptyUnsubscribeSettings, ...result });
       })
@@ -171,17 +178,25 @@ function EmailSettingsPage() {
         if (active) toast.error(error instanceof Error ? error.message : "Could not load unsubscribe page settings.");
       });
     return () => { active = false; };
-  }, [user?.id, isSuperUser]);
+  }, [selectedTenantId, isSuperUser]);
 
   async function handleSaveUnsubscribe(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (selectedTenantId === null) return;
     setSavingUnsubscribe(true);
     try {
-      const saved = await request<UnsubscribeSettings>("/email-campaign-settings/", {
+      const formData = new FormData();
+      formData.append("unsubscribe_company_name", unsubscribeSettings.unsubscribe_company_name);
+      formData.append("unsubscribe_support_email", unsubscribeSettings.unsubscribe_support_email);
+      formData.append("unsubscribe_company_address", unsubscribeSettings.unsubscribe_company_address);
+      formData.append("unsubscribe_brand_color", unsubscribeSettings.unsubscribe_brand_color);
+      if (unsubscribeLogoFile) formData.append("unsubscribe_logo", unsubscribeLogoFile);
+      const saved = await request<UnsubscribeSettings>(`/email-campaign-settings/?tenant_id=${selectedTenantId}`, {
         method: "PATCH",
-        body: JSON.stringify(unsubscribeSettings),
+        body: formData,
       });
       setUnsubscribeSettings({ ...emptyUnsubscribeSettings, ...saved });
+      setUnsubscribeLogoFile(null);
       toast.success("Unsubscribe page settings saved.");
       setUnsubscribeDialogOpen(false);
     } catch (error) {
@@ -382,7 +397,7 @@ function EmailSettingsPage() {
           )}
         </CardContent>
       </Card>
-      {!isSuperUser && (
+      {isSuperUser && selectedTenantId !== null && (
         <Card>
           <CardHeader>
             <CardTitle>Unsubscribe page</CardTitle>
@@ -408,8 +423,12 @@ function EmailSettingsPage() {
               <label className="grid gap-2 text-sm font-medium" htmlFor="unsubscribe-brand-color">Brand color
                 <div className="flex gap-2"><Input id="unsubscribe-brand-color-picker" aria-label="Choose brand color" type="color" className="w-16 p-1" value={/^#[0-9a-fA-F]{6}$/.test(unsubscribeSettings.unsubscribe_brand_color) ? unsubscribeSettings.unsubscribe_brand_color : "#1f5eff"} onChange={(event) => setUnsubscribeSettings((current) => ({ ...current, unsubscribe_brand_color: event.target.value }))} /><Input id="unsubscribe-brand-color" value={unsubscribeSettings.unsubscribe_brand_color} placeholder="#1f5eff" onChange={(event) => setUnsubscribeSettings((current) => ({ ...current, unsubscribe_brand_color: event.target.value }))} /></div>
               </label>
-              <label className="grid gap-2 text-sm font-medium" htmlFor="unsubscribe-logo-url">Logo URL (optional, HTTPS)
-                <Input id="unsubscribe-logo-url" type="url" value={unsubscribeSettings.unsubscribe_logo_url} onChange={(event) => setUnsubscribeSettings((current) => ({ ...current, unsubscribe_logo_url: event.target.value }))} placeholder="https://example.com/logo.png" />
+              <label className="grid gap-2 text-sm font-medium" htmlFor="unsubscribe-logo">Logo image (optional)
+                {unsubscribeSettings.unsubscribe_logo && (
+                  <img src={unsubscribeSettings.unsubscribe_logo} alt="Current unsubscribe page logo" className="max-h-12 max-w-40 object-contain" />
+                )}
+                <Input id="unsubscribe-logo" type="file" accept="image/png,image/jpeg,image/gif,image/webp" onChange={(event) => setUnsubscribeLogoFile(event.target.files?.[0] ?? null)} />
+                <span className="text-xs text-muted-foreground">Upload an image up to 2 MB.</span>
               </label>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setUnsubscribeDialogOpen(false)}>Cancel</Button>
