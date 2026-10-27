@@ -1,6 +1,6 @@
 import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Mail, Save } from "lucide-react";
+import { Eye, EyeOff, Mail, Save } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -55,6 +55,8 @@ function EmailSettingsPage() {
   const [senderDomain, setSenderDomain] = React.useState("");
   const [apiKey, setApiKey] = React.useState("");
   const [webhookSigningKey, setWebhookSigningKey] = React.useState("");
+  const [showApiKey, setShowApiKey] = React.useState(false);
+  const [showWebhookSigningKey, setShowWebhookSigningKey] = React.useState(false);
   const [loadingTenants, setLoadingTenants] = React.useState(true);
   const [loadingSettings, setLoadingSettings] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
@@ -162,7 +164,7 @@ function EmailSettingsPage() {
   }, [selectedTenantId, isSuperUser]);
 
   React.useEffect(() => {
-    if (!isSuperUser || selectedTenantId === null) {
+    if (!user?.id || !isSuperUser) {
       setUnsubscribeSettings(emptyUnsubscribeSettings);
       setUnsubscribeLogoFile(null);
       return;
@@ -170,7 +172,7 @@ function EmailSettingsPage() {
     let active = true;
     setUnsubscribeSettings(emptyUnsubscribeSettings);
     setUnsubscribeLogoFile(null);
-    request<UnsubscribeSettings & { reply_to_email: string; updated_at: string }>(`/email-campaign-settings/?tenant_id=${selectedTenantId}`)
+    request<UnsubscribeSettings & { updated_at: string }>("/unsubscribe-page-settings/")
       .then((result) => {
         if (active) setUnsubscribeSettings({ ...emptyUnsubscribeSettings, ...result });
       })
@@ -178,11 +180,10 @@ function EmailSettingsPage() {
         if (active) toast.error(error instanceof Error ? error.message : "Could not load unsubscribe page settings.");
       });
     return () => { active = false; };
-  }, [selectedTenantId, isSuperUser]);
+  }, [user?.id, isSuperUser]);
 
   async function handleSaveUnsubscribe(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (selectedTenantId === null) return;
     setSavingUnsubscribe(true);
     try {
       const formData = new FormData();
@@ -191,7 +192,7 @@ function EmailSettingsPage() {
       formData.append("unsubscribe_company_address", unsubscribeSettings.unsubscribe_company_address);
       formData.append("unsubscribe_brand_color", unsubscribeSettings.unsubscribe_brand_color);
       if (unsubscribeLogoFile) formData.append("unsubscribe_logo", unsubscribeLogoFile);
-      const saved = await request<UnsubscribeSettings>(`/email-campaign-settings/?tenant_id=${selectedTenantId}`, {
+      const saved = await request<UnsubscribeSettings>("/unsubscribe-page-settings/", {
         method: "PATCH",
         body: formData,
       });
@@ -345,17 +346,28 @@ function EmailSettingsPage() {
 
               <label className="grid gap-2 text-sm font-medium" htmlFor="mailgun-api-key">
                 Mailgun API key {settings?.has_api_key ? "(configured)" : ""}
-                <Input
-                  id="mailgun-api-key"
-                  type="password"
-                  autoComplete="new-password"
-                  value={apiKey}
-                  onChange={(event) => setApiKey(event.target.value)}
-                  placeholder={
-                    settings?.has_api_key ? "Leave blank to keep the saved key" : "Required"
-                  }
-                  required={!settings?.has_api_key}
-                />
+                <div className="relative">
+                  <Input
+                    id="mailgun-api-key"
+                    type={showApiKey ? "text" : "password"}
+                    autoComplete="new-password"
+                    className="pr-10"
+                    value={apiKey}
+                    onChange={(event) => setApiKey(event.target.value)}
+                    placeholder={
+                      settings?.has_api_key ? "Leave blank to keep the saved key" : "Required"
+                    }
+                    required={!settings?.has_api_key}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    aria-label={showApiKey ? "Hide API key" : "Show API key"}
+                    onClick={() => setShowApiKey((visible) => !visible)}
+                  >
+                    {showApiKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
               </label>
 
               <label
@@ -364,19 +376,30 @@ function EmailSettingsPage() {
               >
                 Mailgun webhook signing key{" "}
                 {settings?.has_webhook_signing_key ? "(configured)" : ""}
-                <Input
-                  id="mailgun-webhook-signing-key"
-                  type="password"
-                  autoComplete="new-password"
-                  value={webhookSigningKey}
-                  onChange={(event) => setWebhookSigningKey(event.target.value)}
-                  placeholder={
-                    settings?.has_webhook_signing_key
-                      ? "Leave blank to keep the saved key"
-                      : "Required"
-                  }
-                  required={!settings?.has_webhook_signing_key}
-                />
+                <div className="relative">
+                  <Input
+                    id="mailgun-webhook-signing-key"
+                    type={showWebhookSigningKey ? "text" : "password"}
+                    autoComplete="new-password"
+                    className="pr-10"
+                    value={webhookSigningKey}
+                    onChange={(event) => setWebhookSigningKey(event.target.value)}
+                    placeholder={
+                      settings?.has_webhook_signing_key
+                        ? "Leave blank to keep the saved key"
+                        : "Required"
+                    }
+                    required={!settings?.has_webhook_signing_key}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    aria-label={showWebhookSigningKey ? "Hide signing key" : "Show signing key"}
+                    onClick={() => setShowWebhookSigningKey((visible) => !visible)}
+                  >
+                    {showWebhookSigningKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                  </button>
+                </div>
               </label>
 
               <div>
@@ -397,11 +420,11 @@ function EmailSettingsPage() {
           )}
         </CardContent>
       </Card>
-      {isSuperUser && selectedTenantId !== null && (
+      {isSuperUser && (
         <Card>
           <CardHeader>
             <CardTitle>Unsubscribe page</CardTitle>
-            <CardDescription>Customize the page shown when someone clicks unsubscribe in your emails.</CardDescription>
+            <CardDescription>Configure one shared unsubscribe page for every tenant.</CardDescription>
           </CardHeader>
           <CardContent>
             <Button type="button" variant="outline" onClick={() => setUnsubscribeDialogOpen(true)}>Configure unsubscribe page</Button>
