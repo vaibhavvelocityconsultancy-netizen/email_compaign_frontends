@@ -11,7 +11,6 @@ import {
   ShoppingCart,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useAuth } from "@/lib/auth";
 import {
   Sidebar,
   SidebarContent,
@@ -163,21 +162,18 @@ const MENU_ITEMS: MenuItem[] = [
 ];
 
 export function AppSidebar() {
-  const { user } = useAuth();
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-  const menuItems: MenuItem[] = user?.is_superuser
-    ? [
-        ...MENU_ITEMS,
-        {
-          key: "email-settings",
-          label: "Email settings",
-          icon: ShieldCheck,
-          to: "/email-settings",
-        },
-      ]
-    : MENU_ITEMS;
+  const menuItems: MenuItem[] = [
+    ...MENU_ITEMS,
+    {
+      key: "email-settings",
+      label: "Email settings",
+      icon: ShieldCheck,
+      to: "/email-settings",
+    },
+  ];
 
   const isActive = (to: string) => pathname === to || pathname.startsWith(`${to}/`);
 

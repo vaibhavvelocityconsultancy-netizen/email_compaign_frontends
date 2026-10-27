@@ -10,6 +10,7 @@ export interface TenantMailgunSettings {
   tenant: number;
   tenant_name: string;
   default_from_email: string;
+  reply_to_email: string;
   sender_domain: string;
   has_api_key: boolean;
   has_webhook_signing_key: boolean;
@@ -17,9 +18,23 @@ export interface TenantMailgunSettings {
 
 export interface TenantMailgunSettingsInput {
   default_from_email: string;
+  reply_to_email: string;
   sender_domain: string;
   api_key?: string;
   webhook_signing_key?: string;
+}
+
+export function getOwnTenantMailgunSettings(): Promise<TenantMailgunSettings> {
+  return request<TenantMailgunSettings>("/auth/mailgun-settings/");
+}
+
+export function saveOwnTenantMailgunSettings(
+  data: TenantMailgunSettingsInput,
+): Promise<TenantMailgunSettings> {
+  return request<TenantMailgunSettings>("/auth/mailgun-settings/", {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
 }
 
 export function listTenantsWithMailgunSettings(): Promise<TenantMailgunSettingsSummary[]> {

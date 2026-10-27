@@ -8,8 +8,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth";
 import {
+  getOwnTenantMailgunSettings,
   getTenantMailgunSettings,
   listTenantsWithMailgunSettings,
+  saveOwnTenantMailgunSettings,
   saveTenantMailgunSettings,
   type TenantMailgunSettings,
   type TenantMailgunSettingsSummary,
@@ -27,10 +29,12 @@ export const Route = createFileRoute("/email-settings")({
 
 function EmailSettingsPage() {
   const { user } = useAuth();
+  const isSuperUser = Boolean(user?.is_superuser);
   const [tenants, setTenants] = React.useState<TenantMailgunSettingsSummary[]>([]);
   const [selectedTenantId, setSelectedTenantId] = React.useState<number | null>(null);
   const [settings, setSettings] = React.useState<TenantMailgunSettings | null>(null);
   const [defaultFromEmail, setDefaultFromEmail] = React.useState("");
+  const [replyToEmail, setReplyToEmail] = React.useState("");
   const [senderDomain, setSenderDomain] = React.useState("");
   const [apiKey, setApiKey] = React.useState("");
   const [webhookSigningKey, setWebhookSigningKey] = React.useState("");
@@ -39,7 +43,7 @@ function EmailSettingsPage() {
   const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
-    if (!user?.is_superuser) {
+    if (!isSuperUser) {
       setLoadingTenants(false);
       return;
     }
@@ -62,12 +66,48 @@ function EmailSettingsPage() {
     return () => {
       active = false;
     };
-  }, [user?.is_superuser]);
+  }, [isSuperUser]);
 
   React.useEffect(() => {
-    if (selectedTenantId === null || !user?.is_superuser) {
+    if (!user?.id || isSuperUser) {
+      return;
+    }
+
+    let active = true;
+    setLoadingSettings(true);
+    setSettings(null);
+    setApiKey("");
+    setWebhookSigningKey("");
+    getOwnTenantMailgunSettings()
+      .then((result) => {
+        if (!active) return;
+        setSettings(result);
+        setDefaultFromEmail(result.default_from_email);
+        setReplyToEmail(result.reply_to_email);
+        setSenderDomain(result.sender_domain);
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        toast.error(error instanceof Error ? error.message : "Could not load Mailgun settings.");
+      })
+      .finally(() => {
+        if (active) setLoadingSettings(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [user?.id, isSuperUser]);
+
+  React.useEffect(() => {
+    if (!isSuperUser) {
+      return;
+    }
+
+    if (selectedTenantId === null) {
       setSettings(null);
       setDefaultFromEmail("");
+      setReplyToEmail("");
       setSenderDomain("");
       setApiKey("");
       setWebhookSigningKey("");
@@ -84,6 +124,7 @@ function EmailSettingsPage() {
         if (!active) return;
         setSettings(result);
         setDefaultFromEmail(result.default_from_email);
+        setReplyToEmail(result.reply_to_email);
         setSenderDomain(result.sender_domain);
       })
       .catch((error: unknown) => {
@@ -97,29 +138,39 @@ function EmailSettingsPage() {
     return () => {
       active = false;
     };
-  }, [selectedTenantId, user?.is_superuser]);
+  }, [selectedTenantId, isSuperUser]);
 
   async function handleSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (selectedTenantId === null) return;
+    if (isSuperUser && selectedTenantId === null) return;
     setSaving(true);
     try {
-      const saved = await saveTenantMailgunSettings(selectedTenantId, {
+      const input = {
         default_from_email: defaultFromEmail,
+        reply_to_email: replyToEmail,
         sender_domain: senderDomain,
         ...(apiKey ? { api_key: apiKey } : {}),
         ...(webhookSigningKey ? { webhook_signing_key: webhookSigningKey } : {}),
-      });
+      };
+      let saved: TenantMailgunSettings;
+      if (isSuperUser) {
+        if (selectedTenantId === null) return;
+        saved = await saveTenantMailgunSettings(selectedTenantId, input);
+      } else {
+        saved = await saveOwnTenantMailgunSettings(input);
+      }
       setSettings(saved);
       setApiKey("");
       setWebhookSigningKey("");
-      setTenants((current) =>
-        current.map((tenant) =>
-          tenant.id === selectedTenantId
-            ? { ...tenant, configured: saved.has_api_key && saved.has_webhook_signing_key }
-            : tenant,
-        ),
-      );
+      if (isSuperUser) {
+        setTenants((current) =>
+          current.map((tenant) =>
+            tenant.id === selectedTenantId
+              ? { ...tenant, configured: saved.has_api_key && saved.has_webhook_signing_key }
+              : tenant,
+          ),
+        );
+      }
       toast.success("Mailgun settings saved.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not save Mailgun settings.");
@@ -128,62 +179,54 @@ function EmailSettingsPage() {
     }
   }
 
-  if (!user?.is_superuser) {
-    return (
-      <Card>
-        <CardContent className="p-6 text-sm text-muted-foreground">
-          Only a super admin can manage tenant email settings.
-        </CardContent>
-      </Card>
-    );
-  }
-
   const isConfigured = settings?.has_api_key && settings.has_webhook_signing_key;
 
   return (
     <div className="flex flex-col gap-7">
       <div>
         <div className="font-mono text-[11px] tracking-wide text-muted-foreground">
-          SUPER ADMIN
+          {isSuperUser ? "SUPER ADMIN" : "TENANT EMAIL SETTINGS"}
         </div>
         <h1 className="mt-1 flex items-center gap-2 font-display text-3xl font-bold">
           <Mail className="size-7" />
-          Tenant email settings
+          {isSuperUser ? "Tenant email settings" : "Email settings"}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Configure separate Mailgun credentials and sender details for each tenant.
+          {isSuperUser
+            ? "Configure separate Mailgun credentials and sender details for each tenant."
+            : `Configure Mailgun credentials and sender details for ${settings?.tenant_name ?? "your tenant"}.`}
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Select tenant</CardTitle>
-          <CardDescription>
-            Settings are stored independently for each tenant.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <label className="flex max-w-xl flex-col gap-2 text-sm font-medium" htmlFor="tenant">
-            Tenant
-            <select
-              id="tenant"
-              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-              value={selectedTenantId ?? ""}
-              disabled={loadingTenants || tenants.length === 0}
-              onChange={(event) =>
-                setSelectedTenantId(event.target.value ? Number(event.target.value) : null)
-              }
-            >
-              {tenants.length === 0 && <option value="">No tenants found</option>}
-              {tenants.map((tenant) => (
-                <option key={tenant.id} value={tenant.id}>
-                  {tenant.name} {tenant.configured ? "— configured" : "— not configured"}
-                </option>
-              ))}
-            </select>
-          </label>
-        </CardContent>
-      </Card>
+      {isSuperUser && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Select tenant</CardTitle>
+            <CardDescription>Settings are stored independently for each tenant.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <label className="flex max-w-xl flex-col gap-2 text-sm font-medium" htmlFor="tenant">
+              Tenant
+              <select
+                id="tenant"
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                value={selectedTenantId ?? ""}
+                disabled={loadingTenants || tenants.length === 0}
+                onChange={(event) =>
+                  setSelectedTenantId(event.target.value ? Number(event.target.value) : null)
+                }
+              >
+                {tenants.length === 0 && <option value="">No tenants found</option>}
+                {tenants.map((tenant) => (
+                  <option key={tenant.id} value={tenant.id}>
+                    {tenant.name} {tenant.configured ? "— configured" : "— not configured"}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -195,7 +238,7 @@ function EmailSettingsPage() {
         <CardContent>
           {loadingTenants || loadingSettings ? (
             <p className="text-sm text-muted-foreground">Loading email settings…</p>
-          ) : tenants.length === 0 ? (
+          ) : isSuperUser && tenants.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Create a tenant before configuring its Mailgun account.
             </p>
@@ -209,6 +252,17 @@ function EmailSettingsPage() {
                   onChange={(event) => setDefaultFromEmail(event.target.value)}
                   placeholder="Velocity Consultancy <reply@example.com>"
                   required
+                />
+              </label>
+
+              <label className="grid gap-2 text-sm font-medium" htmlFor="reply-to-email">
+                Reply-to email
+                <Input
+                  id="reply-to-email"
+                  type="email"
+                  value={replyToEmail}
+                  onChange={(event) => setReplyToEmail(event.target.value)}
+                  placeholder="replies@example.com"
                 />
               </label>
 
@@ -231,7 +285,9 @@ function EmailSettingsPage() {
                   autoComplete="new-password"
                   value={apiKey}
                   onChange={(event) => setApiKey(event.target.value)}
-                  placeholder={settings?.has_api_key ? "Leave blank to keep the saved key" : "Required"}
+                  placeholder={
+                    settings?.has_api_key ? "Leave blank to keep the saved key" : "Required"
+                  }
                   required={!settings?.has_api_key}
                 />
               </label>
@@ -258,7 +314,10 @@ function EmailSettingsPage() {
               </label>
 
               <div>
-                <Button type="submit" disabled={saving || selectedTenantId === null}>
+                <Button
+                  type="submit"
+                  disabled={saving || (isSuperUser && selectedTenantId === null)}
+                >
                   <Save />
                   {saving ? "Saving…" : "Save settings"}
                 </Button>
