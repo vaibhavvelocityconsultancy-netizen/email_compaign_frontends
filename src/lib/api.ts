@@ -233,11 +233,6 @@ export interface Campaign {
   createdAt: string;
 }
 
-export interface EmailCampaignSettings {
-  replyToEmail: string;
-  updatedAt: string;
-}
-
 export interface AutomaticEmailResult {
   sent: number;
   failed: number;
@@ -863,40 +858,6 @@ export async function updateBatch(
     }),
   });
   return mapBatch(batch);
-}
-
-interface ApiEmailCampaignSettings {
-  reply_to_email: string;
-  updated_at: string;
-}
-
-function mapEmailCampaignSettings(
-  campaignSettings: ApiEmailCampaignSettings,
-): EmailCampaignSettings {
-  return {
-    replyToEmail: campaignSettings.reply_to_email,
-    updatedAt: campaignSettings.updated_at,
-  };
-}
-
-export async function getEmailCampaignSettings(): Promise<EmailCampaignSettings> {
-  const campaignSettings = await request<ApiEmailCampaignSettings>(
-    "/email-campaign-settings/",
-  );
-  return mapEmailCampaignSettings(campaignSettings);
-}
-
-export async function updateEmailCampaignSettings(data: {
-  replyToEmail: string;
-}): Promise<EmailCampaignSettings> {
-  const campaignSettings = await request<ApiEmailCampaignSettings>(
-    "/email-campaign-settings/",
-    {
-      method: "PATCH",
-      body: JSON.stringify({ reply_to_email: data.replyToEmail }),
-    },
-  );
-  return mapEmailCampaignSettings(campaignSettings);
 }
 
 export async function getBatchLeads(id: string): Promise<CampaignLead[]> {
