@@ -1,7 +1,7 @@
 import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCheck, Eye, LoaderCircle, Trash2 } from "lucide-react";
+import { CheckCheck, LoaderCircle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -38,14 +38,23 @@ function LogsPage() {
     enabled: Boolean(user?.is_superuser),
     refetchInterval: 15000,
   });
+  const markAllRead = useMutation({
+    mutationFn: () => request<{ updated: number }>("/auth/system-logs/read-all/", { method: "POST" }),
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries({ queryKey: ["system-logs"] });
+      void queryClient.invalidateQueries({ queryKey: ["system-notification-count"] });
+      toast.success(`${result.updated} log${result.updated === 1 ? "" : "s"} marked as read.`);
+    },
+    onError: () => toast.error("Could not mark logs as read."),
+  });
+
   const action = useMutation({
-    mutationFn: (args: { id: number; action: "read" | "acknowledge" | "dismiss" }) =>
+    mutationFn: (args: { id: number; action: "acknowledge" | "dismiss" }) =>
       request(`/auth/system-logs/${args.id}/action/`, { method: "POST", body: JSON.stringify({ action: args.action }) }),
     onSuccess: (_data, args) => {
       void queryClient.invalidateQueries({ queryKey: ["system-logs"] });
       void queryClient.invalidateQueries({ queryKey: ["system-notification-count"] });
       if (args.action === "acknowledge") toast.success("Log acknowledged.");
-      if (args.action === "read") toast.success("Log marked as read.");
       if (args.action === "dismiss") toast.success("Log dismissed.");
     },
     onError: () => toast.error("Could not update this log."),
@@ -57,7 +66,13 @@ function LogsPage() {
     <div className="space-y-4 p-6">
       <div className="flex items-center justify-between gap-4">
         <div><h1 className="text-2xl font-semibold">System Logs</h1><p className="text-sm text-muted-foreground">Backend and cron errors recorded by the CRM.</p></div>
-        <Input className="max-w-xs" placeholder="Search logs..." value={search} onChange={(event) => setSearch(event.target.value)} />
+        <div className="flex items-center gap-2">
+          <Input className="max-w-xs" placeholder="Search logs..." value={search} onChange={(event) => setSearch(event.target.value)} />
+          <Button variant="outline" disabled={markAllRead.isPending || !logs.data?.results.some((log) => !log.is_read)} onClick={() => markAllRead.mutate()}>
+            {markAllRead.isPending ? <LoaderCircle className="mr-1 size-4 animate-spin" /> : <CheckCheck className="mr-1 size-4" />}
+            Mark all as read
+          </Button>
+        </div>
       </div>
       {logs.data?.results.map((log) => (
         <Card key={log.id} className={log.is_read ? "opacity-75" : "border-destructive/50"}>
@@ -70,23 +85,7 @@ function LogsPage() {
               <div className="flex flex-wrap justify-end gap-2">
                 {log.is_acknowledged ? (
                   <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">Acknowledged</span>
-                ) : (
-                  !log.is_read && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={action.isPending && action.variables?.id === log.id}
-                      onClick={() => action.mutate({ id: log.id, action: "read" })}
-                    >
-                      {action.isPending && action.variables?.id === log.id && action.variables.action === "read" ? (
-                        <LoaderCircle className="mr-1 size-4 animate-spin" />
-                      ) : (
-                        <Eye className="mr-1 size-4" />
-                      )}
-                      Mark as read
-                    </Button>
-                  )
-                )}
+                ) : null}
                 {!log.is_acknowledged && (
                   <Button
                     size="sm"
