@@ -1,10 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
-import { useState } from "react";
+import { ChevronLeft, ChevronRight, RefreshCw, Send } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { getInboundReplies } from "@/lib/api";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { getInboundReplies, sendInboundReply } from "@/lib/api";
 
 const PAGE_SIZE = 10;
 
@@ -25,11 +28,28 @@ function IncomingRepliesPage() {
   });
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [page, setPage] = useState(0);
+  const [replySubject, setReplySubject] = useState("");
+  const [replyBody, setReplyBody] = useState("");
+  const sendReplyMutation = useMutation({
+    mutationFn: ({ id, subject, body }: { id: number; subject: string; body: string }) => sendInboundReply(id, subject, body),
+    onSuccess: (result) => {
+      toast.success(result.detail);
+      setReplyBody("");
+      void repliesQuery.refetch();
+    },
+    onError: (error: Error) => toast.error(error.message || "Could not send reply."),
+  });
   const replies = repliesQuery.data ?? [];
   const pageCount = Math.max(1, Math.ceil(replies.length / PAGE_SIZE));
   const currentPage = Math.min(page, pageCount - 1);
   const pageReplies = replies.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE);
   const selectedReply = replies.find((reply) => reply.id === selectedId) ?? pageReplies[0] ?? null;
+  useEffect(() => {
+    if (!selectedReply) return;
+    const subject = selectedReply.subject || "Campaign email";
+    setReplySubject(subject.toLowerCase().startsWith("re:") ? subject : `Re: ${subject}`);
+    setReplyBody("");
+  }, [selectedReply?.id]);
   return (
     <section className="space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
@@ -140,6 +160,35 @@ function IncomingRepliesPage() {
                   <dd>{selectedReply.campaign?.name ?? "—"}</dd>
                 </dl>
               </div>
+              <form
+                className="mt-4 space-y-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  sendReplyMutation.mutate({ id: selectedReply.id, subject: replySubject, body: replyBody });
+                }}
+              >
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium" htmlFor="reply-subject">Subject</label>
+                  <Input id="reply-subject" value={replySubject} onChange={(event) => setReplySubject(event.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium" htmlFor="reply-body">Reply</label>
+                  <Textarea
+                    id="reply-body"
+                    className="min-h-36"
+                    placeholder={`Write a reply to ${selectedReply.sender_email}…`}
+                    value={replyBody}
+                    onChange={(event) => setReplyBody(event.target.value)}
+                    required
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <Button type="submit" disabled={sendReplyMutation.isPending || !replyBody.trim()}>
+                    <Send className="mr-2 size-4" />
+                    {sendReplyMutation.isPending ? "Sending…" : "Send reply"}
+                  </Button>
+                </div>
+              </form>
             </article>
           )}
         </div>

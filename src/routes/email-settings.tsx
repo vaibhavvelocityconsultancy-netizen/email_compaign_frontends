@@ -215,7 +215,7 @@ function EmailSettingsPage() {
     try {
       const input = {
         default_from_email: defaultFromEmail,
-        reply_to_email: replyToEmail,
+        reply_to_email: replyToEmail.trim(),
         sender_domain: senderDomain,
         ...(apiKey ? { api_key: apiKey } : {}),
         ...(webhookSigningKey ? { webhook_signing_key: webhookSigningKey } : {}),
@@ -325,10 +325,9 @@ function EmailSettingsPage() {
                 Reply-to email
                 <Input
                   id="reply-to-email"
-                  type="email"
                   value={replyToEmail}
                   onChange={(event) => setReplyToEmail(event.target.value)}
-                  placeholder="replies@example.com"
+                  placeholder="Velocity Consultancy <replies@example.com>"
                 />
               </label>
 

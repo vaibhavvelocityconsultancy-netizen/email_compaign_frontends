@@ -4,12 +4,14 @@ import { useCallback, useMemo, useState } from "react";
 import { useFieldArray, useFormContext, type FieldPath } from "react-hook-form";
 import { z } from "zod";
 import { toast } from "sonner";
-import { AlertTriangle, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, CalendarDays, Plus, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { DataTable, type Column } from "@/components/common/DataTable";
 import { EntityForm, fieldPresets, type FormFieldConfig } from "@/components/common/EntityForm";
@@ -43,21 +45,53 @@ const sequenceSchema = z.object({
     templateId: z.number().int().positive("Choose an email template"),
     delayDays: z.number().int().min(0, "Delay cannot be negative"),
     delayMinutes: z.number().int().min(0, "Delay cannot be negative"),
+    sendDate: z.string(),
+    sendTime: z.string(),
   })).min(1, "Add at least one step"),
 });
 
 type SequenceFormValues = z.infer<typeof sequenceSchema>;
+
+function toLocalDateInput(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function dateAfterDays(days: number) {
+  const date = new Date();
+  date.setHours(12, 0, 0, 0);
+  date.setDate(date.getDate() + Math.max(0, days));
+  return toLocalDateInput(date);
+}
+
+function daysFromToday(value: string) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const selected = new Date(`${value}T00:00:00`);
+  return Math.max(0, Math.round((selected.getTime() - today.getTime()) / 86400000));
+}
+
+function parseLocalDate(value: string) {
+  return value ? new Date(`${value}T00:00:00`) : undefined;
+}
+
+function formatCalendarDate(value: string) {
+  const date = parseLocalDate(value);
+  return date ? date.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" }) : "Select date";
+}
 
 function SequenceStepsEditor({ templates, disabled }: { templates: EmailTemplate[]; disabled: boolean }) {
   const { control, setValue, watch } = useFormContext<SequenceFormValues>();
   const { fields, append, remove } = useFieldArray({ control, name: "steps", keyName: "fieldKey" });
 
   return (
-    <section className="col-span-full space-y-3 rounded-lg border border-line bg-background/60 p-3 sm:p-4">
+    <section className="col-span-full space-y-4 rounded-lg border border-line bg-background/60 p-3 sm:p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold">Sequence steps</h3>
-          <p className="mt-0.5 text-xs text-muted-foreground">Each delay is measured from the previous email.</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">Today sends immediately; future dates schedule the step.</p>
         </div>
         <Button
           type="button"
@@ -65,7 +99,7 @@ function SequenceStepsEditor({ templates, disabled }: { templates: EmailTemplate
           variant="outline"
           className="h-8 gap-1.5"
           disabled={disabled || templates.length === 0}
-          onClick={() => append({ templateId: Number(templates[0]?.id ?? 0), delayDays: 0, delayMinutes: 0 })}
+          onClick={() => append({ templateId: Number(templates[0]?.id ?? 0), delayDays: 0, delayMinutes: 0, sendDate: toLocalDateInput(new Date()), sendTime: "" })}
         >
           <Plus className="size-4" /> Add step
         </Button>
@@ -83,75 +117,123 @@ function SequenceStepsEditor({ templates, disabled }: { templates: EmailTemplate
           const chosenTemplate = templates.find((template) => template.id === String(templateId));
 
           return (
-            <div key={item.fieldKey} className="grid min-w-0 grid-cols-1 items-end gap-3 rounded-md border border-line bg-surface p-3 sm:grid-cols-[minmax(0,1fr)_7rem_7rem_auto]">
-              <FormField
-                control={control}
-                name={`steps.${index}.templateId` as FieldPath<SequenceFormValues>}
-                render={({ field }) => (
-                  <FormItem className="min-w-0 space-y-2">
-                    <FormLabel>Step {index + 1} template</FormLabel>
-                    <Select
-                      value={field.value ? String(field.value) : ""}
-                      onValueChange={(value) => field.onChange(Number(value))}
-                      disabled={disabled || templates.length === 0}
-                    >
+            <div key={item.fieldKey} className="rounded-md border border-line/50 bg-background/50">
+              {/* Step header */}
+              <div className="flex items-center justify-between border-b border-line/50 px-3 py-2 sm:px-4">
+                <div className="flex items-center gap-2">
+                  <span className="flex size-6 items-center justify-center rounded-full bg-brand/10 font-mono text-xs font-semibold text-brand">
+                    {index + 1}
+                  </span>
+                  <span className="text-sm font-medium">Step {index + 1}</span>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-8 text-destructive hover:text-destructive"
+                  disabled={disabled || fields.length === 1}
+                  title="Remove step"
+                  aria-label={`Remove step ${index + 1}`}
+                  onClick={() => remove(index)}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </div>
+
+              {/* Step fields */}
+              <div className="grid grid-cols-1 gap-4 p-3 sm:grid-cols-2 sm:p-4">
+                <FormField
+                  control={control}
+                  name={`steps.${index}.templateId` as FieldPath<SequenceFormValues>}
+                  render={({ field }) => (
+                    <FormItem className="min-w-0 space-y-2 sm:col-span-2">
+                      <FormLabel>Email template</FormLabel>
+                      <Select
+                        value={field.value ? String(field.value) : ""}
+                        onValueChange={(value) => field.onChange(Number(value))}
+                        disabled={disabled || templates.length === 0}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Choose a template" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {templates.map((template) => (
+                            <SelectItem key={template.id} value={template.id}>{template.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {chosenTemplate && (
+                        <p className="truncate text-xs text-muted-foreground">Subject: {chosenTemplate.subject}</p>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={control}
+                  name={`steps.${index}.sendDate` as FieldPath<SequenceFormValues>}
+                  render={({ field }) => (
+                    <FormItem className="min-w-0 space-y-2">
+                      <FormLabel>Send date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button type="button" variant="outline" className="w-full justify-start text-left font-normal" disabled={disabled}>
+                              <CalendarDays className="mr-2 size-4 shrink-0" />
+                              <span className="truncate">{formatCalendarDate(field.value as string)}</span>
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={parseLocalDate(field.value as string)}
+                            onSelect={(date) => {
+                              if (!date) return;
+                              const selectedDate = toLocalDateInput(date);
+                              field.onChange(selectedDate);
+                              const delayDays = daysFromToday(selectedDate);
+                              setValue(`steps.${index}.delayDays`, delayDays, { shouldDirty: true, shouldValidate: true });
+                              if (!delayDays) setValue(`steps.${index}.delayMinutes`, 0, { shouldDirty: true });
+                            }}
+                            disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={control}
+                  name={`steps.${index}.delayMinutes` as FieldPath<SequenceFormValues>}
+                  render={({ field }) => (
+                    <FormItem className="min-w-0 space-y-2">
+                      <FormLabel>Extra delay (minutes)</FormLabel>
                       <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choose a template" />
-                        </SelectTrigger>
+                        <Input
+                          type="number"
+                          min={0}
+                          step={1}
+                          className="w-full"
+                          disabled={disabled}
+                          value={field.value as number}
+                          onChange={(event) => field.onChange(Number(event.target.value))}
+                        />
                       </FormControl>
-                      <SelectContent>
-                        {templates.map((template) => (
-                          <SelectItem key={template.id} value={template.id}>{template.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {chosenTemplate && <p className="truncate text-xs text-muted-foreground">{chosenTemplate.subject}</p>}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={control}
-                name={`steps.${index}.delayDays` as FieldPath<SequenceFormValues>}
-                render={({ field }) => (
-                  <FormItem className="space-y-2">
-                    <FormLabel>Delay days</FormLabel>
-                    <FormControl>
-                      <Input type="number" min={0} step={1} disabled={disabled} value={field.value as number} onChange={(event) => field.onChange(Number(event.target.value))} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={control}
-                name={`steps.${index}.delayMinutes` as FieldPath<SequenceFormValues>}
-                render={({ field }) => (
-                  <FormItem className="space-y-2">
-                    <FormLabel>Minutes</FormLabel>
-                    <FormControl>
-                      <Input type="number" min={0} step={1} disabled={disabled} value={field.value as number} onChange={(event) => field.onChange(Number(event.target.value))} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-9 justify-self-end text-destructive hover:text-destructive"
-                disabled={disabled || fields.length === 1}
-                title="Remove step"
-                aria-label={`Remove step ${index + 1}`}
-                onClick={() => remove(index)}
-              >
-                <Trash2 />
-              </Button>
-              <input type="hidden" {...control.register(`steps.${index}.templateId`)} />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
               <input type="hidden" {...control.register(`steps.${index}.delayDays`)} />
-              <input type="hidden" {...control.register(`steps.${index}.delayMinutes`)} />
+              <input type="hidden" {...control.register(`steps.${index}.sendTime`)} />
               <span className="sr-only" aria-live="polite">Step template: {chosenTemplate?.name ?? "not selected"}</span>
             </div>
           );
@@ -160,7 +242,6 @@ function SequenceStepsEditor({ templates, disabled }: { templates: EmailTemplate
     </section>
   );
 }
-
 function SequencesPage() {
   const queryClient = useQueryClient();
   const [formOpen, setFormOpen] = useState(false);
@@ -195,6 +276,7 @@ function SequencesPage() {
           templateId: String(step.templateId),
           delayDays: step.delayDays,
           delayMinutes: step.delayMinutes,
+          sendTime: step.sendTime,
         })),
       };
       return editing ? updateSequence(editing.id, payload) : createSequence(payload);
@@ -298,11 +380,12 @@ function SequencesPage() {
       templateId: Number(step.templateId),
       delayDays: step.delayDays,
       delayMinutes: step.delayMinutes,
+      sendTime: step.sendTime,
     })),
   } : {
     name: "",
     description: "",
-    steps: [{ templateId: Number(templates[0]?.id ?? 0), delayDays: 0, delayMinutes: 0 }],
+    steps: [{ templateId: Number(templates[0]?.id ?? 0), delayDays: 0, delayMinutes: 0, sendTime: "" }],
   }, [editing, templates]);
 
   const canCreate = templates.length > 0;

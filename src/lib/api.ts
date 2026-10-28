@@ -228,6 +228,7 @@ export interface SequenceStep {
   templateId: string;
   delayDays: number;
   delayMinutes: number;
+  sendTime: string;
 }
 
 export interface Sequence {
@@ -244,6 +245,7 @@ export interface SequenceInput {
     templateId: string;
     delayDays: number;
     delayMinutes: number;
+    sendTime: string;
   }>;
 }
 
@@ -290,6 +292,8 @@ export interface InboundReply {
   id: number;
   status: LogStatus;
   sender_email: string;
+  recipient_email?: string;
+  subject?: string;
   received_at: string;
   lead: { id: number; name: string; email: string | null } | null;
   campaign: { id: number; name: string } | null;
@@ -354,6 +358,7 @@ interface ApiSequenceStep {
   template: number;
   delay_days: number;
   delay_minutes: number;
+  send_time: string | null;
 }
 
 interface ApiBatch {
@@ -851,6 +856,7 @@ export async function getSequences(): Promise<Sequence[]> {
         templateId: String(step.template),
         delayDays: step.delay_days,
         delayMinutes: step.delay_minutes,
+        sendTime: step.send_time ?? "",
       })),
   }));
 }
@@ -865,6 +871,7 @@ function mapSequence(sequence: ApiSequence & { steps?: ApiSequenceStep[] }): Seq
       templateId: String(step.template),
       delayDays: step.delay_days,
       delayMinutes: step.delay_minutes,
+      sendTime: step.send_time ?? "",
     })),
   };
 }
@@ -878,6 +885,7 @@ function sequencePayload(data: SequenceInput) {
       template: Number(step.templateId),
       delay_days: step.delayDays,
       delay_minutes: step.delayMinutes,
+      send_time: step.sendTime || null,
     })),
   };
 }
@@ -1006,6 +1014,13 @@ export async function getEmailLogs(): Promise<EmailLog[]> {
 
 export async function getInboundReplies(): Promise<InboundReply[]> {
   return request<InboundReply[]>("/inbound-replies/");
+}
+
+export async function sendInboundReply(id: number, subject: string, body: string): Promise<{ detail: string }> {
+  return request<{ detail: string }>(`/inbound-replies/${id}/`, {
+    method: "POST",
+    body: JSON.stringify({ subject, body }),
+  });
 }
 
 export async function getRecentEmailLogs(): Promise<EmailLog[]> {

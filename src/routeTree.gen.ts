@@ -19,6 +19,7 @@ import { Route as FinalOfferRouteImport } from './routes/final-offer'
 import { Route as LeadCategoriesRouteImport } from './routes/lead-categories'
 import { Route as LocationRouteImport } from './routes/location'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as LogsRouteImport } from './routes/logs'
 import { Route as MarketingRouteImport } from './routes/marketing'
 import { Route as OrderDashboardRouteImport } from './routes/order-dashboard'
 import { Route as RegisterRouteImport } from './routes/register'
@@ -91,6 +92,11 @@ const LocationRoute = LocationRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LogsRoute = LogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MarketingRoute = MarketingRouteImport.update({
@@ -226,6 +232,7 @@ export interface FileRoutesByFullPath {
   '/lead-categories': typeof LeadCategoriesRoute
   '/location': typeof LocationRoute
   '/login': typeof LoginRoute
+  '/logs': typeof LogsRoute
   '/marketing': typeof MarketingRouteWithChildren
   '/order-dashboard': typeof OrderDashboardRoute
   '/register': typeof RegisterRoute
@@ -261,6 +268,7 @@ export interface FileRoutesByTo {
   '/lead-categories': typeof LeadCategoriesRoute
   '/location': typeof LocationRoute
   '/login': typeof LoginRoute
+  '/logs': typeof LogsRoute
   '/marketing': typeof MarketingRouteWithChildren
   '/order-dashboard': typeof OrderDashboardRoute
   '/register': typeof RegisterRoute
@@ -295,6 +303,7 @@ export interface FileRoutesById {
   '/lead-categories': typeof LeadCategoriesRoute
   '/location': typeof LocationRoute
   '/login': typeof LoginRoute
+  '/logs': typeof LogsRoute
   '/marketing': typeof MarketingRouteWithChildren
   '/order-dashboard': typeof OrderDashboardRoute
   '/register': typeof RegisterRoute
@@ -332,6 +341,7 @@ export interface FileRouteTypes {
     | '/lead-categories'
     | '/location'
     | '/login'
+    | '/logs'
     | '/marketing'
     | '/order-dashboard'
     | '/register'
@@ -367,6 +377,7 @@ export interface FileRouteTypes {
     | '/lead-categories'
     | '/location'
     | '/login'
+    | '/logs'
     | '/marketing'
     | '/order-dashboard'
     | '/register'
@@ -400,6 +411,7 @@ export interface FileRouteTypes {
     | '/lead-categories'
     | '/location'
     | '/login'
+    | '/logs'
     | '/marketing'
     | '/order-dashboard'
     | '/register'
@@ -436,6 +448,7 @@ export interface RootRouteChildren {
   LeadCategoriesRoute: typeof LeadCategoriesRoute
   LocationRoute: typeof LocationRoute
   LoginRoute: typeof LoginRoute
+  LogsRoute: typeof LogsRoute
   MarketingRoute: typeof MarketingRouteWithChildren
   OrderDashboardRoute: typeof OrderDashboardRoute
   RegisterRoute: typeof RegisterRoute
@@ -519,6 +532,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/logs': {
+      id: '/logs'
+      path: '/logs'
+      fullPath: '/logs'
+      preLoaderRoute: typeof LogsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/marketing': {
@@ -760,6 +780,7 @@ const rootRouteChildren: RootRouteChildren = {
   LeadCategoriesRoute: LeadCategoriesRoute,
   LocationRoute: LocationRoute,
   LoginRoute: LoginRoute,
+  LogsRoute: LogsRoute,
   MarketingRoute: MarketingRouteWithChildren,
   OrderDashboardRoute: OrderDashboardRoute,
   RegisterRoute: RegisterRoute,

@@ -11,6 +11,7 @@ import {
   Megaphone,
   ShoppingCart,
   Building2,
+  ScrollText,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -179,6 +180,12 @@ export function AppSidebar() {
       label: "Tenants",
       icon: Building2,
       to: "/tenants",
+    }] : []),
+    ...(user?.is_superuser ? [{
+      key: "logs",
+      label: "Logs",
+      icon: ScrollText,
+      to: "/logs",
     }] : []),
     {
       key: "email-settings",

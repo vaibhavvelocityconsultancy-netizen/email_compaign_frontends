@@ -16,7 +16,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/auth";
-import { getRecentEmailLogs, type EmailLog } from "@/lib/api";
+import { getRecentEmailLogs, request, type EmailLog } from "@/lib/api";
 
 interface CampaignNotification {
   id: string;
@@ -31,6 +31,15 @@ export function AppLayout() {
   const [notifications, setNotifications] = useState<CampaignNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const seenLogIds = useRef<Set<string> | null>(null);
+  const systemNotificationQuery = useQuery({
+    queryKey: ["system-notification-count"],
+    queryFn: () => request<{ unread_notifications: number }>("/auth/system-logs/?status=unread"),
+    enabled: Boolean(user?.is_superuser),
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true,
+  });
+  const systemUnreadCount = systemNotificationQuery.data?.unread_notifications ?? 0;
+  const totalUnreadCount = unreadCount + systemUnreadCount;
   const notificationQuery = useQuery({
     queryKey: ["email-notifications"],
     queryFn: getRecentEmailLogs,
@@ -129,17 +138,23 @@ export function AppLayout() {
                   <Button
                     variant="ghost"
                     className="relative size-10 rounded-full p-0 text-muted-foreground hover:bg-surface hover:text-foreground"
-                    aria-label={`Open notifications${unreadCount ? `, ${unreadCount} unread` : ""}`}
+                    aria-label={`Open notifications${totalUnreadCount ? `, ${totalUnreadCount} unread` : ""}`}
                   >
                     <Bell className="size-[18px]" />
-                    {unreadCount > 0 && (
+                    {totalUnreadCount > 0 && (
                       <span className="absolute -right-0.5 -top-0.5 grid min-h-4 min-w-4 place-items-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-none text-white">
-                        {unreadCount > 9 ? "9+" : unreadCount}
+                        {totalUnreadCount > 9 ? "9+" : totalUnreadCount}
                       </span>
                     )}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-80">
+                  {user?.is_superuser && systemUnreadCount > 0 && (
+                    <DropdownMenuItem className="items-start whitespace-normal text-destructive" onClick={() => void navigate({ to: "/logs" })}>
+                      <Bell data-icon="inline-start" className="mt-0.5" />
+                      <span>{systemUnreadCount} persistent system error notification{systemUnreadCount === 1 ? "" : "s"}</span>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuLabel>Email campaign notifications</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={enableBrowserNotifications}>
