@@ -16,12 +16,31 @@ export interface TenantMailgunSettings {
   has_webhook_signing_key: boolean;
 }
 
+export interface TenantAdminSummary {
+  id: number;
+  name: string;
+  created_at: string;
+  users_count: number;
+  mailgun_configured: boolean;
+  has_api_key: boolean;
+  has_webhook_signing_key: boolean;
+  sender_domain: string;
+}
+
 export interface TenantMailgunSettingsInput {
   default_from_email: string;
   reply_to_email: string;
   sender_domain: string;
   api_key?: string;
   webhook_signing_key?: string;
+}
+
+export function listAdminTenants(): Promise<TenantAdminSummary[]> {
+  return request<TenantAdminSummary[]>("/auth/tenants/");
+}
+
+export function deleteAdminTenant(tenantId: number): Promise<void> {
+  return request<void>(`/auth/tenants/${tenantId}/`, { method: "DELETE" });
 }
 
 export function getOwnTenantMailgunSettings(): Promise<TenantMailgunSettings> {

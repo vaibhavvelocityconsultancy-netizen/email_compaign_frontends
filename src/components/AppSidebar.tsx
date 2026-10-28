@@ -1,4 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { useAuth } from "@/lib/auth";
 import {
   Briefcase,
   ChevronDown,
@@ -9,6 +10,7 @@ import {
   ListChecks,
   Megaphone,
   ShoppingCart,
+  Building2,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -166,11 +168,18 @@ const MENU_ITEMS: MenuItem[] = [
 ];
 
 export function AppSidebar() {
+  const { user } = useAuth();
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
   const menuItems: MenuItem[] = [
     ...MENU_ITEMS,
+    ...(user?.is_superuser ? [{
+      key: "tenants",
+      label: "Tenants",
+      icon: Building2,
+      to: "/tenants",
+    }] : []),
     {
       key: "email-settings",
       label: "Email settings",

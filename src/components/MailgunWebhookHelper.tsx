@@ -1,16 +1,12 @@
 import { useEffect, useState } from "react";
 import { Check, Copy } from "lucide-react";
-
-const configuredApiBase = (
-  Reflect.get(import.meta.env, "VITE_API_BASE_URL") as string | undefined
-)?.trim().replace(/\/+$/, "");
+import { getApiBase, isLocalFrontend } from "../lib/api";
 
 function getWebhookUrl() {
-  const base = configuredApiBase
-    ? configuredApiBase.replace(/\/api$/i, "")
-    : typeof window !== "undefined"
-      ? window.location.origin
-      : "";
+  const apiBase = getApiBase();
+  const base = isLocalFrontend()
+    ? window.location.origin
+    : apiBase.replace(/\/api$/i, "") || (typeof window !== "undefined" ? window.location.origin : "");
   return `${base}/api/webhooks/mailgun/`;
 }
 

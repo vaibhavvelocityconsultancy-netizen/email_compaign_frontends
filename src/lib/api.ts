@@ -1,5 +1,18 @@
-const configuredApiBase = (Reflect.get(import.meta.env, "VITE_API_BASE_URL") as string | undefined)?.replace(/\/+$/, "");
-const apiBase = configuredApiBase || "/api";
+const configuredApiBase = (
+  Reflect.get(import.meta.env, "VITE_API_BASE_URL") as string | undefined
+)?.trim().replace(/\/+$/, "");
+
+export function isLocalFrontend(): boolean {
+  if (typeof window === "undefined") return false;
+  const hostname = window.location.hostname.toLowerCase();
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname.endsWith(".localhost");
+}
+
+export function getApiBase(): string {
+  return isLocalFrontend() ? "/api" : configuredApiBase || "/api";
+}
+
+const apiBase = getApiBase();
 const accessTokenKey = "vantage.access";
 const refreshTokenKey = "vantage.refresh";
 
@@ -198,6 +211,7 @@ export interface MessageTemplate {
   subject: string;
   body: string;
   signature: string;
+  signatureProfileId?: string | null;
   logoName?: string;
   attachmentName?: string;
   waTemplateName?: string;
@@ -318,6 +332,7 @@ interface ApiTemplate {
   subject: string;
   body: string;
   signature: string;
+  signature_profile: number | null;
   logo: string | null;
   attachment: string | null;
   wa_template_name: string;
@@ -563,6 +578,7 @@ function mapTemplate(template: ApiTemplate): MessageTemplate {
     subject: template.subject,
     body: template.body,
     signature: template.signature,
+    signatureProfileId: template.signature_profile == null ? null : String(template.signature_profile),
     ...(logoName ? { logoName } : {}),
     ...(attachmentName ? { attachmentName } : {}),
     waTemplateName: template.wa_template_name,
@@ -718,7 +734,17 @@ export async function getTemplates(): Promise<MessageTemplate[]> {
   return templates.map(mapTemplate);
 }
 
+export interface EmailSignature {
+  id: string;
+  name: string;
+  text: string;
+  logoUrl?: string;
+  logoName?: string;
+  isDefault: boolean;
+}
+
 export interface TemplateInput {
+  signatureId?: string | null;
   channel: Channel;
   name: string;
   categoryId?: number | null;
@@ -741,6 +767,7 @@ function templateForm(data: TemplateInput): FormData {
   form.append("subject", data.subject);
   form.append("body", data.body);
   form.append("signature", data.signature);
+  if (data.signatureId !== undefined) form.append("signature_profile", data.signatureId || "");
   form.append("wa_template_name", data.waTemplateName ?? "");
   form.append("wa_language", data.waLanguage ?? "");
   if (data.logo) form.append("logo", data.logo);
@@ -766,6 +793,45 @@ export async function updateTemplate(id: string, data: TemplateInput): Promise<M
 
 export async function deleteTemplate(id: string): Promise<void> {
   await request<void>(`/email-templates/${id}/`, { method: "DELETE" });
+}
+
+export async function getEmailSignatures(): Promise<EmailSignature[]> {
+  const signatures = await request<Array<{ id: number; name: string; text: string; logo: string | null; is_default: boolean }>>("/email-signatures/");
+  return signatures.map((signature) => {
+    const logoName = fileName(signature.logo);
+    return {
+      id: String(signature.id),
+      name: signature.name,
+      text: signature.text,
+      logoUrl: signature.logo || undefined,
+      ...(logoName ? { logoName } : {}),
+      isDefault: signature.is_default,
+    };
+  });
+}
+
+export async function saveEmailSignature(
+  id: string | null,
+  data: { name: string; text: string; logo?: File; isDefault: boolean },
+): Promise<EmailSignature> {
+  const form = new FormData();
+  form.append("name", data.name);
+  form.append("text", data.text);
+  form.append("is_default", String(data.isDefault));
+  if (data.logo) form.append("logo", data.logo);
+  const signature = await request<{ id: number; name: string; text: string; logo: string | null; is_default: boolean }>(
+    id ? `/email-signatures/${id}/` : "/email-signatures/",
+    { method: id ? "PATCH" : "POST", body: form },
+  );
+  return {
+    id: String(signature.id), name: signature.name, text: signature.text,
+    logoUrl: signature.logo || undefined, logoName: fileName(signature.logo),
+    isDefault: signature.is_default,
+  };
+}
+
+export async function deleteEmailSignature(id: string): Promise<void> {
+  await request<void>(`/email-signatures/${id}/`, { method: "DELETE" });
 }
 
 export async function getSequences(): Promise<Sequence[]> {

@@ -24,6 +24,7 @@ import { Route as OrderDashboardRouteImport } from './routes/order-dashboard'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as RolesRouteImport } from './routes/roles'
 import { Route as TasksRouteImport } from './routes/tasks'
+import { Route as TenantsRouteImport } from './routes/tenants'
 import { Route as UserRouteImport } from './routes/user'
 import { Route as MarketingEmailCampaignRouteImport } from './routes/marketing/email-campaign'
 import { Route as MarketingLeadsRouteImport } from './routes/marketing/leads'
@@ -115,6 +116,11 @@ const RolesRoute = RolesRouteImport.update({
 const TasksRoute = TasksRouteImport.update({
   id: '/tasks',
   path: '/tasks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TenantsRoute = TenantsRouteImport.update({
+  id: '/tenants',
+  path: '/tenants',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UserRoute = UserRouteImport.update({
@@ -225,6 +231,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/roles': typeof RolesRoute
   '/tasks': typeof TasksRouteWithChildren
+  '/tenants': typeof TenantsRoute
   '/user': typeof UserRoute
   '/marketing/email-campaign': typeof MarketingEmailCampaignRouteWithChildren
   '/marketing/leads': typeof MarketingLeadsRouteWithChildren
@@ -258,6 +265,7 @@ export interface FileRoutesByTo {
   '/order-dashboard': typeof OrderDashboardRoute
   '/register': typeof RegisterRoute
   '/roles': typeof RolesRoute
+  '/tenants': typeof TenantsRoute
   '/user': typeof UserRoute
   '/marketing/leads': typeof MarketingLeadsRouteWithChildren
   '/sales/opportunities': typeof SalesOpportunitiesRoute
@@ -292,6 +300,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/roles': typeof RolesRoute
   '/tasks': typeof TasksRouteWithChildren
+  '/tenants': typeof TenantsRoute
   '/user': typeof UserRoute
   '/marketing/email-campaign': typeof MarketingEmailCampaignRouteWithChildren
   '/marketing/leads': typeof MarketingLeadsRouteWithChildren
@@ -328,6 +337,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/roles'
     | '/tasks'
+    | '/tenants'
     | '/user'
     | '/marketing/email-campaign'
     | '/marketing/leads'
@@ -361,6 +371,7 @@ export interface FileRouteTypes {
     | '/order-dashboard'
     | '/register'
     | '/roles'
+    | '/tenants'
     | '/user'
     | '/marketing/leads'
     | '/sales/opportunities'
@@ -394,6 +405,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/roles'
     | '/tasks'
+    | '/tenants'
     | '/user'
     | '/marketing/email-campaign'
     | '/marketing/leads'
@@ -429,6 +441,7 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   RolesRoute: typeof RolesRoute
   TasksRoute: typeof TasksRouteWithChildren
+  TenantsRoute: typeof TenantsRoute
   UserRoute: typeof UserRoute
   SalesOpportunitiesRoute: typeof SalesOpportunitiesRoute
   SalesOrdersRoute: typeof SalesOrdersRoute
@@ -541,6 +554,13 @@ declare module '@tanstack/react-router' {
       path: '/tasks'
       fullPath: '/tasks'
       preLoaderRoute: typeof TasksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tenants': {
+      id: '/tenants'
+      path: '/tenants'
+      fullPath: '/tenants'
+      preLoaderRoute: typeof TenantsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/user': {
@@ -745,6 +765,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   RolesRoute: RolesRoute,
   TasksRoute: TasksRouteWithChildren,
+  TenantsRoute: TenantsRoute,
   UserRoute: UserRoute,
   SalesOpportunitiesRoute: SalesOpportunitiesRoute,
   SalesOrdersRoute: SalesOrdersRoute,
