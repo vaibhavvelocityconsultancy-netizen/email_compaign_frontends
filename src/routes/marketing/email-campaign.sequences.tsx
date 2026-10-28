@@ -380,12 +380,13 @@ function SequencesPage() {
       templateId: Number(step.templateId),
       delayDays: step.delayDays,
       delayMinutes: step.delayMinutes,
+      sendDate: dateAfterDays(step.delayDays),
       sendTime: step.sendTime,
     })),
   } : {
     name: "",
     description: "",
-    steps: [{ templateId: Number(templates[0]?.id ?? 0), delayDays: 0, delayMinutes: 0, sendTime: "" }],
+    steps: [{ templateId: Number(templates[0]?.id ?? 0), delayDays: 0, delayMinutes: 0, sendDate: toLocalDateInput(new Date()), sendTime: "" }],
   }, [editing, templates]);
 
   const canCreate = templates.length > 0;
