@@ -52,7 +52,7 @@ function IncomingRepliesPage() {
   }, [selectedReply?.id]);
   return (
     <section className="space-y-5">
-      <header className="flex flex-wrap items-end justify-between gap-3">
+      <header className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-line bg-card/60 p-5 shadow-sm">
         <div>
           <p className="font-mono text-[11px] tracking-wide text-muted-foreground">COMMUNICATION</p>
           <h1 className="mt-1 font-display text-3xl font-bold tracking-tight">Incoming Replies</h1>

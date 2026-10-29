@@ -25,7 +25,15 @@ const inactiveCls = { className: "border-transparent text-muted-foreground hover
 function EmailCampaignLayout() {
   return (
     <div className="space-y-6">
-      <div className="flex gap-1 border-b border-line">
+      <div className="rise rounded-xl border border-line bg-card/60 px-4 pt-4 shadow-sm sm:px-5">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <p className="font-mono text-[10px] tracking-[0.18em] text-muted-foreground">MARKETING WORKSPACE</p>
+            <h1 className="mt-1 font-display text-2xl font-bold tracking-tight">Email campaigns</h1>
+          </div>
+          <span className="hidden rounded-full border border-brand/20 bg-brand/10 px-2.5 py-1 text-[11px] font-medium text-brand sm:inline-flex">Content & automation</span>
+        </div>
+        <div className="flex gap-1 overflow-x-auto border-t border-line">
         <Link
           to="/marketing/email-campaign/campaigns"
           search={{ create: false }}
@@ -40,6 +48,7 @@ function EmailCampaignLayout() {
             {t.label}
           </Link>
         ))}
+        </div>
       </div>
       <Outlet />
     </div>
