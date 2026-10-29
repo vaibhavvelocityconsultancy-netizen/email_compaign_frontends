@@ -296,12 +296,13 @@ function LeadsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="rise flex flex-wrap items-end justify-between gap-3">
+      <div className="rise flex flex-col gap-5 rounded-2xl border border-line bg-surface/70 p-5 shadow-sm sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="font-mono text-[11px] tracking-wide text-muted-foreground">AUDIENCE</div>
-          <h1 className="mt-1 font-display text-3xl font-bold tracking-tight">Leads</h1>
+          <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-brand">Audience</div>
+          <h1 className="mt-2 font-display text-3xl font-bold tracking-tight">Leads</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Manage prospects, follow-ups, and campaign readiness in one place.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
             onClick={() => {
@@ -315,31 +316,23 @@ function LeadsPage() {
                   );
                 });
             }}
-            className="flex h-9 items-center gap-1.5 rounded-lg border border-line bg-surface px-4 text-sm font-medium transition-colors hover:bg-background"
+            className="flex h-10 items-center gap-2 rounded-lg border border-line bg-background px-3.5 text-sm font-medium transition-colors hover:border-brand/40 hover:bg-surface"
           >
-            <Download className="size-4" /> Download template
+            <Download className="size-4 text-muted-foreground" /> Template
           </button>
           <button
             type="button"
-            onClick={() => navigate({
-              to: "/tasks/form",
-              search: { taskId: undefined, module: "LEAD", companyId: undefined, referenceId: undefined },
-            })}
-            className="flex h-9 items-center gap-1.5 rounded-lg border border-line bg-surface px-4 text-sm font-medium transition-colors hover:bg-background"
+            onClick={() => setImportOpen(true)}
+            className="flex h-10 items-center gap-2 rounded-lg border border-line bg-background px-3.5 text-sm font-medium transition-colors hover:border-brand/40 hover:bg-surface"
           >
-            <Plus className="size-4" /> New Task
+            <Upload className="size-4 text-muted-foreground" /> Import
           </button>
           <button
+            type="button"
             onClick={openCreate}
-            className="flex h-9 items-center gap-1.5 rounded-lg bg-brand px-4 text-sm font-medium text-white transition-colors hover:bg-brand/90"
+            className="flex h-10 items-center gap-2 rounded-lg bg-brand px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand/90"
           >
             <Plus className="size-4" /> Add lead
-          </button>
-          <button
-            onClick={() => setImportOpen(true)}
-            className="flex h-9 items-center gap-1.5 rounded-lg border border-line bg-surface px-4 text-sm font-medium transition-colors hover:bg-background"
-          >
-            <Upload className="size-4" /> Import Leads
           </button>
         </div>
       </div>
