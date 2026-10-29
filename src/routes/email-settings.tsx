@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   Eye,
   EyeOff,
-  Globe2,
   Inbox,
   LockKeyhole,
   Mail,
@@ -503,70 +502,9 @@ function EmailSettingsPage() {
   }
 
   const isConfigured = settings?.has_api_key && settings.has_webhook_signing_key;
+  const noTenantSelected = isSuperUser && selectedTenantId === null;
 
-  return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 pb-10">
-      <header className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-card via-card to-primary/5 p-6 shadow-sm sm:p-8">
-        <div className="absolute -right-20 -top-24 size-64 rounded-full bg-primary/10 blur-3xl" />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-              <Mail className="size-4" />
-              {isSuperUser ? "Workspace administration" : "Email infrastructure"}
-            </div>
-            <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
-              {isSuperUser ? "Tenant email settings" : "Email settings"}
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-              {isSuperUser
-                ? "Manage delivery credentials, sender identity, and reply tracking for every tenant."
-                : `Configure reliable email delivery and reply tracking for ${settings?.tenant_name ?? "your tenant"}.`}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 self-start rounded-full border border-border/70 bg-background/70 px-3 py-1.5 text-xs font-medium text-muted-foreground sm:self-auto">
-            <span className={`size-2 rounded-full ${isConfigured ? "bg-emerald-500" : "bg-amber-500"}`} />
-            {isConfigured ? "Delivery configured" : "Setup required"}
-          </div>
-        </div>
-      </header>
-
-      {isSuperUser && (
-        <Card className="border-primary/20 bg-primary/[0.03] shadow-sm">
-          <CardHeader className="pb-4">
-            <div className="flex items-start gap-3">
-              <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-                <Globe2 className="size-5" />
-              </div>
-              <div>
-                <CardTitle className="text-base">Active tenant</CardTitle>
-                <CardDescription className="mt-1">Email settings are saved independently for each tenant.</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <label className="flex max-w-xl flex-col gap-2 text-sm font-medium" htmlFor="tenant">
-              Choose a tenant
-              <select
-                id="tenant"
-                className="h-11 rounded-lg border border-input bg-background px-3 text-sm shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                value={selectedTenantId ?? ""}
-                disabled={loadingTenants || tenants.length === 0}
-                onChange={(event) =>
-                  setSelectedTenantId(event.target.value ? Number(event.target.value) : null)
-                }
-              >
-                {tenants.length === 0 && <option value="">No tenants found</option>}
-                {tenants.map((tenant) => (
-                  <option key={tenant.id} value={tenant.id}>
-                    {tenant.name} {tenant.configured ? "— configured" : "— setup required"}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </CardContent>
-        </Card>
-      )}
-
+  const sendingSection = (
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(300px,0.8fr)]">
       <Card className="shadow-sm">
         <CardHeader className="border-b border-border/60 pb-5">
@@ -608,18 +546,16 @@ function EmailSettingsPage() {
                   placeholder="Velocity Consultancy <replies@example.com>"
                 />
               </label>
-            </div>
-
-            <label className="grid gap-2 text-sm font-medium" htmlFor="sender-domain">
-              Mailgun sender domain
-              <Input
-                id="sender-domain"
-                value={senderDomain}
-                onChange={(event) => setSenderDomain(event.target.value)}
-                placeholder="mg.example.com"
-                required
-              />
-            </label>
+              <label className="grid gap-2 text-sm font-medium" htmlFor="sender-domain">
+                Mailgun sender domain
+                <Input
+                  id="sender-domain"
+                  value={senderDomain}
+                  onChange={(event) => setSenderDomain(event.target.value)}
+                  placeholder="mg.example.com"
+                  required
+                />
+              </label>
 
               <label className="grid gap-2 text-sm font-medium" htmlFor="mailgun-api-key">
                 Mailgun API key {settings?.has_api_key ? "(configured)" : ""}
@@ -718,8 +654,9 @@ function EmailSettingsPage() {
         </Card>
       </div>
       </div>
+  );
 
-      {(!isSuperUser || selectedTenantId !== null) && (
+  const repliesSection = (!isSuperUser || selectedTenantId !== null) ? (
         <Card className="shadow-sm">
           <CardHeader className="border-b border-border/60 pb-5">
             <div className="flex items-start gap-3">
@@ -745,12 +682,10 @@ function EmailSettingsPage() {
                 value={replyProvider}
                 onChange={(event) => setReplyProvider(event.target.value as "gmail" | "ionos")}
               >
-                {provider === "gmail" ? "Gmail" : "IONOS"}
-                <StatusDot ok={connected} />
-              </button>
-            );
-          })}
-        </div>
+                <option value="gmail">Gmail</option>
+                <option value="ionos">IONOS</option>
+              </select>
+            </label>
 
         {replyProvider === "gmail" ? (
           <div className="grid gap-4">
@@ -857,7 +792,7 @@ function EmailSettingsPage() {
         )}
       </CardContent>
     </Card>
-  );
+  ) : null;
 
   const unsubscribeSection = (
     <Card>
@@ -960,6 +895,21 @@ function EmailSettingsPage() {
       </CardContent>
     </Card>
   );
+
+  const visibleSections: { id: SectionId; label: string; hint: string; ok?: boolean }[] = [
+    { id: "sending", label: "Sending", hint: "Mailgun delivery", ok: Boolean(isConfigured) },
+    { id: "webhooks", label: "Webhooks", hint: "Inbound events" },
+    {
+      id: "replies",
+      label: "Reply tracking",
+      hint: "Gmail or IONOS",
+      ok: gmailConnection.connected || ionosConnection.connected,
+    },
+    ...(isSuperUser
+      ? [{ id: "unsubscribe" as const, label: "Unsubscribe", hint: "Shared page" }]
+      : []),
+  ];
+  const current = visibleSections.find((section) => section.id === activeSection) ?? visibleSections[0];
 
   /* ---------- render ---------- */
 
