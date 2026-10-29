@@ -1,6 +1,19 @@
 import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Eye, EyeOff, Mail, RefreshCw, Save, Unplug } from "lucide-react";
+import {
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Globe2,
+  Inbox,
+  LockKeyhole,
+  Mail,
+  RefreshCw,
+  Save,
+  Server,
+  ShieldCheck,
+  Unplug,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -433,34 +446,50 @@ function EmailSettingsPage() {
   const isConfigured = settings?.has_api_key && settings.has_webhook_signing_key;
 
   return (
-    <div className="flex flex-col gap-7">
-      <div>
-        <div className="font-mono text-[11px] tracking-wide text-muted-foreground">
-          {isSuperUser ? "SUPER ADMIN" : "TENANT EMAIL SETTINGS"}
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 pb-10">
+      <header className="relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-br from-card via-card to-primary/5 p-6 shadow-sm sm:p-8">
+        <div className="absolute -right-20 -top-24 size-64 rounded-full bg-primary/10 blur-3xl" />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+              <Mail className="size-4" />
+              {isSuperUser ? "Workspace administration" : "Email infrastructure"}
+            </div>
+            <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
+              {isSuperUser ? "Tenant email settings" : "Email settings"}
+            </h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
+              {isSuperUser
+                ? "Manage delivery credentials, sender identity, and reply tracking for every tenant."
+                : `Configure reliable email delivery and reply tracking for ${settings?.tenant_name ?? "your tenant"}.`}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 self-start rounded-full border border-border/70 bg-background/70 px-3 py-1.5 text-xs font-medium text-muted-foreground sm:self-auto">
+            <span className={`size-2 rounded-full ${isConfigured ? "bg-emerald-500" : "bg-amber-500"}`} />
+            {isConfigured ? "Delivery configured" : "Setup required"}
+          </div>
         </div>
-        <h1 className="mt-1 flex items-center gap-2 font-display text-3xl font-bold">
-          <Mail className="size-7" />
-          {isSuperUser ? "Tenant email settings" : "Email settings"}
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {isSuperUser
-            ? "Configure separate Mailgun credentials and sender details for each tenant."
-            : `Configure Mailgun credentials and sender details for ${settings?.tenant_name ?? "your tenant"}.`}
-        </p>
-      </div>
+      </header>
 
       {isSuperUser && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Select tenant</CardTitle>
-            <CardDescription>Settings are stored independently for each tenant.</CardDescription>
+        <Card className="border-primary/20 bg-primary/[0.03] shadow-sm">
+          <CardHeader className="pb-4">
+            <div className="flex items-start gap-3">
+              <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                <Globe2 className="size-5" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Active tenant</CardTitle>
+                <CardDescription className="mt-1">Email settings are saved independently for each tenant.</CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <label className="flex max-w-xl flex-col gap-2 text-sm font-medium" htmlFor="tenant">
-              Tenant
+              Choose a tenant
               <select
                 id="tenant"
-                className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                className="h-11 rounded-lg border border-input bg-background px-3 text-sm shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                 value={selectedTenantId ?? ""}
                 disabled={loadingTenants || tenants.length === 0}
                 onChange={(event) =>
@@ -470,7 +499,7 @@ function EmailSettingsPage() {
                 {tenants.length === 0 && <option value="">No tenants found</option>}
                 {tenants.map((tenant) => (
                   <option key={tenant.id} value={tenant.id}>
-                    {tenant.name} {tenant.configured ? "— configured" : "— not configured"}
+                    {tenant.name} {tenant.configured ? "— configured" : "— setup required"}
                   </option>
                 ))}
               </select>
@@ -479,12 +508,18 @@ function EmailSettingsPage() {
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Mailgun configuration</CardTitle>
-          <CardDescription>
-            Secret values are encrypted in the database and never displayed after saving.
-          </CardDescription>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(300px,0.8fr)]">
+      <Card className="shadow-sm">
+        <CardHeader className="border-b border-border/60 pb-5">
+          <div className="flex items-start gap-3">
+            <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+              <Server className="size-5" />
+            </div>
+            <div>
+              <CardTitle>Mailgun delivery</CardTitle>
+              <CardDescription className="mt-1">Connect your sending domain and secure delivery credentials.</CardDescription>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {loadingTenants || loadingSettings ? (
@@ -603,18 +638,44 @@ function EmailSettingsPage() {
           )}
         </CardContent>
       </Card>
-
-      <MailgunWebhookHelper />
+      <div className="flex flex-col gap-6">
+        <MailgunWebhookHelper />
+        <Card className="border-emerald-500/20 bg-emerald-500/[0.03] shadow-sm">
+          <CardHeader>
+            <div className="flex items-start gap-3">
+              <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-emerald-500/10 text-emerald-600">
+                <ShieldCheck className="size-5" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Security checklist</CardTitle>
+                <CardDescription className="mt-1">Keep credentials private and rotate them regularly.</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2"><LockKeyhole className="size-4 text-emerald-600" /> Secrets are encrypted at rest.</div>
+            <div className="flex items-center gap-2"><CheckCircle2 className="size-4 text-emerald-600" /> Keys are never shown after saving.</div>
+          </CardContent>
+        </Card>
+      </div>
+      </div>
 
       {(!isSuperUser || selectedTenantId !== null) && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Email reply tracking</CardTitle>
-            <CardDescription>
-              {isSuperUser
-                ? `Choose a mailbox provider for ${tenants.find((tenant) => tenant.id === selectedTenantId)?.name ?? "the selected tenant"}.`
-                : "Connect a mailbox to receive and track replies for this tenant."}
-            </CardDescription>
+        <Card className="shadow-sm">
+          <CardHeader className="border-b border-border/60 pb-5">
+            <div className="flex items-start gap-3">
+              <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                <Inbox className="size-5" />
+              </div>
+              <div>
+                <CardTitle>Email reply tracking</CardTitle>
+                <CardDescription className="mt-1">
+                  {isSuperUser
+                    ? `Choose a mailbox provider for ${tenants.find((tenant) => tenant.id === selectedTenantId)?.name ?? "the selected tenant"}.`
+                    : "Connect a mailbox to receive and track replies for this tenant."}
+                </CardDescription>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="grid max-w-2xl gap-5">
             <label className="grid max-w-xs gap-2 text-sm font-medium" htmlFor="reply-mailbox-provider">
