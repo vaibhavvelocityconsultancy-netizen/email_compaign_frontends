@@ -35,6 +35,49 @@ export interface TenantMailgunSettingsInput {
   webhook_signing_key?: string;
 }
 
+export interface IonosMailboxStatus {
+  connected: boolean;
+  email: string;
+  last_sync_at: string | null;
+  last_error: string;
+}
+
+export interface IonosMailboxCredentials {
+  email: string;
+  password: string;
+}
+
+function ionosMailboxPath(tenantId?: number): string {
+  return `/auth/ionos-mailbox/${tenantId ? `?tenant_id=${tenantId}` : ""}`;
+}
+
+export function getIonosMailbox(tenantId?: number): Promise<IonosMailboxStatus> {
+  return request<IonosMailboxStatus>(ionosMailboxPath(tenantId));
+}
+
+export function connectIonosMailbox(
+  credentials: IonosMailboxCredentials,
+  tenantId?: number,
+): Promise<IonosMailboxStatus> {
+  return request<IonosMailboxStatus>(ionosMailboxPath(tenantId), {
+    method: "POST",
+    body: JSON.stringify(credentials),
+  });
+}
+
+export function disconnectIonosMailbox(tenantId?: number): Promise<{ connected: false; email: "" }> {
+  return request(ionosMailboxPath(tenantId), { method: "DELETE" });
+}
+
+export function syncIonosMailbox(tenantId?: number): Promise<{
+  processed_count: number;
+  last_sync_at: string | null;
+}> {
+  return request(`/auth/ionos-mailbox/sync/${tenantId ? `?tenant_id=${tenantId}` : ""}`, {
+    method: "POST",
+  });
+}
+
 export function listAdminTenants(): Promise<TenantAdminSummary[]> {
   return request<TenantAdminSummary[]>("/auth/tenants/");
 }

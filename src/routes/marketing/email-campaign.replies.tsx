@@ -144,7 +144,9 @@ function IncomingRepliesPage() {
           {selectedReply && (
             <article className="min-w-0 rounded-lg border border-line p-5">
               <div className="border-b border-line pb-4">
-                <h2 className="break-words text-xl font-semibold">Replied</h2>
+                <h2 className="break-words text-xl font-semibold">
+                  {selectedReply.status === "unmatched" ? "Unmatched message" : "Replied"}
+                </h2>
                 <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-[5rem_minmax(0,1fr)]">
                   <dt className="text-muted-foreground">From</dt>
                   <dd className="break-all">{selectedReply.sender_email}</dd>
@@ -160,7 +162,13 @@ function IncomingRepliesPage() {
                   <dd>{selectedReply.campaign?.name ?? "—"}</dd>
                 </dl>
               </div>
-              <form
+              <div className="border-b border-line py-4">
+                <h3 className="break-words font-medium">{selectedReply.subject || "(No subject)"}</h3>
+                <p className="mt-3 whitespace-pre-wrap break-words text-sm text-muted-foreground">
+                  {selectedReply.body_plain || "No plain-text message body was available."}
+                </p>
+              </div>
+              {selectedReply.lead ? <form
                 className="mt-4 space-y-3"
                 onSubmit={(event) => {
                   event.preventDefault();
@@ -188,7 +196,11 @@ function IncomingRepliesPage() {
                     {sendReplyMutation.isPending ? "Sending…" : "Send reply"}
                   </Button>
                 </div>
-              </form>
+              </form> : (
+                <p className="mt-4 text-sm text-muted-foreground">
+                  This message was saved for review but could not be confidently linked to a campaign lead.
+                </p>
+              )}
             </article>
           )}
         </div>

@@ -1,6 +1,6 @@
 import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Eye, EyeOff, Mail, Save, Unplug } from "lucide-react";
+import { Eye, EyeOff, Mail, RefreshCw, Save, Unplug } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,13 @@ import {
   getOwnTenantMailgunSettings,
   getTenantMailgunSettings,
   listTenantsWithMailgunSettings,
+  connectIonosMailbox,
+  disconnectIonosMailbox,
+  getIonosMailbox,
   saveOwnTenantMailgunSettings,
   saveTenantMailgunSettings,
+  syncIonosMailbox,
+  type IonosMailboxStatus,
   type TenantMailgunSettings,
   type TenantMailgunSettingsSummary,
 } from "@/lib/mailgun-settings-api";
@@ -71,6 +76,19 @@ function EmailSettingsPage() {
     last_sync_at: string | null;
   }>({ connected: false, email: "", last_sync_at: null });
   const [gmailLoading, setGmailLoading] = React.useState(false);
+  const [gmailSyncing, setGmailSyncing] = React.useState(false);
+  const [replyProvider, setReplyProvider] = React.useState<"gmail" | "ionos">("gmail");
+  const [ionosConnection, setIonosConnection] = React.useState<IonosMailboxStatus>({
+    connected: false,
+    email: "",
+    last_sync_at: null,
+    last_error: "",
+  });
+  const [ionosEmail, setIonosEmail] = React.useState("");
+  const [ionosPassword, setIonosPassword] = React.useState("");
+  const [showIonosPassword, setShowIonosPassword] = React.useState(false);
+  const [ionosLoading, setIonosLoading] = React.useState(false);
+  const [ionosSyncing, setIonosSyncing] = React.useState(false);
 
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -92,6 +110,26 @@ function EmailSettingsPage() {
       .catch((error: unknown) => {
         if (active) {
           toast.error(error instanceof Error ? error.message : "Could not load Gmail connection.");
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [user?.id, isSuperUser, selectedTenantId]);
+
+  React.useEffect(() => {
+    if (!user?.id || (isSuperUser && selectedTenantId === null)) return;
+    let active = true;
+    getIonosMailbox(isSuperUser ? selectedTenantId ?? undefined : undefined)
+      .then((result) => {
+        if (active) {
+          setIonosConnection(result);
+          if (result.email) setIonosEmail(result.email);
+        }
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          toast.error(error instanceof Error ? error.message : "Could not load IONOS connection.");
         }
       });
     return () => {
@@ -122,6 +160,94 @@ function EmailSettingsPage() {
       toast.error(error instanceof Error ? error.message : "Could not disconnect Gmail.");
     } finally {
       setGmailLoading(false);
+    }
+  }
+
+  async function syncGmailReplies() {
+    if (!gmailConnection.connected) {
+      toast.error("Connect Gmail before syncing replies.");
+      return;
+    }
+    setGmailSyncing(true);
+    try {
+      const tenantQuery = isSuperUser ? `?tenant_id=${selectedTenantId}` : "";
+      const result = await request<{
+        processed_count: number;
+        last_sync_at: string | null;
+      }>(`/auth/gmail-connection/sync/${tenantQuery}`, { method: "POST" });
+      setGmailConnection((current) => ({
+        ...current,
+        last_sync_at: result.last_sync_at,
+      }));
+      toast.success(
+        result.processed_count
+          ? `Gmail sync complete: ${result.processed_count} new repl${result.processed_count === 1 ? "y" : "ies"}.`
+          : "Gmail sync complete. No new replies found.",
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Gmail reply synchronization failed.");
+      const tenantQuery = isSuperUser ? `?tenant_id=${selectedTenantId}` : "";
+      request<typeof gmailConnection>(`/auth/gmail-connection/${tenantQuery}`)
+        .then(setGmailConnection)
+        .catch(() => undefined);
+    } finally {
+      setGmailSyncing(false);
+    }
+  }
+
+  async function connectIonos(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setIonosLoading(true);
+    try {
+      const result = await connectIonosMailbox(
+        { email: ionosEmail.trim(), password: ionosPassword },
+        isSuperUser ? selectedTenantId ?? undefined : undefined,
+      );
+      setIonosConnection(result);
+      setIonosEmail(result.email);
+      setIonosPassword("");
+      toast.success("IONOS mailbox connected and verified.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not connect to IONOS.");
+    } finally {
+      setIonosLoading(false);
+    }
+  }
+
+  async function disconnectIonos() {
+    setIonosLoading(true);
+    try {
+      await disconnectIonosMailbox(isSuperUser ? selectedTenantId ?? undefined : undefined);
+      setIonosConnection({ connected: false, email: "", last_sync_at: null, last_error: "" });
+      setIonosEmail("");
+      setIonosPassword("");
+      toast.success("IONOS mailbox disconnected.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not disconnect IONOS.");
+    } finally {
+      setIonosLoading(false);
+    }
+  }
+
+  async function handleIonosSync() {
+    setIonosSyncing(true);
+    try {
+      const result = await syncIonosMailbox(
+        isSuperUser ? selectedTenantId ?? undefined : undefined,
+      );
+      setIonosConnection((current) => ({
+        ...current,
+        last_sync_at: result.last_sync_at,
+        last_error: "",
+      }));
+      toast.success(`IONOS sync complete: ${result.processed_count} new message(s).`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "IONOS synchronization failed.");
+      getIonosMailbox(isSuperUser ? selectedTenantId ?? undefined : undefined)
+        .then(setIonosConnection)
+        .catch(() => undefined);
+    } finally {
+      setIonosSyncing(false);
     }
   }
 
@@ -483,21 +609,35 @@ function EmailSettingsPage() {
       {(!isSuperUser || selectedTenantId !== null) && (
         <Card>
           <CardHeader>
-            <CardTitle>Gmail reply tracking</CardTitle>
+            <CardTitle>Email reply tracking</CardTitle>
             <CardDescription>
               {isSuperUser
-                ? `Connect the Gmail account for ${tenants.find((tenant) => tenant.id === selectedTenantId)?.name ?? "the selected tenant"}.`
-                : "Connect the Gmail account this tenant uses for reply tracking and sending replies."}
+                ? `Choose a mailbox provider for ${tenants.find((tenant) => tenant.id === selectedTenantId)?.name ?? "the selected tenant"}.`
+                : "Connect a mailbox to receive and track replies for this tenant."}
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-wrap items-center justify-between gap-4">
+          <CardContent className="grid max-w-2xl gap-5">
+            <label className="grid max-w-xs gap-2 text-sm font-medium" htmlFor="reply-mailbox-provider">
+              Reply mailbox provider
+              <select
+                id="reply-mailbox-provider"
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                value={replyProvider}
+                onChange={(event) => setReplyProvider(event.target.value as "gmail" | "ionos")}
+              >
+                <option value="gmail">Gmail</option>
+                <option value="ionos">IONOS</option>
+              </select>
+            </label>
+            {replyProvider === "gmail" ? (
+              <>
             <div>
               <p className="text-sm font-medium">
                 {gmailConnection.connected ? gmailConnection.email : "No Gmail account connected"}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 {gmailConnection.connected
-                  ? "Connected for this tenant"
+                  ? `Connected for this tenant${gmailConnection.last_sync_at ? ` · Last sync ${new Date(gmailConnection.last_sync_at).toLocaleString()}` : " · Not synced yet"}`
                   : "Each tenant connects its own Gmail account."}
               </p>
             </div>
@@ -525,6 +665,96 @@ function EmailSettingsPage() {
               <Button type="button" onClick={connectGmail} disabled={gmailLoading}>
                 {gmailLoading ? "Connecting…" : "Connect Gmail"}
               </Button>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={syncGmailReplies}
+              disabled={!gmailConnection.connected || gmailLoading || gmailSyncing}
+            >
+              <RefreshCw className={gmailSyncing ? "animate-spin" : ""} />
+              {gmailSyncing ? "Syncing replies..." : "Sync Replies"}
+            </Button>
+            {!gmailConnection.connected && (
+              <p className="w-full text-xs text-muted-foreground">
+                Connect Gmail before synchronizing replies.
+              </p>
+            )}
+              </>
+            ) : (
+              <form className="grid gap-4" onSubmit={connectIonos}>
+                {ionosConnection.connected && (
+                  <div>
+                    <p className="text-sm font-medium">Connected: {ionosConnection.email}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Last successful sync: {ionosConnection.last_sync_at
+                        ? new Date(ionosConnection.last_sync_at).toLocaleString()
+                        : "Not synced yet"}
+                    </p>
+                  </div>
+                )}
+                {ionosConnection.last_error && (
+                  <p className="text-sm text-destructive">{ionosConnection.last_error}</p>
+                )}
+                <label className="grid gap-2 text-sm font-medium" htmlFor="ionos-email">
+                  IONOS email address
+                  <Input
+                    id="ionos-email"
+                    type="email"
+                    autoComplete="username"
+                    value={ionosEmail}
+                    onChange={(event) => setIonosEmail(event.target.value)}
+                    placeholder="name@example.com"
+                    required
+                  />
+                </label>
+                <label className="grid gap-2 text-sm font-medium" htmlFor="ionos-password">
+                  Mailbox password
+                  <div className="relative">
+                    <Input
+                      id="ionos-password"
+                      type={showIonosPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      className="pr-10"
+                      value={ionosPassword}
+                      onChange={(event) => setIonosPassword(event.target.value)}
+                      placeholder={ionosConnection.connected ? "Enter to reconnect or test" : "Required"}
+                      required
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      aria-label={showIonosPassword ? "Hide mailbox password" : "Show mailbox password"}
+                      onClick={() => setShowIonosPassword((visible) => !visible)}
+                    >
+                      {showIonosPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                    </button>
+                  </div>
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="submit"
+                    disabled={ionosLoading || (isSuperUser && selectedTenantId === null)}
+                  >
+                    {ionosLoading
+                      ? "Testing connection..."
+                      : ionosConnection.connected
+                        ? "Reconnect / Test Connection"
+                        : "Connect / Test Connection"}
+                  </Button>
+                  {ionosConnection.connected && (
+                    <>
+                      <Button type="button" variant="outline" onClick={handleIonosSync} disabled={ionosSyncing}>
+                        {ionosSyncing ? "Syncing..." : "Sync now"}
+                      </Button>
+                      <Button type="button" variant="outline" onClick={disconnectIonos} disabled={ionosLoading}>
+                        <Unplug />
+                        Disconnect
+                      </Button>
+                    </>
+                  )}
+                </div>
+              </form>
             )}
           </CardContent>
         </Card>

@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, Eye, Megaphone, Pause, Pencil, Play, Plus, Send, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye, Megaphone, Pause, Pencil, Play, Plus, RefreshCw, Send, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -24,6 +24,7 @@ import {
   getLeadCategories,
   getSequences,
   getTemplates,
+  request,
   pauseBatch,
   resumeBatch,
   sendBatchNow,
@@ -33,6 +34,7 @@ import {
   type Lead,
   type MessageTemplate,
 } from "@/lib/api";
+import { syncIonosMailbox } from "@/lib/mailgun-settings-api";
 
 export const Route = createFileRoute("/marketing/email-campaign/campaigns")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -87,6 +89,33 @@ function CampaignsPage() {
   const [newTemplateBody, setNewTemplateBody] = useState("");
   const [newTemplateSignature, setNewTemplateSignature] = useState("");
   const [draftTemplateId, setDraftTemplateId] = useState("");
+  const [syncingReplies, setSyncingReplies] = useState(false);
+
+  async function syncCampaignReplies() {
+    setSyncingReplies(true);
+    const results = await Promise.allSettled([
+      request<{ processed_count: number }>("/auth/gmail-connection/sync/", { method: "POST" }),
+      syncIonosMailbox(),
+    ]);
+    setSyncingReplies(false);
+
+    const providers = ["Gmail", "IONOS"];
+    const summary = results.map((result, index) => {
+      const provider = providers[index];
+      if (result.status === "fulfilled") {
+        const count = result.value.processed_count;
+        return `${provider}: ${count} new repl${count === 1 ? "y" : "ies"}`;
+      }
+      const message = result.reason instanceof Error ? result.reason.message : "sync failed";
+      return `${provider}: ${message}`;
+    });
+
+    if (results.every((result) => result.status === "fulfilled")) {
+      toast.success(`Reply sync complete. ${summary.join("; ")}.`);
+    } else {
+      toast.error(summary.join("; "));
+    }
+  }
 
   const campaignsQuery = useQuery({ queryKey: ["campaigns"], queryFn: getBatches });
   const leadsQuery = useQuery({ queryKey: ["leads"], queryFn: getLeads });
@@ -486,6 +515,10 @@ function CampaignsPage() {
           <div className="font-mono text-[11px] tracking-wide text-muted-foreground">OUTREACH</div>
           <h1 className="mt-1 font-display text-3xl font-bold tracking-tight">Campaigns</h1>
         </div>
+        <Button size="sm" variant="outline" className="h-9 gap-1.5" disabled={syncingReplies} onClick={syncCampaignReplies}>
+          <RefreshCw className={`size-4 ${syncingReplies ? "animate-spin" : ""}`} />
+          {syncingReplies ? "Syncing replies…" : "Sync Replies"}
+        </Button>
       </div>
 
       <div className="rise" style={{ animationDelay: "80ms" }}>

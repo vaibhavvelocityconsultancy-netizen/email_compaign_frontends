@@ -290,10 +290,11 @@ export interface EmailLog {
 
 export interface InboundReply {
   id: number;
-  status: LogStatus;
+  status: LogStatus | "unmatched";
   sender_email: string;
   recipient_email?: string;
   subject?: string;
+  body_plain?: string;
   received_at: string;
   lead: { id: number; name: string; email: string | null } | null;
   campaign: { id: number; name: string } | null;
