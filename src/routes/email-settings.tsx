@@ -1,4 +1,5 @@
 import * as React from "react";
+import { ModuleHero } from "@/components/ModuleHero";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   CheckCircle2,

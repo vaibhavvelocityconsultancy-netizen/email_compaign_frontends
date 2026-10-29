@@ -1,3 +1,4 @@
+import { ModuleHero } from "@/components/ModuleHero";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
@@ -104,7 +105,7 @@ function EmailLogsPage() {
       <div className="rise flex flex-wrap items-end justify-between gap-3 rounded-xl border border-line bg-card/60 p-5 shadow-sm">
         <div>
           <div className="font-mono text-[11px] tracking-[0.18em] text-muted-foreground">COMMUNICATION</div>
-          <h1 className="mt-1 font-display text-3xl font-bold tracking-tight">Email Logs</h1>
+          <ModuleHero eyebrow="Delivery activity" title="Email Logs" description="Understand delivery, opens, clicks, and failures across your outreach." icon={<span aria-hidden="true">•</span>} />
           <p className="mt-2 text-sm text-muted-foreground">Review delivery activity, recipients, and campaign performance.</p>
         </div>
         <div className="rounded-lg border border-line bg-background/60 px-3 py-2 text-right">

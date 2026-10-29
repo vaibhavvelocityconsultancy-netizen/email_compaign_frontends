@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { ModuleHero } from "@/components/ModuleHero";
 import { createFileRoute } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight, RefreshCw, Send } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -55,7 +56,7 @@ function IncomingRepliesPage() {
       <header className="flex flex-wrap items-end justify-between gap-3 rounded-xl border border-line bg-card/60 p-5 shadow-sm">
         <div>
           <p className="font-mono text-[11px] tracking-wide text-muted-foreground">COMMUNICATION</p>
-          <h1 className="mt-1 font-display text-3xl font-bold tracking-tight">Incoming Replies</h1>
+          <ModuleHero eyebrow="Conversation inbox" title="Incoming Replies" description="Keep every prospect response visible so your team can respond with context." icon={<span aria-hidden="true">•</span>} />
         </div>
         <Button
           variant="outline"

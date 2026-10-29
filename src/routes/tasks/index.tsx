@@ -1,3 +1,4 @@
+import { ModuleHero } from "@/components/ModuleHero";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import * as React from "react";
 import { Pencil, Plus, Repeat, Trash2 } from "lucide-react";
@@ -212,7 +213,7 @@ export default function TasksPage() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="font-mono text-[11px] font-semibold tracking-[0.18em] text-brand">WORK QUEUE</div>
-            <h1 className="mt-2 text-2xl font-semibold tracking-tight">Tasks</h1>
+            <ModuleHero eyebrow="Operations workspace" title="Tasks" description="Organize follow-ups, ownership, and deadlines without losing momentum." icon={<span aria-hidden="true">•</span>} />
             <p className="mt-2 text-sm text-muted-foreground">
               Follow-ups and reminders across leads, opportunities and quotations.
             </p>

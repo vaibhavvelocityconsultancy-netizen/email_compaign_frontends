@@ -1,3 +1,4 @@
+import { ModuleHero } from "@/components/ModuleHero";
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { ArrowUpRight, FileText, ShoppingCart, Target } from "lucide-react";
@@ -29,7 +30,7 @@ function SalesDashboard() {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="font-mono text-[11px] font-semibold tracking-[0.18em] text-brand">SALES WORKSPACE</div>
-            <h1 className="mt-2 font-display text-3xl font-bold tracking-tight">Sales dashboard</h1>
+            <ModuleHero eyebrow="Revenue workspace" title="Sales dashboard" description="Keep opportunities, orders, and revenue activity visible from one focused workspace." icon={<span aria-hidden="true">•</span>} />
             <p className="mt-2 max-w-xl text-sm text-muted-foreground">Keep your pipeline, quotations, and orders moving from one focused workspace.</p>
           </div>
           <div className="rounded-full border border-line bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground">Workspace overview</div>

@@ -1,3 +1,4 @@
+import { ModuleHero } from "@/components/ModuleHero";
 import { createFileRoute } from "@tanstack/react-router";
 import { Building2, KeyRound, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -99,7 +100,8 @@ function TenantsPage() {
     <div className="space-y-6">
       <div>
         <div className="font-mono text-[11px] tracking-wide text-muted-foreground">ADMINISTRATION</div>
-        <h1 className="mt-1 flex items-center gap-2 font-display text-3xl font-bold tracking-tight">
+        <ModuleHero eyebrow="Workspace administration" title="Tenants" description="Manage the organizations and workspaces connected to your CRM." icon={<span aria-hidden="true">•</span>} />
+            <h1 className="sr-only">
           <Building2 className="size-7" /> Tenants
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">View tenant accounts and verify their Mailgun key configuration.</p>

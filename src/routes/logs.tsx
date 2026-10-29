@@ -1,4 +1,5 @@
 import * as React from "react";
+import { ModuleHero } from "@/components/ModuleHero";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCheck, LoaderCircle, Trash2 } from "lucide-react";
@@ -65,7 +66,7 @@ function LogsPage() {
   return (
     <div className="space-y-4 p-6">
       <div className="flex items-center justify-between gap-4">
-        <div><h1 className="text-2xl font-semibold">System Logs</h1><p className="text-sm text-muted-foreground">Backend and cron errors recorded by the CRM.</p></div>
+        <ModuleHero eyebrow="System health" title="System Logs" description="Review backend and scheduled-job activity so issues are visible and actionable." icon={<span aria-hidden="true">•</span>} />
         <div className="flex items-center gap-2">
           <Input className="max-w-xs" placeholder="Search logs..." value={search} onChange={(event) => setSearch(event.target.value)} />
           <Button variant="outline" disabled={markAllRead.isPending || !logs.data?.results.some((log) => !log.is_read)} onClick={() => markAllRead.mutate()}>

@@ -1,3 +1,4 @@
+import { ModuleHero } from "@/components/ModuleHero";
 import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
@@ -299,7 +300,7 @@ function LeadsPage() {
       <div className="rise flex flex-col gap-5 rounded-2xl border border-line bg-surface/70 p-5 shadow-sm sm:flex-row sm:items-end sm:justify-between">
         <div>
           <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-brand">Audience</div>
-          <h1 className="mt-2 font-display text-3xl font-bold tracking-tight">Leads</h1>
+          <ModuleHero eyebrow="Marketing pipeline" title="Leads" description="Capture, qualify, and move prospects through your sales pipeline with clarity." icon={<span aria-hidden="true">•</span>} />
           <p className="mt-1 text-sm text-muted-foreground">Manage prospects, follow-ups, and campaign readiness in one place.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

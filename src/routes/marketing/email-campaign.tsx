@@ -1,3 +1,4 @@
+import { ModuleHero } from "@/components/ModuleHero";
 import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/marketing/email-campaign")({
@@ -29,7 +30,7 @@ function EmailCampaignLayout() {
         <div className="mb-3 flex items-center justify-between gap-3">
           <div>
             <p className="font-mono text-[10px] tracking-[0.18em] text-muted-foreground">MARKETING WORKSPACE</p>
-            <h1 className="mt-1 font-display text-2xl font-bold tracking-tight">Email campaigns</h1>
+            <ModuleHero eyebrow="Engagement workspace" title="Email campaigns" description="Create thoughtful outreach sequences and understand every delivery outcome." icon={<span aria-hidden="true">•</span>} />
           </div>
           <span className="hidden rounded-full border border-brand/20 bg-brand/10 px-2.5 py-1 text-[11px] font-medium text-brand sm:inline-flex">Content & automation</span>
         </div>

@@ -1,3 +1,4 @@
+import { ModuleHero } from "@/components/ModuleHero";
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { getBatches, getLeads, getEmailLogs, getSequences } from "../lib/api";
@@ -44,7 +45,7 @@ function MarketingDashboard() {
       <div className="rise flex items-end justify-between">
         <div>
           <div className="font-mono text-[11px] tracking-wide text-muted-foreground">OVERVIEW</div>
-          <h1 className="mt-1 font-display text-3xl font-bold tracking-tight">Marketing dashboard</h1>
+          <ModuleHero eyebrow="Growth workspace" title="Marketing dashboard" description="Plan campaigns, manage leads, and keep every growth motion moving forward." icon={<span aria-hidden="true">•</span>} />
         </div>
       </div>
 
