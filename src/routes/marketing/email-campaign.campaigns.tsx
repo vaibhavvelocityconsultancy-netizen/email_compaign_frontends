@@ -509,11 +509,12 @@ function CampaignsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="rise flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <div className="font-mono text-[11px] tracking-wide text-muted-foreground">OUTREACH</div>
-          <h1 className="mt-1 font-display text-3xl font-bold tracking-tight">Campaigns</h1>
+<div className="space-y-6">
+  <div className="rise flex flex-wrap items-end justify-between gap-3 rounded-xl border border-line bg-card/60 p-5 shadow-sm">
+  <div>
+  <div className="font-mono text-[11px] tracking-[0.18em] text-muted-foreground">OUTREACH</div>
+  <h1 className="mt-1 font-display text-3xl font-bold tracking-tight">Campaigns</h1>
+  <p className="mt-2 max-w-xl text-sm text-muted-foreground">Coordinate targeted outreach with clear ownership, timing, and delivery visibility.</p>
         </div>
         <Button size="sm" variant="outline" className="h-9 gap-1.5" disabled={syncingReplies} onClick={syncCampaignReplies}>
           <RefreshCw className={`size-4 ${syncingReplies ? "animate-spin" : ""}`} />

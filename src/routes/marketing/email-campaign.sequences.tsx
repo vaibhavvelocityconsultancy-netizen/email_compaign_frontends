@@ -393,10 +393,15 @@ function SequencesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="rise flex flex-wrap items-end justify-between gap-3">
+      <div className="rise flex flex-wrap items-end justify-between gap-3 rounded-xl border border-line bg-card/60 p-5 shadow-sm">
         <div>
-          <div className="font-mono text-[11px] tracking-wide text-muted-foreground">AUTOMATION</div>
+          <div className="font-mono text-[11px] tracking-[0.18em] text-muted-foreground">AUTOMATION</div>
           <h1 className="mt-1 font-display text-3xl font-bold tracking-tight">Sequences</h1>
+          <p className="mt-2 max-w-xl text-sm text-muted-foreground">Orchestrate thoughtful follow-ups with reusable steps and timing.</p>
+        </div>
+        <div className="rounded-lg border border-line bg-background/60 px-3 py-2 text-right">
+          <div className="font-mono text-lg font-semibold">{sequences.length}</div>
+          <div className="text-[11px] text-muted-foreground">active sequences</div>
         </div>
       </div>
 

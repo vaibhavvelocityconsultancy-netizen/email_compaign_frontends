@@ -384,10 +384,15 @@ function TemplatesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="rise flex flex-wrap items-end justify-between gap-3">
+      <div className="rise flex flex-wrap items-end justify-between gap-3 rounded-xl border border-line bg-card/60 p-5 shadow-sm">
         <div>
-          <div className="font-mono text-[11px] tracking-wide text-muted-foreground">CONTENT</div>
+          <div className="font-mono text-[11px] tracking-[0.18em] text-muted-foreground">CONTENT LIBRARY</div>
           <h1 className="mt-1 font-display text-3xl font-bold tracking-tight">Message Templates</h1>
+          <p className="mt-2 max-w-xl text-sm text-muted-foreground">Create reusable messages for campaigns and keep every send consistent.</p>
+        </div>
+        <div className="rounded-lg border border-line bg-background/60 px-3 py-2 text-right">
+          <div className="font-mono text-lg font-semibold">{counts.email + counts.whatsapp}</div>
+          <div className="text-[11px] text-muted-foreground">saved templates</div>
         </div>
       </div>
 
