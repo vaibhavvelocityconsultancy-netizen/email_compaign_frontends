@@ -50,9 +50,80 @@ const emptyUnsubscribeSettings: UnsubscribeSettings = {
   unsubscribe_logo: null,
 };
 
+type SectionId = "sending" | "webhooks" | "replies" | "unsubscribe";
+
+/* ---------- small presentational helpers ---------- */
+
+function StatusDot({ ok }: { ok: boolean | undefined }) {
+  return (
+    <span
+      aria-hidden
+      className={`size-2 shrink-0 rounded-full ${ok ? "bg-emerald-500" : "bg-muted-foreground/40"}`}
+    />
+  );
+}
+
+function SecretInput({
+  id,
+  label,
+  configured,
+  value,
+  onChange,
+  show,
+  onToggle,
+  placeholderKeep,
+  autoComplete = "new-password",
+  required,
+}: {
+  id: string;
+  label: string;
+  configured?: boolean;
+  value: string;
+  onChange: (value: string) => void;
+  show: boolean;
+  onToggle: () => void;
+  placeholderKeep?: string;
+  autoComplete?: string;
+  required?: boolean;
+}) {
+  return (
+    <label className="grid gap-2 text-sm font-medium" htmlFor={id}>
+      <span className="flex items-center gap-2">
+        {label}
+        {configured && (
+          <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-600">
+            Saved
+          </span>
+        )}
+      </span>
+      <div className="relative">
+        <Input
+          id={id}
+          type={show ? "text" : "password"}
+          autoComplete={autoComplete}
+          className="pr-10"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={configured ? (placeholderKeep ?? "Leave blank to keep the saved value") : "Required"}
+          required={required}
+        />
+        <button
+          type="button"
+          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          aria-label={show ? `Hide ${label}` : `Show ${label}`}
+          onClick={onToggle}
+        >
+          {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+        </button>
+      </div>
+    </label>
+  );
+}
+
 function EmailSettingsPage() {
   const { user } = useAuth();
   const isSuperUser = Boolean(user?.is_superuser);
+  const [activeSection, setActiveSection] = React.useState<SectionId>("sending");
   const [tenants, setTenants] = React.useState<TenantMailgunSettingsSummary[]>([]);
   const [selectedTenantId, setSelectedTenantId] = React.useState<number | null>(null);
   const [settings, setSettings] = React.useState<TenantMailgunSettings | null>(null);
@@ -69,7 +140,6 @@ function EmailSettingsPage() {
   const [unsubscribeSettings, setUnsubscribeSettings] = React.useState<UnsubscribeSettings>(emptyUnsubscribeSettings);
   const [unsubscribeLogoFile, setUnsubscribeLogoFile] = React.useState<File | null>(null);
   const [savingUnsubscribe, setSavingUnsubscribe] = React.useState(false);
-  const [unsubscribeDialogOpen, setUnsubscribeDialogOpen] = React.useState(false);
   const [gmailConnection, setGmailConnection] = React.useState<{
     connected: boolean;
     email: string;
@@ -90,11 +160,14 @@ function EmailSettingsPage() {
   const [ionosLoading, setIonosLoading] = React.useState(false);
   const [ionosSyncing, setIonosSyncing] = React.useState(false);
 
+  /* ---------- effects (unchanged logic) ---------- */
+
   React.useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const gmailResult = params.get("gmail");
     if (gmailResult === "connected") {
       toast.success("Gmail connected.");
+      setActiveSection("replies"); // land back on the tab the user came from
       window.history.replaceState({}, "", `${window.location.pathname}${window.location.hash}`);
     }
   }, []);
@@ -137,6 +210,116 @@ function EmailSettingsPage() {
     };
   }, [user?.id, isSuperUser, selectedTenantId]);
 
+  React.useEffect(() => {
+    if (!isSuperUser) {
+      setLoadingTenants(false);
+      return;
+    }
+    let active = true;
+    listTenantsWithMailgunSettings()
+      .then((results) => {
+        if (!active) return;
+        setTenants(results);
+        setSelectedTenantId((current) => current ?? results[0]?.id ?? null);
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        toast.error(error instanceof Error ? error.message : "Could not load tenants.");
+      })
+      .finally(() => {
+        if (active) setLoadingTenants(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [isSuperUser]);
+
+  React.useEffect(() => {
+    if (!user?.id || isSuperUser) return;
+    let active = true;
+    setLoadingSettings(true);
+    setSettings(null);
+    setApiKey("");
+    setWebhookSigningKey("");
+    getOwnTenantMailgunSettings()
+      .then((result) => {
+        if (!active) return;
+        setSettings(result);
+        setDefaultFromEmail(result.default_from_email);
+        setReplyToEmail(result.reply_to_email);
+        setSenderDomain(result.sender_domain);
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        toast.error(error instanceof Error ? error.message : "Could not load Mailgun settings.");
+      })
+      .finally(() => {
+        if (active) setLoadingSettings(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [user?.id, isSuperUser]);
+
+  React.useEffect(() => {
+    if (!isSuperUser) return;
+    if (selectedTenantId === null) {
+      setSettings(null);
+      setDefaultFromEmail("");
+      setReplyToEmail("");
+      setSenderDomain("");
+      setApiKey("");
+      setWebhookSigningKey("");
+      return;
+    }
+    let active = true;
+    setLoadingSettings(true);
+    setSettings(null);
+    setApiKey("");
+    setWebhookSigningKey("");
+    getTenantMailgunSettings(selectedTenantId)
+      .then((result) => {
+        if (!active) return;
+        setSettings(result);
+        setDefaultFromEmail(result.default_from_email);
+        setReplyToEmail(result.reply_to_email);
+        setSenderDomain(result.sender_domain);
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        toast.error(error instanceof Error ? error.message : "Could not load Mailgun settings.");
+      })
+      .finally(() => {
+        if (active) setLoadingSettings(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [selectedTenantId, isSuperUser]);
+
+  React.useEffect(() => {
+    if (!user?.id || !isSuperUser) {
+      setUnsubscribeSettings(emptyUnsubscribeSettings);
+      setUnsubscribeLogoFile(null);
+      return;
+    }
+    let active = true;
+    setUnsubscribeSettings(emptyUnsubscribeSettings);
+    setUnsubscribeLogoFile(null);
+    request<UnsubscribeSettings & { updated_at: string }>("/unsubscribe-page-settings/")
+      .then((result) => {
+        if (active) setUnsubscribeSettings({ ...emptyUnsubscribeSettings, ...result });
+      })
+      .catch((error: unknown) => {
+        if (active) toast.error(error instanceof Error ? error.message : "Could not load unsubscribe page settings.");
+      });
+    return () => {
+      active = false;
+    };
+  }, [user?.id, isSuperUser]);
+
+  /* ---------- handlers (unchanged logic) ---------- */
+
   async function connectGmail() {
     setGmailLoading(true);
     try {
@@ -175,10 +358,7 @@ function EmailSettingsPage() {
         processed_count: number;
         last_sync_at: string | null;
       }>(`/auth/gmail-connection/sync/${tenantQuery}`, { method: "POST" });
-      setGmailConnection((current) => ({
-        ...current,
-        last_sync_at: result.last_sync_at,
-      }));
+      setGmailConnection((current) => ({ ...current, last_sync_at: result.last_sync_at }));
       toast.success(
         result.processed_count
           ? `Gmail sync complete: ${result.processed_count} new repl${result.processed_count === 1 ? "y" : "ies"}.`
@@ -232,14 +412,8 @@ function EmailSettingsPage() {
   async function handleIonosSync() {
     setIonosSyncing(true);
     try {
-      const result = await syncIonosMailbox(
-        isSuperUser ? selectedTenantId ?? undefined : undefined,
-      );
-      setIonosConnection((current) => ({
-        ...current,
-        last_sync_at: result.last_sync_at,
-        last_error: "",
-      }));
+      const result = await syncIonosMailbox(isSuperUser ? selectedTenantId ?? undefined : undefined);
+      setIonosConnection((current) => ({ ...current, last_sync_at: result.last_sync_at, last_error: "" }));
       toast.success(`IONOS sync complete: ${result.processed_count} new message(s).`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "IONOS synchronization failed.");
@@ -250,123 +424,6 @@ function EmailSettingsPage() {
       setIonosSyncing(false);
     }
   }
-
-  React.useEffect(() => {
-    if (!isSuperUser) {
-      setLoadingTenants(false);
-      return;
-    }
-
-    let active = true;
-    listTenantsWithMailgunSettings()
-      .then((results) => {
-        if (!active) return;
-        setTenants(results);
-        setSelectedTenantId((current) => current ?? results[0]?.id ?? null);
-      })
-      .catch((error: unknown) => {
-        if (!active) return;
-        toast.error(error instanceof Error ? error.message : "Could not load tenants.");
-      })
-      .finally(() => {
-        if (active) setLoadingTenants(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [isSuperUser]);
-
-  React.useEffect(() => {
-    if (!user?.id || isSuperUser) {
-      return;
-    }
-
-    let active = true;
-    setLoadingSettings(true);
-    setSettings(null);
-    setApiKey("");
-    setWebhookSigningKey("");
-    getOwnTenantMailgunSettings()
-      .then((result) => {
-        if (!active) return;
-        setSettings(result);
-        setDefaultFromEmail(result.default_from_email);
-        setReplyToEmail(result.reply_to_email);
-        setSenderDomain(result.sender_domain);
-      })
-      .catch((error: unknown) => {
-        if (!active) return;
-        toast.error(error instanceof Error ? error.message : "Could not load Mailgun settings.");
-      })
-      .finally(() => {
-        if (active) setLoadingSettings(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [user?.id, isSuperUser]);
-
-  React.useEffect(() => {
-    if (!isSuperUser) {
-      return;
-    }
-
-    if (selectedTenantId === null) {
-      setSettings(null);
-      setDefaultFromEmail("");
-      setReplyToEmail("");
-      setSenderDomain("");
-      setApiKey("");
-      setWebhookSigningKey("");
-      return;
-    }
-
-    let active = true;
-    setLoadingSettings(true);
-    setSettings(null);
-    setApiKey("");
-    setWebhookSigningKey("");
-    getTenantMailgunSettings(selectedTenantId)
-      .then((result) => {
-        if (!active) return;
-        setSettings(result);
-        setDefaultFromEmail(result.default_from_email);
-        setReplyToEmail(result.reply_to_email);
-        setSenderDomain(result.sender_domain);
-      })
-      .catch((error: unknown) => {
-        if (!active) return;
-        toast.error(error instanceof Error ? error.message : "Could not load Mailgun settings.");
-      })
-      .finally(() => {
-        if (active) setLoadingSettings(false);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [selectedTenantId, isSuperUser]);
-
-  React.useEffect(() => {
-    if (!user?.id || !isSuperUser) {
-      setUnsubscribeSettings(emptyUnsubscribeSettings);
-      setUnsubscribeLogoFile(null);
-      return;
-    }
-    let active = true;
-    setUnsubscribeSettings(emptyUnsubscribeSettings);
-    setUnsubscribeLogoFile(null);
-    request<UnsubscribeSettings & { updated_at: string }>("/unsubscribe-page-settings/")
-      .then((result) => {
-        if (active) setUnsubscribeSettings({ ...emptyUnsubscribeSettings, ...result });
-      })
-      .catch((error: unknown) => {
-        if (active) toast.error(error instanceof Error ? error.message : "Could not load unsubscribe page settings.");
-      });
-    return () => { active = false; };
-  }, [user?.id, isSuperUser]);
 
   async function handleSaveUnsubscribe(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -385,7 +442,6 @@ function EmailSettingsPage() {
       setUnsubscribeSettings({ ...emptyUnsubscribeSettings, ...saved });
       setUnsubscribeLogoFile(null);
       toast.success("Unsubscribe page settings saved.");
-      setUnsubscribeDialogOpen(false);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not save unsubscribe page settings.");
     } finally {
@@ -413,6 +469,8 @@ function EmailSettingsPage() {
         saved = await saveOwnTenantMailgunSettings(input);
       }
       setSettings(saved);
+      setApiKey("");
+      setWebhookSigningKey("");
       if (isSuperUser) {
         setTenants((current) =>
           current.map((tenant) =>
@@ -430,71 +488,38 @@ function EmailSettingsPage() {
     }
   }
 
-  const isConfigured = settings?.has_api_key && settings.has_webhook_signing_key;
+  /* ---------- derived ---------- */
 
-  return (
-    <div className="flex flex-col gap-7">
-      <div>
-        <div className="font-mono text-[11px] tracking-wide text-muted-foreground">
-          {isSuperUser ? "SUPER ADMIN" : "TENANT EMAIL SETTINGS"}
-        </div>
-        <h1 className="mt-1 flex items-center gap-2 font-display text-3xl font-bold">
-          <Mail className="size-7" />
-          {isSuperUser ? "Tenant email settings" : "Email settings"}
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {isSuperUser
-            ? "Configure separate Mailgun credentials and sender details for each tenant."
-            : `Configure Mailgun credentials and sender details for ${settings?.tenant_name ?? "your tenant"}.`}
-        </p>
-      </div>
+  const isConfigured = Boolean(settings?.has_api_key && settings.has_webhook_signing_key);
+  const repliesConnected = gmailConnection.connected || ionosConnection.connected;
+  const selectedTenantName = tenants.find((tenant) => tenant.id === selectedTenantId)?.name;
+  const noTenantSelected = isSuperUser && selectedTenantId === null;
 
-      {isSuperUser && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Select tenant</CardTitle>
-            <CardDescription>Settings are stored independently for each tenant.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <label className="flex max-w-xl flex-col gap-2 text-sm font-medium" htmlFor="tenant">
-              Tenant
-              <select
-                id="tenant"
-                className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                value={selectedTenantId ?? ""}
-                disabled={loadingTenants || tenants.length === 0}
-                onChange={(event) =>
-                  setSelectedTenantId(event.target.value ? Number(event.target.value) : null)
-                }
-              >
-                {tenants.length === 0 && <option value="">No tenants found</option>}
-                {tenants.map((tenant) => (
-                  <option key={tenant.id} value={tenant.id}>
-                    {tenant.name} {tenant.configured ? "— configured" : "— not configured"}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </CardContent>
-        </Card>
-      )}
+  const sections: { id: SectionId; label: string; hint: string; ok?: boolean; hidden?: boolean }[] = [
+    { id: "sending", label: "Sending", hint: "Mailgun credentials & sender", ok: isConfigured },
+    { id: "webhooks", label: "Webhooks", hint: "Delivery & open tracking" },
+    { id: "replies", label: "Reply tracking", hint: "Gmail or IONOS mailbox", ok: repliesConnected, hidden: noTenantSelected },
+    { id: "unsubscribe", label: "Unsubscribe page", hint: "Shared across all tenants", hidden: !isSuperUser },
+  ];
+  const visibleSections = sections.filter((section) => !section.hidden);
+  const current = visibleSections.find((section) => section.id === activeSection) ?? visibleSections[0];
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Mailgun configuration</CardTitle>
-          <CardDescription>
-            Secret values are encrypted in the database and never displayed after saving.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {loadingTenants || loadingSettings ? (
-            <p className="text-sm text-muted-foreground">Loading email settings…</p>
-          ) : isSuperUser && tenants.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Create a tenant before configuring its Mailgun account.
-            </p>
-          ) : (
-            <form className="grid max-w-2xl gap-5" onSubmit={handleSave}>
+  /* ---------- sections ---------- */
+
+  const sendingSection = (
+    <Card>
+      <CardHeader>
+        <CardTitle>Mailgun configuration</CardTitle>
+        <CardDescription>Secret values are encrypted in the database and never displayed after saving.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loadingTenants || loadingSettings ? (
+          <p className="text-sm text-muted-foreground">Loading email settings…</p>
+        ) : isSuperUser && tenants.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Create a tenant before configuring its Mailgun account.</p>
+        ) : (
+          <form className="grid max-w-3xl gap-5" onSubmit={handleSave}>
+            <div className="grid gap-5 sm:grid-cols-2">
               <label className="grid gap-2 text-sm font-medium" htmlFor="default-from-email">
                 Default from email
                 <Input
@@ -505,7 +530,6 @@ function EmailSettingsPage() {
                   required
                 />
               </label>
-
               <label className="grid gap-2 text-sm font-medium" htmlFor="reply-to-email">
                 Reply-to email
                 <Input
@@ -515,122 +539,96 @@ function EmailSettingsPage() {
                   placeholder="Velocity Consultancy <replies@example.com>"
                 />
               </label>
+            </div>
 
-              <label className="grid gap-2 text-sm font-medium" htmlFor="sender-domain">
-                Mailgun sender domain
-                <Input
-                  id="sender-domain"
-                  value={senderDomain}
-                  onChange={(event) => setSenderDomain(event.target.value)}
-                  placeholder="mg.example.com"
-                  required
-                />
-              </label>
-
-              <label className="grid gap-2 text-sm font-medium" htmlFor="mailgun-api-key">
-                Mailgun API key {settings?.has_api_key ? "(configured)" : ""}
-                <div className="relative">
-                  <Input
-                    id="mailgun-api-key"
-                    type={showApiKey ? "text" : "password"}
-                    autoComplete="new-password"
-                    className="pr-10"
-                    value={apiKey}
-                    onChange={(event) => setApiKey(event.target.value)}
-                    placeholder={
-                      settings?.has_api_key ? "Leave blank to keep the saved key" : "Required"
-                    }
-                    required={!settings?.has_api_key}
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    aria-label={showApiKey ? "Hide API key" : "Show API key"}
-                    onClick={() => setShowApiKey((visible) => !visible)}
-                  >
-                    {showApiKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
-                </div>
-              </label>
-
-              <label
-                className="grid gap-2 text-sm font-medium"
-                htmlFor="mailgun-webhook-signing-key"
-              >
-                Mailgun webhook signing key{" "}
-                {settings?.has_webhook_signing_key ? "(configured)" : ""}
-                <div className="relative">
-                  <Input
-                    id="mailgun-webhook-signing-key"
-                    type={showWebhookSigningKey ? "text" : "password"}
-                    autoComplete="new-password"
-                    className="pr-10"
-                    value={webhookSigningKey}
-                    onChange={(event) => setWebhookSigningKey(event.target.value)}
-                    placeholder={
-                      settings?.has_webhook_signing_key
-                        ? "Leave blank to keep the saved key"
-                        : "Required"
-                    }
-                    required={!settings?.has_webhook_signing_key}
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    aria-label={showWebhookSigningKey ? "Hide signing key" : "Show signing key"}
-                    onClick={() => setShowWebhookSigningKey((visible) => !visible)}
-                  >
-                    {showWebhookSigningKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                  </button>
-                </div>
-              </label>
-
-              <div>
-                <Button
-                  type="submit"
-                  disabled={saving || (isSuperUser && selectedTenantId === null)}
-                >
-                  <Save />
-                  {saving ? "Saving…" : "Save settings"}
-                </Button>
-                {isConfigured && (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    This tenant has complete Mailgun credentials.
-                  </p>
-                )}
-              </div>
-            </form>
-          )}
-        </CardContent>
-      </Card>
-
-      <MailgunWebhookHelper />
-
-      {(!isSuperUser || selectedTenantId !== null) && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Email reply tracking</CardTitle>
-            <CardDescription>
-              {isSuperUser
-                ? `Choose a mailbox provider for ${tenants.find((tenant) => tenant.id === selectedTenantId)?.name ?? "the selected tenant"}.`
-                : "Connect a mailbox to receive and track replies for this tenant."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid max-w-2xl gap-5">
-            <label className="grid max-w-xs gap-2 text-sm font-medium" htmlFor="reply-mailbox-provider">
-              Reply mailbox provider
-              <select
-                id="reply-mailbox-provider"
-                className="h-9 rounded-md border border-input bg-background px-3 text-sm"
-                value={replyProvider}
-                onChange={(event) => setReplyProvider(event.target.value as "gmail" | "ionos")}
-              >
-                <option value="gmail">Gmail</option>
-                <option value="ionos">IONOS</option>
-              </select>
+            <label className="grid gap-2 text-sm font-medium" htmlFor="sender-domain">
+              Mailgun sender domain
+              <Input
+                id="sender-domain"
+                value={senderDomain}
+                onChange={(event) => setSenderDomain(event.target.value)}
+                placeholder="mg.example.com"
+                required
+              />
             </label>
-            {replyProvider === "gmail" ? (
-              <>
+
+            <div className="grid gap-5 border-t pt-5 sm:grid-cols-2">
+              <SecretInput
+                id="mailgun-api-key"
+                label="API key"
+                configured={settings?.has_api_key}
+                value={apiKey}
+                onChange={setApiKey}
+                show={showApiKey}
+                onToggle={() => setShowApiKey((visible) => !visible)}
+                placeholderKeep="Leave blank to keep the saved key"
+                required={!settings?.has_api_key}
+              />
+              <SecretInput
+                id="mailgun-webhook-signing-key"
+                label="Webhook signing key"
+                configured={settings?.has_webhook_signing_key}
+                value={webhookSigningKey}
+                onChange={setWebhookSigningKey}
+                show={showWebhookSigningKey}
+                onToggle={() => setShowWebhookSigningKey((visible) => !visible)}
+                placeholderKeep="Leave blank to keep the saved key"
+                required={!settings?.has_webhook_signing_key}
+              />
+            </div>
+
+            <div className="flex items-center gap-3">
+              <Button type="submit" disabled={saving || noTenantSelected}>
+                <Save />
+                {saving ? "Saving…" : "Save settings"}
+              </Button>
+              {isConfigured && (
+                <p className="text-xs text-muted-foreground">This tenant has complete Mailgun credentials.</p>
+              )}
+            </div>
+          </form>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  const repliesSection = (
+    <Card>
+      <CardHeader>
+        <CardTitle>Email reply tracking</CardTitle>
+        <CardDescription>
+          {isSuperUser
+            ? `Choose a mailbox provider for ${selectedTenantName ?? "the selected tenant"}.`
+            : "Connect a mailbox to receive and track replies for this tenant."}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid max-w-3xl gap-5">
+        {/* segmented provider switch */}
+        <div role="tablist" aria-label="Reply mailbox provider" className="inline-flex w-fit rounded-lg border bg-muted p-1">
+          {(["gmail", "ionos"] as const).map((provider) => {
+            const connected = provider === "gmail" ? gmailConnection.connected : ionosConnection.connected;
+            return (
+              <button
+                key={provider}
+                type="button"
+                role="tab"
+                aria-selected={replyProvider === provider}
+                onClick={() => setReplyProvider(provider)}
+                className={`flex items-center gap-2 rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
+                  replyProvider === provider
+                    ? "bg-background shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {provider === "gmail" ? "Gmail" : "IONOS"}
+                <StatusDot ok={connected} />
+              </button>
+            );
+          })}
+        </div>
+
+        {replyProvider === "gmail" ? (
+          <div className="grid gap-4">
             <div>
               <p className="text-sm font-medium">
                 {gmailConnection.connected ? gmailConnection.email : "No Gmail account connected"}
@@ -641,169 +639,280 @@ function EmailSettingsPage() {
                   : "Each tenant connects its own Gmail account."}
               </p>
             </div>
-            {gmailConnection.connected ? (
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={connectGmail}
-                  disabled={gmailLoading}
-                >
-                  Reconnect
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={disconnectGmail}
-                  disabled={gmailLoading}
-                >
-                  <Unplug />
-                  Disconnect
-                </Button>
-              </div>
-            ) : (
-              <Button type="button" onClick={connectGmail} disabled={gmailLoading}>
-                {gmailLoading ? "Connecting…" : "Connect Gmail"}
-              </Button>
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              onClick={syncGmailReplies}
-              disabled={!gmailConnection.connected || gmailLoading || gmailSyncing}
-            >
-              <RefreshCw className={gmailSyncing ? "animate-spin" : ""} />
-              {gmailSyncing ? "Syncing replies..." : "Sync Replies"}
-            </Button>
-            {!gmailConnection.connected && (
-              <p className="w-full text-xs text-muted-foreground">
-                Connect Gmail before synchronizing replies.
-              </p>
-            )}
-              </>
-            ) : (
-              <form className="grid gap-4" onSubmit={connectIonos}>
-                {ionosConnection.connected && (
-                  <div>
-                    <p className="text-sm font-medium">Connected: {ionosConnection.email}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Last successful sync: {ionosConnection.last_sync_at
-                        ? new Date(ionosConnection.last_sync_at).toLocaleString()
-                        : "Not synced yet"}
-                    </p>
-                  </div>
-                )}
-                {ionosConnection.last_error && (
-                  <p className="text-sm text-destructive">{ionosConnection.last_error}</p>
-                )}
-                <label className="grid gap-2 text-sm font-medium" htmlFor="ionos-email">
-                  IONOS email address
-                  <Input
-                    id="ionos-email"
-                    type="email"
-                    autoComplete="username"
-                    value={ionosEmail}
-                    onChange={(event) => setIonosEmail(event.target.value)}
-                    placeholder="name@example.com"
-                    required
-                  />
-                </label>
-                <label className="grid gap-2 text-sm font-medium" htmlFor="ionos-password">
-                  Mailbox password
-                  <div className="relative">
-                    <Input
-                      id="ionos-password"
-                      type={showIonosPassword ? "text" : "password"}
-                      autoComplete="new-password"
-                      className="pr-10"
-                      value={ionosPassword}
-                      onChange={(event) => setIonosPassword(event.target.value)}
-                      placeholder={ionosConnection.connected ? "Enter to reconnect or test" : "Required"}
-                      required
-                    />
-                    <button
-                      type="button"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      aria-label={showIonosPassword ? "Hide mailbox password" : "Show mailbox password"}
-                      onClick={() => setShowIonosPassword((visible) => !visible)}
-                    >
-                      {showIonosPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                    </button>
-                  </div>
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="submit"
-                    disabled={ionosLoading || (isSuperUser && selectedTenantId === null)}
-                  >
-                    {ionosLoading
-                      ? "Testing connection..."
-                      : ionosConnection.connected
-                        ? "Reconnect / Test Connection"
-                        : "Connect / Test Connection"}
+            <div className="flex flex-wrap gap-2">
+              {gmailConnection.connected ? (
+                <>
+                  <Button type="button" variant="outline" onClick={connectGmail} disabled={gmailLoading}>
+                    Reconnect
                   </Button>
-                  {ionosConnection.connected && (
-                    <>
-                      <Button type="button" variant="outline" onClick={handleIonosSync} disabled={ionosSyncing}>
-                        {ionosSyncing ? "Syncing..." : "Sync now"}
-                      </Button>
-                      <Button type="button" variant="outline" onClick={disconnectIonos} disabled={ionosLoading}>
-                        <Unplug />
-                        Disconnect
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </form>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {isSuperUser && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Unsubscribe page</CardTitle>
-            <CardDescription>Configure one shared unsubscribe page for every tenant.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button type="button" variant="outline" onClick={() => setUnsubscribeDialogOpen(true)}>Configure unsubscribe page</Button>
-            {unsubscribeDialogOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setUnsubscribeDialogOpen(false); }}>
-            <section className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-background p-6 shadow-xl" role="dialog" aria-modal="true" aria-labelledby="unsubscribe-dialog-title">
-            <h2 id="unsubscribe-dialog-title" className="text-lg font-semibold">Configure unsubscribe page</h2>
-            <p className="mb-5 mt-1 text-sm text-muted-foreground">These details appear to recipients who click the unsubscribe link.</p>
-            <form className="grid gap-5" onSubmit={handleSaveUnsubscribe}>
-              <label className="grid gap-2 text-sm font-medium" htmlFor="unsubscribe-company-name">Company name
-                <Input id="unsubscribe-company-name" value={unsubscribeSettings.unsubscribe_company_name} onChange={(event) => setUnsubscribeSettings((current) => ({ ...current, unsubscribe_company_name: event.target.value }))} />
-              </label>
-              <label className="grid gap-2 text-sm font-medium" htmlFor="unsubscribe-support-email">Support email
-                <Input id="unsubscribe-support-email" type="email" value={unsubscribeSettings.unsubscribe_support_email} onChange={(event) => setUnsubscribeSettings((current) => ({ ...current, unsubscribe_support_email: event.target.value }))} />
-              </label>
-              <label className="grid gap-2 text-sm font-medium" htmlFor="unsubscribe-company-address">Company address
-                <Input id="unsubscribe-company-address" value={unsubscribeSettings.unsubscribe_company_address} onChange={(event) => setUnsubscribeSettings((current) => ({ ...current, unsubscribe_company_address: event.target.value }))} />
-              </label>
-              <label className="grid gap-2 text-sm font-medium" htmlFor="unsubscribe-brand-color">Brand color
-                <div className="flex gap-2"><Input id="unsubscribe-brand-color-picker" aria-label="Choose brand color" type="color" className="w-16 p-1" value={/^#[0-9a-fA-F]{6}$/.test(unsubscribeSettings.unsubscribe_brand_color) ? unsubscribeSettings.unsubscribe_brand_color : "#1f5eff"} onChange={(event) => setUnsubscribeSettings((current) => ({ ...current, unsubscribe_brand_color: event.target.value }))} /><Input id="unsubscribe-brand-color" value={unsubscribeSettings.unsubscribe_brand_color} placeholder="#1f5eff" onChange={(event) => setUnsubscribeSettings((current) => ({ ...current, unsubscribe_brand_color: event.target.value }))} /></div>
-              </label>
-              <label className="grid gap-2 text-sm font-medium" htmlFor="unsubscribe-logo">Logo image (optional)
-                {unsubscribeSettings.unsubscribe_logo && (
-                  <img src={unsubscribeSettings.unsubscribe_logo} alt="Current unsubscribe page logo" className="max-h-12 max-w-40 object-contain" />
-                )}
-                <Input id="unsubscribe-logo" type="file" accept="image/png,image/jpeg,image/gif,image/webp" onChange={(event) => setUnsubscribeLogoFile(event.target.files?.[0] ?? null)} />
-                <span className="text-xs text-muted-foreground">Upload an image up to 2 MB.</span>
-              </label>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setUnsubscribeDialogOpen(false)}>Cancel</Button>
-                <Button type="submit" disabled={savingUnsubscribe}><Save />{savingUnsubscribe ? "Saving…" : "Save"}</Button>
-              </div>
-            </form>
-            </section>
+                  <Button type="button" variant="outline" onClick={disconnectGmail} disabled={gmailLoading}>
+                    <Unplug />
+                    Disconnect
+                  </Button>
+                </>
+              ) : (
+                <Button type="button" onClick={connectGmail} disabled={gmailLoading}>
+                  {gmailLoading ? "Connecting…" : "Connect Gmail"}
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={syncGmailReplies}
+                disabled={!gmailConnection.connected || gmailLoading || gmailSyncing}
+              >
+                <RefreshCw className={gmailSyncing ? "animate-spin" : ""} />
+                {gmailSyncing ? "Syncing replies..." : "Sync replies"}
+              </Button>
             </div>
+            {!gmailConnection.connected && (
+              <p className="text-xs text-muted-foreground">Connect Gmail before synchronizing replies.</p>
             )}
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        ) : (
+          <form className="grid gap-4" onSubmit={connectIonos}>
+            {ionosConnection.connected && (
+              <div>
+                <p className="text-sm font-medium">Connected: {ionosConnection.email}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Last successful sync:{" "}
+                  {ionosConnection.last_sync_at
+                    ? new Date(ionosConnection.last_sync_at).toLocaleString()
+                    : "Not synced yet"}
+                </p>
+              </div>
+            )}
+            {ionosConnection.last_error && <p className="text-sm text-destructive">{ionosConnection.last_error}</p>}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="grid gap-2 text-sm font-medium" htmlFor="ionos-email">
+                IONOS email address
+                <Input
+                  id="ionos-email"
+                  type="email"
+                  autoComplete="username"
+                  value={ionosEmail}
+                  onChange={(event) => setIonosEmail(event.target.value)}
+                  placeholder="name@example.com"
+                  required
+                />
+              </label>
+              <SecretInput
+                id="ionos-password"
+                label="Mailbox password"
+                value={ionosPassword}
+                onChange={setIonosPassword}
+                show={showIonosPassword}
+                onToggle={() => setShowIonosPassword((visible) => !visible)}
+                configured={false}
+                required
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" disabled={ionosLoading || noTenantSelected}>
+                {ionosLoading
+                  ? "Testing connection..."
+                  : ionosConnection.connected
+                    ? "Reconnect / test connection"
+                    : "Connect / test connection"}
+              </Button>
+              {ionosConnection.connected && (
+                <>
+                  <Button type="button" variant="outline" onClick={handleIonosSync} disabled={ionosSyncing}>
+                    <RefreshCw className={ionosSyncing ? "animate-spin" : ""} />
+                    {ionosSyncing ? "Syncing..." : "Sync now"}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={disconnectIonos} disabled={ionosLoading}>
+                    <Unplug />
+                    Disconnect
+                  </Button>
+                </>
+              )}
+            </div>
+          </form>
+        )}
+      </CardContent>
+    </Card>
+  );
+
+  const unsubscribeSection = (
+    <Card>
+      <CardHeader>
+        <CardTitle>Unsubscribe page</CardTitle>
+        <CardDescription>
+          One shared page for every tenant. These details appear to recipients who click the unsubscribe link.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form className="grid max-w-3xl gap-5" onSubmit={handleSaveUnsubscribe}>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <label className="grid gap-2 text-sm font-medium" htmlFor="unsubscribe-company-name">
+              Company name
+              <Input
+                id="unsubscribe-company-name"
+                value={unsubscribeSettings.unsubscribe_company_name}
+                onChange={(event) =>
+                  setUnsubscribeSettings((c) => ({ ...c, unsubscribe_company_name: event.target.value }))
+                }
+              />
+            </label>
+            <label className="grid gap-2 text-sm font-medium" htmlFor="unsubscribe-support-email">
+              Support email
+              <Input
+                id="unsubscribe-support-email"
+                type="email"
+                value={unsubscribeSettings.unsubscribe_support_email}
+                onChange={(event) =>
+                  setUnsubscribeSettings((c) => ({ ...c, unsubscribe_support_email: event.target.value }))
+                }
+              />
+            </label>
+          </div>
+          <label className="grid gap-2 text-sm font-medium" htmlFor="unsubscribe-company-address">
+            Company address
+            <Input
+              id="unsubscribe-company-address"
+              value={unsubscribeSettings.unsubscribe_company_address}
+              onChange={(event) =>
+                setUnsubscribeSettings((c) => ({ ...c, unsubscribe_company_address: event.target.value }))
+              }
+            />
+          </label>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <label className="grid gap-2 text-sm font-medium" htmlFor="unsubscribe-brand-color">
+              Brand color
+              <div className="flex gap-2">
+                <Input
+                  id="unsubscribe-brand-color-picker"
+                  aria-label="Choose brand color"
+                  type="color"
+                  className="w-16 p-1"
+                  value={
+                    /^#[0-9a-fA-F]{6}$/.test(unsubscribeSettings.unsubscribe_brand_color)
+                      ? unsubscribeSettings.unsubscribe_brand_color
+                      : "#1f5eff"
+                  }
+                  onChange={(event) =>
+                    setUnsubscribeSettings((c) => ({ ...c, unsubscribe_brand_color: event.target.value }))
+                  }
+                />
+                <Input
+                  id="unsubscribe-brand-color"
+                  value={unsubscribeSettings.unsubscribe_brand_color}
+                  placeholder="#1f5eff"
+                  onChange={(event) =>
+                    setUnsubscribeSettings((c) => ({ ...c, unsubscribe_brand_color: event.target.value }))
+                  }
+                />
+              </div>
+            </label>
+            <label className="grid gap-2 text-sm font-medium" htmlFor="unsubscribe-logo">
+              Logo image (optional)
+              <div className="flex items-center gap-3">
+                {unsubscribeSettings.unsubscribe_logo && (
+                  <img
+                    src={unsubscribeSettings.unsubscribe_logo}
+                    alt="Current unsubscribe page logo"
+                    className="max-h-9 max-w-24 object-contain"
+                  />
+                )}
+                <Input
+                  id="unsubscribe-logo"
+                  type="file"
+                  accept="image/png,image/jpeg,image/gif,image/webp"
+                  onChange={(event) => setUnsubscribeLogoFile(event.target.files?.[0] ?? null)}
+                />
+              </div>
+              <span className="text-xs font-normal text-muted-foreground">PNG, JPG, GIF or WebP, up to 2 MB.</span>
+            </label>
+          </div>
+          <div>
+            <Button type="submit" disabled={savingUnsubscribe}>
+              <Save />
+              {savingUnsubscribe ? "Saving…" : "Save settings"}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+
+  /* ---------- render ---------- */
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* header + tenant picker share one row so nothing pushes content down */}
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <div className="font-mono text-[11px] tracking-wide text-muted-foreground">
+            {isSuperUser ? "SUPER ADMIN" : "TENANT EMAIL SETTINGS"}
+          </div>
+          <h1 className="mt-1 flex items-center gap-2 font-display text-3xl font-bold">
+            <Mail className="size-7" />
+            {isSuperUser ? "Tenant email settings" : "Email settings"}
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {isSuperUser
+              ? "Configure Mailgun credentials, reply tracking and sender details per tenant."
+              : `Configure email sending and reply tracking for ${settings?.tenant_name ?? "your tenant"}.`}
+          </p>
+        </div>
+
+        {isSuperUser && (
+          <label className="flex w-full flex-col gap-1.5 text-sm font-medium sm:w-72" htmlFor="tenant">
+            Tenant
+            <select
+              id="tenant"
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+              value={selectedTenantId ?? ""}
+              disabled={loadingTenants || tenants.length === 0}
+              onChange={(event) => setSelectedTenantId(event.target.value ? Number(event.target.value) : null)}
+            >
+              {tenants.length === 0 && <option value="">No tenants found</option>}
+              {tenants.map((tenant) => (
+                <option key={tenant.id} value={tenant.id}>
+                  {tenant.name} {tenant.configured ? "— configured" : "— not configured"}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
+
+      <div className="grid items-start gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
+        {/* section nav: sticky sidebar on desktop, scrollable pills on mobile */}
+        <nav
+          aria-label="Email settings sections"
+          className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 lg:sticky lg:top-6 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0 lg:pb-0"
+        >
+          {visibleSections.map((section) => {
+            const selected = section.id === current.id;
+            return (
+              <button
+                key={section.id}
+                type="button"
+                aria-current={selected ? "page" : undefined}
+                onClick={() => setActiveSection(section.id)}
+                className={`flex shrink-0 items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors lg:w-full ${
+                  selected ? "bg-muted font-medium" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                }`}
+              >
+                {section.ok !== undefined && <StatusDot ok={section.ok} />}
+                <span className="flex flex-col">
+                  <span className="text-sm">{section.label}</span>
+                  <span className="hidden text-xs font-normal text-muted-foreground lg:block">{section.hint}</span>
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="min-w-0">
+          {current.id === "sending" && sendingSection}
+          {current.id === "webhooks" && <MailgunWebhookHelper />}
+          {current.id === "replies" && repliesSection}
+          {current.id === "unsubscribe" && isSuperUser && unsubscribeSection}
+        </div>
+      </div>
     </div>
   );
 }
