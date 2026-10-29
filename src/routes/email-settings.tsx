@@ -1,6 +1,6 @@
 import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Eye, EyeOff, Mail, Save } from "lucide-react";
+import { Eye, EyeOff, Mail, Save, Unplug } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -65,6 +65,65 @@ function EmailSettingsPage() {
   const [unsubscribeLogoFile, setUnsubscribeLogoFile] = React.useState<File | null>(null);
   const [savingUnsubscribe, setSavingUnsubscribe] = React.useState(false);
   const [unsubscribeDialogOpen, setUnsubscribeDialogOpen] = React.useState(false);
+  const [gmailConnection, setGmailConnection] = React.useState<{
+    connected: boolean;
+    email: string;
+    last_sync_at: string | null;
+  }>({ connected: false, email: "", last_sync_at: null });
+  const [gmailLoading, setGmailLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const gmailResult = params.get("gmail");
+    if (gmailResult === "connected") {
+      toast.success("Gmail connected.");
+      window.history.replaceState({}, "", `${window.location.pathname}${window.location.hash}`);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (!user?.id || (isSuperUser && selectedTenantId === null)) return;
+    let active = true;
+    const tenantQuery = isSuperUser ? `?tenant_id=${selectedTenantId}` : "";
+    request<typeof gmailConnection>(`/auth/gmail-connection/${tenantQuery}`)
+      .then((result) => {
+        if (active) setGmailConnection(result);
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          toast.error(error instanceof Error ? error.message : "Could not load Gmail connection.");
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [user?.id, isSuperUser, selectedTenantId]);
+
+  async function connectGmail() {
+    setGmailLoading(true);
+    try {
+      const tenantQuery = isSuperUser ? `?tenant_id=${selectedTenantId}` : "";
+      const result = await request<{ authorization_url: string }>(`/auth/google/authorize/${tenantQuery}`);
+      window.location.assign(result.authorization_url);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not start Gmail authorization.");
+      setGmailLoading(false);
+    }
+  }
+
+  async function disconnectGmail() {
+    setGmailLoading(true);
+    try {
+      const tenantQuery = isSuperUser ? `?tenant_id=${selectedTenantId}` : "";
+      await request(`/auth/gmail-connection/${tenantQuery}`, { method: "DELETE" });
+      setGmailConnection({ connected: false, email: "", last_sync_at: null });
+      toast.success("Gmail disconnected.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not disconnect Gmail.");
+    } finally {
+      setGmailLoading(false);
+    }
+  }
 
   React.useEffect(() => {
     if (!isSuperUser) {
@@ -420,6 +479,56 @@ function EmailSettingsPage() {
       </Card>
 
       <MailgunWebhookHelper />
+
+      {(!isSuperUser || selectedTenantId !== null) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Gmail reply tracking</CardTitle>
+            <CardDescription>
+              {isSuperUser
+                ? `Connect the Gmail account for ${tenants.find((tenant) => tenant.id === selectedTenantId)?.name ?? "the selected tenant"}.`
+                : "Connect the Gmail account this tenant uses for reply tracking and sending replies."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium">
+                {gmailConnection.connected ? gmailConnection.email : "No Gmail account connected"}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {gmailConnection.connected
+                  ? "Connected for this tenant"
+                  : "Each tenant connects its own Gmail account."}
+              </p>
+            </div>
+            {gmailConnection.connected ? (
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={connectGmail}
+                  disabled={gmailLoading}
+                >
+                  Reconnect
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={disconnectGmail}
+                  disabled={gmailLoading}
+                >
+                  <Unplug />
+                  Disconnect
+                </Button>
+              </div>
+            ) : (
+              <Button type="button" onClick={connectGmail} disabled={gmailLoading}>
+                {gmailLoading ? "Connecting…" : "Connect Gmail"}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {isSuperUser && (
         <Card>
