@@ -164,13 +164,13 @@ function Section({
   return (
     <section
       aria-labelledby={id}
-      className="space-y-6 border-b border-line py-8 first:pt-0"
+      className="rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-7"
     >
       <div>
         <h2 id={id} className="font-display text-xl font-semibold tracking-tight">{title}</h2>
         <p className="mt-1 text-sm text-muted-foreground">{description}</p>
       </div>
-      <div className="grid gap-8">{children}</div>
+      <div className="grid gap-7">{children}</div>
     </section>
   );
 }
@@ -543,15 +543,23 @@ function LeadFormPage() {
   const filteredCities = cityOptions.filter((city) => !selectedState || city.state === selectedState.id);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-8 rounded-lg bg-white p-11 shadow-md">
-      <div className="mb-8 flex flex-wrap items-start justify-between gap-3">
+    <div className="mx-auto max-w-5xl space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-4 rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-7">
         <div>
-          <Button variant="ghost" size="sm" onClick={goBack} className="-ml-3 mb-3 text-muted-foreground">
+          <Button variant="ghost" size="sm" onClick={goBack} className="-ml-3 mb-4 text-muted-foreground">
             <ArrowLeft /> Leads
           </Button>
-          <h1 className="font-display text-3xl font-bold tracking-tight">
-            {leadId ? `Edit enquiry${leadQuery.data?.srNo ? ` #${leadQuery.data.srNo}` : ""}` : "New enquiry"}
-          </h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="font-display text-3xl font-bold tracking-tight">
+              {leadId ? `Edit enquiry${leadQuery.data?.srNo ? ` #${leadQuery.data.srNo}` : ""}` : "New enquiry"}
+            </h1>
+            <span className="rounded-full border border-brand/20 bg-brand/10 px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-brand">
+              {leadId ? "Editing" : "New lead"}
+            </span>
+          </div>
+          <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+            Capture the right context now so every follow-up is clear and actionable.
+          </p>
         </div>
         <Button
           type="button"
