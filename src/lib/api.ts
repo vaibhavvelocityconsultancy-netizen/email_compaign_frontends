@@ -643,6 +643,16 @@ export async function updateLeadStatus(id: string, status: LeadStatus): Promise<
   return mapLead(lead);
 }
 
+export async function bulkUpdateLeads(
+  ids: Array<string | number>,
+  updates: Partial<LeadInput>,
+): Promise<{ updated: number }> {
+  return request<{ updated: number }>("/leads/bulk-update/", {
+    method: "POST",
+    body: JSON.stringify({ ids, updates }),
+  });
+}
+
 export async function deleteLead(id: string): Promise<void> {
   await request<void>(`/leads/${id}/`, { method: "DELETE" });
 }

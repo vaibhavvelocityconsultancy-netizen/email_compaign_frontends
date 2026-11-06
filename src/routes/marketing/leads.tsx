@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ChevronDown, Download, Pencil, Plus, Trash2, Upload } from "lucide-react";
-import { deleteLead, getLeads, importLeads, updateLeadStatus, type Lead, type LeadStatus } from "../../lib/api";
+import { bulkUpdateLeads, deleteLead, getLeads, importLeads, updateLeadStatus, type Lead, type LeadStatus, type LeadInput } from "../../lib/api";
 import { downloadLeadCsvTemplate } from "../../lib/lead-csv-template";
 import { DataTable, type Column } from "../../components/common/DataTable";
 import { Modal } from "../../components/common/Modal";
@@ -104,6 +104,18 @@ function LeadsPage() {
   const [deleteTarget, setDeleteTarget] = useState<Lead | null>(null);
   const [selectedLeads, setSelectedLeads] = useState<Lead[]>([]);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [bulkFields, setBulkFields] = useState<string[]>([]);
+  const [bulkValues, setBulkValues] = useState<Record<string, string>>({
+    company_name: "",
+    contact_name: "",
+    status: "NEW",
+    source: "OTHER",
+    enquiry_for: "LEAD",
+    enquiry_date: "",
+    followup_date: "",
+    followup_remarks: "",
+  });
   const [selectionResetKey, setSelectionResetKey] = useState(0);
 
   const handleSelectionChange = useCallback((selected: Lead[]) => {
@@ -185,6 +197,36 @@ function LeadsPage() {
     },
     onError: (error: Error) => toast.error(error.message || "Unable to delete selected leads"),
   });
+
+  const bulkEditMut = useMutation({
+    mutationFn: (leads: Lead[]) => {
+      const updates: Partial<LeadInput> = {};
+      bulkFields.forEach((field) => {
+        const value = bulkValues[field];
+        if (field === "followup_date" || field === "enquiry_date") {
+          (updates as Record<string, unknown>)[field] = value || null;
+        } else {
+          (updates as Record<string, unknown>)[field] = value;
+        }
+      });
+      return bulkUpdateLeads(leads.map((lead) => lead.srNo), updates);
+    },
+    onSuccess: (result) => {
+      void qc.invalidateQueries({ queryKey: ["leads"] });
+      setBulkEditOpen(false);
+      setBulkFields([]);
+      setSelectedLeads([]);
+      setSelectionResetKey((key) => key + 1);
+      toast.success(`${result.updated} leads updated.`);
+    },
+    onError: (error: Error) => toast.error(error.message || "Unable to update selected leads"),
+  });
+
+  const toggleBulkField = (field: string) => {
+    setBulkFields((current) => current.includes(field)
+      ? current.filter((item) => item !== field)
+      : [...current, field]);
+  };
 
   const openCreate = () => navigate({ to: "/marketing/leads/form", search: { leadId: undefined } });
 
@@ -350,6 +392,15 @@ function LeadsPage() {
               <span className="text-sm">{selectedLeads.length} leads selected</span>
               <button
                 type="button"
+                onClick={() => setBulkEditOpen(true)}
+                disabled={bulkEditMut.isPending}
+                className="flex h-9 items-center gap-1.5 rounded-lg border border-brand px-4 text-sm font-medium text-brand transition-colors hover:bg-brand/10 disabled:opacity-50"
+              >
+                <Pencil className="size-4" />
+                Bulk edit
+              </button>
+              <button
+                type="button"
                 onClick={() => setBulkDeleteOpen(true)}
                 disabled={bulkDeleteMut.isPending || deleteLeadMut.isPending}
                 className="flex h-9 items-center gap-1.5 rounded-lg bg-destructive px-4 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:opacity-50"
@@ -447,6 +498,56 @@ function LeadsPage() {
         confirmLabel={bulkDeleteMut.isPending ? "Deleting…" : `Delete ${selectedLeads.length} leads`}
         loading={bulkDeleteMut.isPending}
       />
+      <Modal open={bulkEditOpen} onClose={() => setBulkEditOpen(false)} title="Bulk Edit Leads" eyebrow={`${selectedLeads.length} SELECTED LEADS`}>
+        <div className="space-y-4 p-5">
+          <p className="text-xs text-muted-foreground">Only enabled fields will be changed for the selected leads.</p>
+          {[
+            ["company_name", "Company name", "text"],
+            ["contact_name", "Contact name", "text"],
+            ["status", "Status", "status"],
+            ["source", "Source", "source"],
+            ["enquiry_for", "Enquiry for", "enquiry"],
+            ["enquiry_date", "Enquiry date", "date"],
+            ["followup_date", "Follow-up date", "date"],
+            ["followup_remarks", "Follow-up remarks", "textarea"],
+          ].map(([field, label, type]) => (
+            <div key={field} className="rounded-lg border border-line p-3">
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <input type="checkbox" checked={bulkFields.includes(field)} onChange={() => toggleBulkField(field)} />
+                {label}
+              </label>
+              {bulkFields.includes(field) && (
+                <div className="mt-3">
+                  {type === "status" ? (
+                    <select className={`w-full ${selectCls}`} value={bulkValues[field]} onChange={(event) => setBulkValues((current) => ({ ...current, [field]: event.target.value }))}>
+                      {LEAD_STATUSES.map((value) => <option key={value} value={value}>{statusLabel(value)}</option>)}
+                    </select>
+                  ) : type === "source" ? (
+                    <select className={`w-full ${selectCls}`} value={bulkValues[field]} onChange={(event) => setBulkValues((current) => ({ ...current, [field]: event.target.value }))}>
+                      {LEAD_SOURCES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                    </select>
+                  ) : type === "enquiry" ? (
+                    <select className={`w-full ${selectCls}`} value={bulkValues[field]} onChange={(event) => setBulkValues((current) => ({ ...current, [field]: event.target.value }))}>
+                      <option value="LEAD">Lead</option>
+                      <option value="CLIENT">Client</option>
+                    </select>
+                  ) : type === "textarea" ? (
+                    <textarea className="min-h-20 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm" value={bulkValues[field]} onChange={(event) => setBulkValues((current) => ({ ...current, [field]: event.target.value }))} />
+                  ) : (
+                    <input type={type} className={`w-full ${selectCls}`} value={bulkValues[field]} onChange={(event) => setBulkValues((current) => ({ ...current, [field]: event.target.value }))} />
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center justify-end gap-2 border-t border-line px-5 py-4">
+          <button type="button" onClick={() => setBulkEditOpen(false)} className="h-9 rounded-lg border border-line px-4 text-sm">Cancel</button>
+          <button type="button" disabled={!bulkFields.length || bulkEditMut.isPending} onClick={() => bulkEditMut.mutate(selectedLeads)} className="h-9 rounded-lg bg-brand px-4 text-sm font-medium text-white disabled:opacity-50">
+            {bulkEditMut.isPending ? "Updating…" : `Update ${selectedLeads.length} leads`}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }
