@@ -235,6 +235,7 @@ export interface Sequence {
   id: string;
   name: string;
   description: string;
+  createdAt: string;
   steps: SequenceStep[];
 }
 
@@ -351,6 +352,7 @@ interface ApiSequence {
   id: number;
   name: string;
   description: string;
+  created_at: string;
 }
 
 interface ApiSequenceStep {
@@ -621,6 +623,13 @@ export function createLeadCategory(name: string): Promise<LeadCategory> {
   });
 }
 
+export function updateLeadCategory(id: number, name: string): Promise<LeadCategory> {
+  return request<LeadCategory>(`/lead-categories/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify({ name }),
+  });
+}
+
 export async function createLead(data: LeadInput): Promise<Lead> {
   const lead = await request<ApiLead>("/leads/", {
     method: "POST",
@@ -749,7 +758,9 @@ export async function createSampleLeads(): Promise<{ created: number; existing: 
 
 export async function getTemplates(): Promise<MessageTemplate[]> {
   const templates = await request<ApiTemplate[]>("/email-templates/");
-  return templates.map(mapTemplate);
+  return templates
+    .map(mapTemplate)
+    .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
 }
 
 export interface EmailSignature {
@@ -858,20 +869,23 @@ export async function getSequences(): Promise<Sequence[]> {
     request<ApiSequenceStep[]>("/sequence-steps/"),
   ]);
 
-  return sequences.map((sequence) => ({
-    id: String(sequence.id),
-    name: sequence.name,
-    description: sequence.description,
-    steps: steps
-      .filter((step) => step.sequence === sequence.id)
-      .map((step) => ({
-        id: String(step.id),
-        templateId: String(step.template),
-        delayDays: step.delay_days,
-        delayMinutes: step.delay_minutes,
-        sendTime: step.send_time ?? "",
-      })),
-  }));
+  return sequences
+    .map((sequence) => ({
+      id: String(sequence.id),
+      name: sequence.name,
+      description: sequence.description,
+      createdAt: sequence.created_at,
+      steps: steps
+        .filter((step) => step.sequence === sequence.id)
+        .map((step) => ({
+          id: String(step.id),
+          templateId: String(step.template),
+          delayDays: step.delay_days,
+          delayMinutes: step.delay_minutes,
+          sendTime: step.send_time ?? "",
+        })),
+    }))
+    .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
 }
 
 function mapSequence(sequence: ApiSequence & { steps?: ApiSequenceStep[] }): Sequence {
@@ -879,6 +893,7 @@ function mapSequence(sequence: ApiSequence & { steps?: ApiSequenceStep[] }): Seq
     id: String(sequence.id),
     name: sequence.name,
     description: sequence.description,
+    createdAt: sequence.created_at,
     steps: (sequence.steps ?? []).map((step) => ({
       id: String(step.id),
       templateId: String(step.template),
@@ -1013,17 +1028,19 @@ export async function deleteBatch(id: string): Promise<void> {
 
 export async function getEmailLogs(): Promise<EmailLog[]> {
   const logs = await request<ApiEmailLog[]>("/email-logs/");
-  return logs.map((log) => ({
-    id: String(log.id),
-    batchId: String(log.batch),
-    leadId: String(log.lead),
-    step: log.step_number,
-    status: log.status,
-    sentAt: log.sent_at,
-    subject: log.subject,
-    templateName: log.template_name ?? "",
-    ...(log.error ? { error: log.error } : {}),
-  }));
+  return logs
+    .map((log) => ({
+      id: String(log.id),
+      batchId: String(log.batch),
+      leadId: String(log.lead),
+      step: log.step_number,
+      status: log.status,
+      sentAt: log.sent_at,
+      subject: log.subject,
+      templateName: log.template_name ?? "",
+      ...(log.error ? { error: log.error } : {}),
+    }))
+    .sort((left, right) => Date.parse(right.sentAt) - Date.parse(left.sentAt));
 }
 
 export async function getInboundReplies(): Promise<InboundReply[]> {

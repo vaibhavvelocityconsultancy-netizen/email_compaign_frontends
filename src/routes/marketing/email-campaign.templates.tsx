@@ -218,7 +218,16 @@ function TemplatesPage() {
     const nameCol: Column<MessageTemplate> = {
       key: "name",
       header: "Name",
-      cell: (t) => <span className="font-medium">{t.name}</span>,
+      cell: (t) => (
+        <button
+          type="button"
+          onClick={() => openEdit(t)}
+          className="text-left font-medium hover:text-brand hover:underline"
+          aria-label={`Edit template ${t.name}`}
+        >
+          {t.name}
+        </button>
+      ),
     };
     const createdCol: Column<MessageTemplate> = {
       key: "createdAt",
@@ -502,7 +511,14 @@ function TemplatesPage() {
                 {signature.logoUrl && <img src={signature.logoUrl} alt="" className="size-12 rounded object-contain" />}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 font-medium">
-                    {signature.name}
+                    <button
+                      type="button"
+                      onClick={() => startSignatureEdit(signature)}
+                      className="text-left hover:text-brand hover:underline"
+                      aria-label={`Edit signature ${signature.name}`}
+                    >
+                      {signature.name}
+                    </button>
                     {signature.isDefault && <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] text-brand">Default</span>}
                   </div>
                   <div className="mt-1 line-clamp-2 whitespace-pre-wrap text-xs text-muted-foreground">{signature.text}</div>

@@ -329,7 +329,19 @@ function CampaignsPage() {
     {
       key: "name",
       header: "Campaign",
-      cell: (campaign) => <span className="font-medium">{campaign.name}</span>,
+      cell: (campaign) => (
+        <button
+          type="button"
+          onClick={() => {
+            setEditingCampaign(campaign);
+            setFormOpen(true);
+          }}
+          className="text-left font-medium hover:text-brand hover:underline"
+          aria-label={`Edit campaign ${campaign.name}`}
+        >
+          {campaign.name}
+        </button>
+      ),
     },
     {
       key: "sequenceId",

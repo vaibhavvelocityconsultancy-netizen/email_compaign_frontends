@@ -51,10 +51,15 @@ function CompaniesPage() {
         header: "Company",
         filterable: false,
         cell: (company) => (
-          <div className="min-w-0">
-            <p className="truncate font-medium">{company.name}</p>
+          <button
+            type="button"
+            onClick={() => openCompanyForm(company)}
+            className="min-w-0 text-left hover:text-brand"
+            aria-label={`Edit ${company.name}`}
+          >
+            <p className="truncate font-medium hover:underline">{company.name}</p>
             {company.gst_number && <p className="font-mono text-xs text-muted-foreground">{company.gst_number}</p>}
-          </div>
+          </button>
         ),
       },
       {
@@ -114,7 +119,7 @@ function CompaniesPage() {
         ),
       },
     ],
-    [],
+    [openCompanyForm],
   );
 
   return (

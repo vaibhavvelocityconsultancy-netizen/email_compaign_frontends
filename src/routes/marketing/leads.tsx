@@ -272,7 +272,16 @@ function LeadsPage() {
       key: "companyName",
       header: "Company",
       filterValue: (lead) => lead.companyName,
-      cell: (lead) => <span className="font-medium">{lead.companyName || "—"}</span>,
+      cell: (lead) => (
+        <button
+          type="button"
+          onClick={() => navigate({ to: "/marketing/leads/form", search: { leadId: lead.id } })}
+          className="text-left font-medium hover:text-brand hover:underline"
+          aria-label={`Edit lead ${lead.companyName || lead.srNo}`}
+        >
+          {lead.companyName || "—"}
+        </button>
+      ),
     },
     {
       key: "contactName",

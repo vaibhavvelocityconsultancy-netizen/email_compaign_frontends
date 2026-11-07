@@ -308,7 +308,16 @@ function SequencesPage() {
     {
       key: "name",
       header: "Sequence",
-      cell: (sequence) => <span className="font-medium">{sequence.name}</span>,
+      cell: (sequence) => (
+        <button
+          type="button"
+          onClick={() => openEdit(sequence)}
+          className="text-left font-medium hover:text-brand hover:underline"
+          aria-label={`Edit sequence ${sequence.name}`}
+        >
+          {sequence.name}
+        </button>
+      ),
     },
     {
       key: "description",

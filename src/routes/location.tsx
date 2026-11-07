@@ -143,7 +143,7 @@ function LocationPage() {
   /* Columns */
   const countryColumns = React.useMemo<Column<Country>[]>(
     () => [
-      { key: "name", header: "Country", filterable: false, cell: (r) => <span className="font-medium">{r.name}</span> },
+      { key: "name", header: "Country", filterable: false, cell: (r) => <button type="button" className="text-left font-medium hover:text-brand hover:underline" onClick={() => openEdit(r)} aria-label={`Edit country ${r.name}`}>{r.name}</button> },
       { key: "code", header: "Code", filterable: false, cell: (r) => <span className="font-mono text-xs">{r.code || "—"}</span> },
       {
         key: "states",
@@ -161,7 +161,7 @@ function LocationPage() {
 
   const stateColumns = React.useMemo<Column<State>[]>(
     () => [
-      { key: "name", header: "State", filterable: false, cell: (r) => <span className="font-medium">{r.name}</span> },
+      { key: "name", header: "State", filterable: false, cell: (r) => <button type="button" className="text-left font-medium hover:text-brand hover:underline" onClick={() => openEdit(r)} aria-label={`Edit state ${r.name}`}>{r.name}</button> },
       {
         key: "country",
         header: "Country",
@@ -184,7 +184,7 @@ function LocationPage() {
 
   const cityColumns = React.useMemo<Column<City>[]>(
     () => [
-      { key: "name", header: "City", filterable: false, cell: (r) => <span className="font-medium">{r.name}</span> },
+      { key: "name", header: "City", filterable: false, cell: (r) => <button type="button" className="text-left font-medium hover:text-brand hover:underline" onClick={() => openEdit(r)} aria-label={`Edit city ${r.name}`}>{r.name}</button> },
       {
         key: "state",
         header: "State",

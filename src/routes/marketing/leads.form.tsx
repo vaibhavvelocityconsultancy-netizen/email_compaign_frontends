@@ -739,10 +739,9 @@ function LeadFormPage() {
                 className={controlClass}
               />
             </Field>
-            <Field label="Mobile" required>
+            <Field label="Mobile">
               <input
                 type="tel"
-                required
                 autoComplete="tel"
                 inputMode="tel"
                 value={form.contact_mobile}
