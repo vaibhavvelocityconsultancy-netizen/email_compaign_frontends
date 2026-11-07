@@ -1,5 +1,18 @@
-const configuredApiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/+$/, "");
-const apiBase = configuredApiBase || "/api";
+const configuredApiBase = (
+  Reflect.get(import.meta.env, "VITE_API_BASE_URL") as string | undefined
+)?.trim().replace(/\/+$/, "");
+
+export function isLocalFrontend(): boolean {
+  if (typeof window === "undefined") return false;
+  const hostname = window.location.hostname.toLowerCase();
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname.endsWith(".localhost");
+}
+
+export function getApiBase(): string {
+  return isLocalFrontend() ? "/api" : configuredApiBase || "/api";
+}
+
+const apiBase = getApiBase();
 const accessTokenKey = "vantage.access";
 const refreshTokenKey = "vantage.refresh";
 
@@ -9,6 +22,7 @@ export interface AuthUser {
   email: string;
   first_name: string;
   last_name: string;
+  is_superuser: boolean;
 }
 
 interface AuthResponse {
@@ -67,6 +81,7 @@ export type LogStatus =
 export interface Lead {
   id: string;
   srNo: number;
+  unsubscribed: boolean;
   enquiryFor: string;
   enquiryDate: string;
   companyId: number | null;
@@ -77,6 +92,8 @@ export interface Lead {
   companyPincode: string;
   companyCountry: string;
   companyGstNumber: string;
+  categoryId: number | null;
+  categoryName: string;
   contactId: number | null;
   contactName: string;
   contactDesignation: string;
@@ -108,7 +125,13 @@ export interface LeadInput {
   status: string;
   followup_date: string | null;
   followup_remarks: string;
-  is_opportunity: boolean;
+  category: number | null;
+}
+
+export interface LeadCategory {
+  id: number;
+  name: string;
+  created_at: string;
 }
 
 export type OpportunityStatus =
@@ -183,9 +206,12 @@ export interface MessageTemplate {
   id: string;
   channel: Channel;
   name: string;
+  categoryId: number | null;
+  categoryName: string;
   subject: string;
   body: string;
   signature: string;
+  signatureProfileId?: string | null;
   logoName?: string;
   attachmentName?: string;
   waTemplateName?: string;
@@ -202,6 +228,7 @@ export interface SequenceStep {
   templateId: string;
   delayDays: number;
   delayMinutes: number;
+  sendTime: string;
 }
 
 export interface Sequence {
@@ -218,18 +245,24 @@ export interface SequenceInput {
     templateId: string;
     delayDays: number;
     delayMinutes: number;
+    sendTime: string;
   }>;
 }
 
 export interface Campaign {
   id: string;
   name: string;
+  categoryId: string;
   sequenceId: string;
+  replyToEmail: string;
   leadIds: string[];
-  enquiryDateFrom?: string | null;
-  enquiryDateTo?: string | null;
   status: CampaignStatus;
   createdAt: string;
+}
+
+export interface AutomaticEmailResult {
+  sent: number;
+  failed: number;
 }
 
 export interface CampaignLead {
@@ -255,8 +288,21 @@ export interface EmailLog {
   error?: string;
 }
 
+export interface InboundReply {
+  id: number;
+  status: LogStatus | "unmatched";
+  sender_email: string;
+  recipient_email?: string;
+  subject?: string;
+  body_plain?: string;
+  received_at: string;
+  lead: { id: number; name: string; email: string | null } | null;
+  campaign: { id: number; name: string } | null;
+}
+
 interface ApiLead {
   sr_no: number;
+  unsubscribed: boolean;
   company: number | null;
   contact: number | null;
   company_name: string;
@@ -266,6 +312,8 @@ interface ApiLead {
   company_pincode: string;
   company_country: string;
   company_gst_number: string;
+  category: number | null;
+  category_name: string;
   contact_name: string;
   contact_designation: string;
   contact_mobile: string;
@@ -284,9 +332,12 @@ interface ApiTemplate {
   id: number;
   channel: Channel;
   name: string;
+  category: number | null;
+  category_name: string;
   subject: string;
   body: string;
   signature: string;
+  signature_profile: number | null;
   logo: string | null;
   attachment: string | null;
   wa_template_name: string;
@@ -308,16 +359,19 @@ interface ApiSequenceStep {
   template: number;
   delay_days: number;
   delay_minutes: number;
+  send_time: string | null;
 }
 
 interface ApiBatch {
   id: number;
   name: string;
-  sequence: number;
-  enquiry_date_from: string | null;
-  enquiry_date_to: string | null;
+  category: number | null;
+  category_name: string;
+  sequence: number | null;
+  reply_to_email: string;
   status: CampaignStatus;
   created_at: string;
+  automatic_email?: AutomaticEmailResult;
 }
 
 interface ApiBatchLead {
@@ -344,6 +398,11 @@ interface ApiEmailLog {
   error: string;
 }
 
+interface SendNowResponse {
+  sent: number;
+  failed: number;
+}
+
 interface ApiLeadsResponse {
   count: number;
   results: ApiLead[];
@@ -354,6 +413,7 @@ interface ApiImportResponse {
   total_rows: number;
   duplicates: number;
   invalid: number;
+  row_errors?: Array<{ row: number; errors: Record<string, string[]> }>;
 }
 
 function makeApiUrl(path: string): URL {
@@ -485,6 +545,7 @@ function mapLead(lead: ApiLead): Lead {
   return {
     id: String(lead.sr_no),
     srNo: lead.sr_no,
+    unsubscribed: lead.unsubscribed,
     enquiryFor: lead.enquiry_for,
     enquiryDate: lead.enquiry_date,
     companyId: lead.company,
@@ -495,6 +556,8 @@ function mapLead(lead: ApiLead): Lead {
     companyPincode: lead.company_pincode,
     companyCountry: lead.company_country,
     companyGstNumber: lead.company_gst_number,
+    categoryId: lead.category,
+    categoryName: lead.category_name,
     contactId: lead.contact,
     contactName: lead.contact_name,
     contactDesignation: lead.contact_designation,
@@ -516,9 +579,12 @@ function mapTemplate(template: ApiTemplate): MessageTemplate {
     id: String(template.id),
     channel: template.channel ?? "email",
     name: template.name,
+    categoryId: template.category,
+    categoryName: template.category_name,
     subject: template.subject,
     body: template.body,
     signature: template.signature,
+    signatureProfileId: template.signature_profile == null ? null : String(template.signature_profile),
     ...(logoName ? { logoName } : {}),
     ...(attachmentName ? { attachmentName } : {}),
     waTemplateName: template.wa_template_name,
@@ -542,6 +608,17 @@ export async function getLeadOptions(): Promise<LeadOptionsResponse> {
   return request<LeadOptionsResponse>("/lead-options/");
 }
 
+export function getLeadCategories(): Promise<LeadCategory[]> {
+  return request<LeadCategory[]>("/lead-categories/");
+}
+
+export function createLeadCategory(name: string): Promise<LeadCategory> {
+  return request<LeadCategory>("/lead-categories/", {
+    method: "POST",
+    body: JSON.stringify({ name }),
+  });
+}
+
 export async function createLead(data: LeadInput): Promise<Lead> {
   const lead = await request<ApiLead>("/leads/", {
     method: "POST",
@@ -556,6 +633,24 @@ export async function updateLead(id: string, data: LeadInput): Promise<Lead> {
     body: JSON.stringify(data),
   });
   return mapLead(lead);
+}
+
+export async function updateLeadStatus(id: string, status: LeadStatus): Promise<Lead> {
+  const lead = await request<ApiLead>(`/leads/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify({ status: status.toUpperCase() }),
+  });
+  return mapLead(lead);
+}
+
+export async function bulkUpdateLeads(
+  ids: Array<string | number>,
+  updates: Partial<LeadInput>,
+): Promise<{ updated: number }> {
+  return request<{ updated: number }>("/leads/bulk-update/", {
+    method: "POST",
+    body: JSON.stringify({ ids, updates }),
+  });
 }
 
 export async function deleteLead(id: string): Promise<void> {
@@ -644,14 +739,31 @@ export async function importLeads(file: File): Promise<ApiImportResponse> {
   return request<ApiImportResponse>("/leads/import-csv/", { method: "POST", body: form });
 }
 
+export async function createSampleLeads(): Promise<{ created: number; existing: number }> {
+  return request<{ created: number; existing: number }>("/leads/sample-data/", {
+    method: "POST",
+  });
+}
+
 export async function getTemplates(): Promise<MessageTemplate[]> {
   const templates = await request<ApiTemplate[]>("/email-templates/");
   return templates.map(mapTemplate);
 }
 
+export interface EmailSignature {
+  id: string;
+  name: string;
+  text: string;
+  logoUrl?: string;
+  logoName?: string;
+  isDefault: boolean;
+}
+
 export interface TemplateInput {
+  signatureId?: string | null;
   channel: Channel;
   name: string;
+  categoryId?: number | null;
   subject: string;
   body: string;
   signature: string;
@@ -665,9 +777,13 @@ function templateForm(data: TemplateInput): FormData {
   const form = new FormData();
   form.append("channel", data.channel);
   form.append("name", data.name);
+  if (data.categoryId !== undefined) {
+    form.append("category", data.categoryId === null ? "" : String(data.categoryId));
+  }
   form.append("subject", data.subject);
   form.append("body", data.body);
   form.append("signature", data.signature);
+  if (data.signatureId !== undefined) form.append("signature_profile", data.signatureId || "");
   form.append("wa_template_name", data.waTemplateName ?? "");
   form.append("wa_language", data.waLanguage ?? "");
   if (data.logo) form.append("logo", data.logo);
@@ -695,6 +811,45 @@ export async function deleteTemplate(id: string): Promise<void> {
   await request<void>(`/email-templates/${id}/`, { method: "DELETE" });
 }
 
+export async function getEmailSignatures(): Promise<EmailSignature[]> {
+  const signatures = await request<Array<{ id: number; name: string; text: string; logo: string | null; is_default: boolean }>>("/email-signatures/");
+  return signatures.map((signature) => {
+    const logoName = fileName(signature.logo);
+    return {
+      id: String(signature.id),
+      name: signature.name,
+      text: signature.text,
+      logoUrl: signature.logo || undefined,
+      ...(logoName ? { logoName } : {}),
+      isDefault: signature.is_default,
+    };
+  });
+}
+
+export async function saveEmailSignature(
+  id: string | null,
+  data: { name: string; text: string; logo?: File; isDefault: boolean },
+): Promise<EmailSignature> {
+  const form = new FormData();
+  form.append("name", data.name);
+  form.append("text", data.text);
+  form.append("is_default", String(data.isDefault));
+  if (data.logo) form.append("logo", data.logo);
+  const signature = await request<{ id: number; name: string; text: string; logo: string | null; is_default: boolean }>(
+    id ? `/email-signatures/${id}/` : "/email-signatures/",
+    { method: id ? "PATCH" : "POST", body: form },
+  );
+  return {
+    id: String(signature.id), name: signature.name, text: signature.text,
+    logoUrl: signature.logo || undefined, logoName: fileName(signature.logo),
+    isDefault: signature.is_default,
+  };
+}
+
+export async function deleteEmailSignature(id: string): Promise<void> {
+  await request<void>(`/email-signatures/${id}/`, { method: "DELETE" });
+}
+
 export async function getSequences(): Promise<Sequence[]> {
   const [sequences, steps] = await Promise.all([
     request<ApiSequence[]>("/email-sequences/"),
@@ -712,6 +867,7 @@ export async function getSequences(): Promise<Sequence[]> {
         templateId: String(step.template),
         delayDays: step.delay_days,
         delayMinutes: step.delay_minutes,
+        sendTime: step.send_time ?? "",
       })),
   }));
 }
@@ -726,6 +882,7 @@ function mapSequence(sequence: ApiSequence & { steps?: ApiSequenceStep[] }): Seq
       templateId: String(step.template),
       delayDays: step.delay_days,
       delayMinutes: step.delay_minutes,
+      sendTime: step.send_time ?? "",
     })),
   };
 }
@@ -739,6 +896,7 @@ function sequencePayload(data: SequenceInput) {
       template: Number(step.templateId),
       delay_days: step.delayDays,
       delay_minutes: step.delayMinutes,
+      send_time: step.sendTime || null,
     })),
   };
 }
@@ -768,10 +926,10 @@ async function mapBatch(batch: ApiBatch): Promise<Campaign> {
   return {
     id: String(batch.id),
     name: batch.name,
-    sequenceId: String(batch.sequence),
+    categoryId: batch.category === null ? "" : String(batch.category),
+    sequenceId: batch.sequence === null ? "" : String(batch.sequence),
+    replyToEmail: batch.reply_to_email,
     leadIds: batchLeads.map((lead) => String(lead.lead)),
-    enquiryDateFrom: batch.enquiry_date_from,
-    enquiryDateTo: batch.enquiry_date_to,
     status: batch.status,
     createdAt: batch.created_at,
   };
@@ -782,29 +940,51 @@ export async function getBatches(): Promise<Campaign[]> {
   return Promise.all(batches.map(mapBatch));
 }
 
-export async function createBatch(data: { name: string; sequenceId: string; leadIds: string[]; enquiryDateFrom?: string; enquiryDateTo?: string }): Promise<Campaign> {
-  const batch = await request<ApiBatch>("/batches/", {
+export async function createBatch(data: {
+  name: string;
+  categoryId?: string;
+  sequenceId?: string;
+  templateId?: string;
+  leadIds: string[];
+}): Promise<{ campaign: Campaign; automaticEmail?: AutomaticEmailResult }> {
+  const response = await request<ApiBatch>("/batches/", {
     method: "POST",
     body: JSON.stringify({
       name: data.name,
-      sequence: Number(data.sequenceId),
+      ...(data.categoryId ? { category: Number(data.categoryId) } : {}),
+      ...(data.sequenceId ? { sequence: Number(data.sequenceId) } : {}),
+      ...(data.templateId ? { template: Number(data.templateId) } : {}),
       lead_ids: data.leadIds.map(Number),
-      enquiry_date_from: data.enquiryDateFrom || null,
-      enquiry_date_to: data.enquiryDateTo || null,
     }),
   });
-  return mapBatch(batch);
+  return {
+    campaign: await mapBatch(response),
+    ...(response.automatic_email
+      ? { automaticEmail: response.automatic_email }
+      : {}),
+  };
 }
 
-export async function updateBatch(id: string, data: { name: string; sequenceId: string; leadIds: string[]; enquiryDateFrom?: string; enquiryDateTo?: string }): Promise<Campaign> {
+export async function updateBatch(
+  id: string,
+  data: {
+    name: string;
+    categoryId?: string | null;
+    sequenceId?: string | null;
+    leadIds: string[];
+  },
+): Promise<Campaign> {
   const batch = await request<ApiBatch>(`/batches/${id}/`, {
     method: "PATCH",
     body: JSON.stringify({
       name: data.name,
-      sequence: Number(data.sequenceId),
+      ...(data.categoryId !== undefined
+        ? { category: data.categoryId ? Number(data.categoryId) : null }
+        : {}),
+      ...(data.sequenceId !== undefined
+        ? { sequence: data.sequenceId ? Number(data.sequenceId) : null }
+        : {}),
       lead_ids: data.leadIds.map(Number),
-      enquiry_date_from: data.enquiryDateFrom || null,
-      enquiry_date_to: data.enquiryDateTo || null,
     }),
   });
   return mapBatch(batch);
@@ -843,10 +1023,68 @@ export async function getEmailLogs(): Promise<EmailLog[]> {
   }));
 }
 
+export async function getInboundReplies(): Promise<InboundReply[]> {
+  return request<InboundReply[]>("/inbound-replies/");
+}
+
+export async function sendInboundReply(id: number, subject: string, body: string): Promise<{ detail: string }> {
+  return request<{ detail: string }>(`/inbound-replies/${id}/`, {
+    method: "POST",
+    body: JSON.stringify({ subject, body }),
+  });
+}
+
+export async function getRecentEmailLogs(): Promise<EmailLog[]> {
+  const logs = await request<ApiEmailLog[]>("/email-logs/?limit=50");
+  return logs.map((log) => ({
+    id: String(log.id),
+    batchId: String(log.batch),
+    leadId: String(log.lead),
+    step: log.step_number,
+    status: log.status,
+    sentAt: log.sent_at,
+    subject: log.subject,
+    templateName: log.template_name ?? "",
+    ...(log.error ? { error: log.error } : {}),
+  }));
+}
+
 export async function pauseBatch(id: string): Promise<void> {
   await request<void>(`/batches/${id}/pause/`, { method: "PATCH" });
 }
 
-export async function resumeBatch(id: string): Promise<void> {
-  await request<void>(`/batches/${id}/resume/`, { method: "PATCH" });
+export async function resumeBatch(
+  id: string,
+): Promise<{ status: CampaignStatus; automaticEmail?: AutomaticEmailResult }> {
+  const response = await request<{
+    status: CampaignStatus;
+    automatic_email?: AutomaticEmailResult;
+  }>(`/batches/${id}/resume/`, { method: "PATCH" });
+  return {
+    status: response.status,
+    ...(response.automatic_email
+      ? { automaticEmail: response.automatic_email }
+      : {}),
+  };
+}
+
+export async function sendBatchNow(
+  id: string,
+  data: { templateId: string },
+): Promise<SendNowResponse> {
+  return request<SendNowResponse>(`/batches/${id}/send-now/`, {
+    method: "POST",
+    body: JSON.stringify({
+      template: Number(data.templateId),
+    }),
+  });
+}
+
+export async function sendBatchLeadNow(
+  batchId: string,
+  leadId: string,
+): Promise<SendNowResponse> {
+  return request<SendNowResponse>(`/batches/${batchId}/leads/${leadId}/send-now/`, {
+    method: "POST",
+  });
 }

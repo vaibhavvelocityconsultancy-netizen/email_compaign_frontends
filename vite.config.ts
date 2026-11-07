@@ -1,3 +1,4 @@
+
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
@@ -12,12 +13,13 @@ export default defineConfig({
       },
     },
   },
+
   tanstackStart: {
-    server: { entry: "server" },
-    router: {
-      basepath: "/vc_email_crm",
+    server: {
+      entry: "server",
     },
   },
+
   nitro: {
     preset: "node-server",
   },

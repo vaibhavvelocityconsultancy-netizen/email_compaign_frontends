@@ -1,3 +1,4 @@
+import { ModuleHero } from "@/components/ModuleHero";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import * as React from "react";
 import { Pencil, Plus, Repeat, Trash2 } from "lucide-react";
@@ -207,13 +208,17 @@ export default function TasksPage() {
   ];
 
   return (
-    <div className="space-y-4 p-4 sm:p-6">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <h1 className="text-xl font-semibold">Tasks</h1>
-          <p className="text-sm text-muted-foreground">
-            Follow-ups and reminders across leads, opportunities and quotations.
-          </p>
+    <div className="space-y-5 p-4 sm:p-6">
+      <div className="rounded-2xl border border-line bg-surface/70 p-5 sm:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="font-mono text-[11px] font-semibold tracking-[0.18em] text-brand">WORK QUEUE</div>
+            <ModuleHero eyebrow="Operations workspace" title="Tasks" description="Organize follow-ups, ownership, and deadlines without losing momentum." icon={<span aria-hidden="true">•</span>} />
+            <p className="mt-2 text-sm text-muted-foreground">
+              Follow-ups and reminders across leads, opportunities and quotations.
+            </p>
+          </div>
+          <div className="rounded-full border border-line bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground">{counts.all} total</div>
         </div>
       </div>
 
@@ -264,9 +269,9 @@ export default function TasksPage() {
         selectionResetKey={filter}
         getRowClassName={(r) => (r.followup_date < today && isOpen(r) ? "bg-red-50/60" : "")}
         toolbarActions={
-          <Button
+            <Button
             size="sm"
-            className="h-9 gap-1.5"
+            className="h-9 gap-1.5 rounded-lg px-4 shadow-sm"
             onClick={() => navigate({ to: "/tasks/form", search: { taskId: undefined } })}
           >
             <Plus className="size-4" />

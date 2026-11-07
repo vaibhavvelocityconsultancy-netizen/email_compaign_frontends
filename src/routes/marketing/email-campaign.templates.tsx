@@ -3,13 +3,19 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { toast } from "sonner";
-import { Plus } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { z } from "zod";
 import {
   getTemplates,
   createTemplate,
   updateTemplate,
   deleteTemplate,
+  getEmailSignatures,
+  saveEmailSignature,
+  deleteEmailSignature,
+  type EmailSignature,
+  getLeadCategories,
+  createLeadCategory,
   type MessageTemplate,
   type Channel,
 } from "../../lib/api";
@@ -19,6 +25,7 @@ import { DataTable, type Column } from "../../components/common/DataTable";
 import { EntityForm, fieldPresets, type FormFieldConfig } from "../../components/common/EntityForm";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/marketing/email-campaign/templates")({
   head: () => ({
@@ -41,8 +48,10 @@ const templateSchema = z
   .object({
     channel: z.enum(["email", "whatsapp"]),
     name: z.string().trim().min(1, "Name is required"),
+    categoryId: z.string().optional(),
     subject: z.string().optional(),
     body: z.string().trim().min(1, "Body is required"),
+    signatureId: z.string().optional(),
     signature: z.string().optional(),
     logo: z.any().optional(),
     attachment: z.any().optional(),
@@ -67,6 +76,13 @@ const pickNewFile = (value: unknown): File | undefined =>
 const waStatusClass = (s?: string) =>
   s === "approved" ? "text-emerald-600" : s === "rejected" ? "text-bad" : "text-muted-foreground";
 
+const formatEmailBody = (body: string) =>
+  body
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s*>\s?/, ""))
+    .join("\n")
+    .trim();
+
 // `hidden` receives the form; read the live channel value from it
 type HiddenForm = UseFormReturn<Record<string, unknown>>;
 const hideForWhatsApp = (form: HiddenForm) => form.watch("channel") === "whatsapp";
@@ -75,12 +91,23 @@ const hideForEmail = (form: HiddenForm) => form.watch("channel") !== "whatsapp";
 function TemplatesPage() {
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({ queryKey: ["templates"], queryFn: getTemplates });
+  const { data: categories = [] } = useQuery({ queryKey: ["lead-categories"], queryFn: getLeadCategories });
+  const { data: signatures = [] } = useQuery({ queryKey: ["email-signatures"], queryFn: getEmailSignatures });
 
   const [tab, setTab] = useState<Channel>("email");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<MessageTemplate | null>(null);
   const [preview, setPreview] = useState<MessageTemplate | null>(null);
   const [toDelete, setToDelete] = useState<MessageTemplate | null>(null);
+  const [categoryCreateOpen, setCategoryCreateOpen] = useState(false);
+  const [categoryNameDraft, setCategoryNameDraft] = useState("");
+  const [signatureManagerOpen, setSignatureManagerOpen] = useState(false);
+  const [editingSignature, setEditingSignature] = useState<EmailSignature | null>(null);
+  const [signatureName, setSignatureName] = useState("");
+  const [signatureText, setSignatureText] = useState("");
+  const [signatureLogo, setSignatureLogo] = useState<File | undefined>();
+  const [signatureIsDefault, setSignatureIsDefault] = useState(false);
+  const [signatureToDelete, setSignatureToDelete] = useState<EmailSignature | null>(null);
 
   const all = data ?? [];
   const filtered = useMemo(() => all.filter((t) => (t.channel ?? "email") === tab), [all, tab]);
@@ -110,9 +137,11 @@ function TemplatesPage() {
       const payload = {
         channel: values.channel,
         name: values.name,
+        categoryId: values.categoryId && values.categoryId !== "none" ? Number(values.categoryId) : null,
         body: values.body,
         subject: isEmail ? values.subject ?? "" : "",
         signature: isEmail ? values.signature ?? "" : "",
+        signatureId: isEmail && values.signatureId && values.signatureId !== "none" ? values.signatureId : null,
         waTemplateName: isEmail ? "" : values.waTemplateName ?? "",
         waLanguage: isEmail ? "" : values.waLanguage || "en",
         ...(logo ? { logo } : {}),
@@ -129,6 +158,17 @@ function TemplatesPage() {
     onError: (e: Error) => toast.error(e.message || "Could not save template"),
   });
 
+  const addCategory = useMutation({
+    mutationFn: () => createLeadCategory(categoryNameDraft.trim()),
+    onSuccess: async (category) => {
+      await qc.invalidateQueries({ queryKey: ["lead-categories"] });
+      setCategoryNameDraft("");
+      setCategoryCreateOpen(false);
+      toast.success(`Category "${category.name}" added. Select it in the template form.`);
+    },
+    onError: (error: Error) => toast.error(error.message || "Could not add category"),
+  });
+
   const remove = useMutation({
     mutationFn: (id: string) => deleteTemplate(id),
     onSuccess: () => {
@@ -138,6 +178,40 @@ function TemplatesPage() {
     },
     onError: (e: Error) => toast.error(e.message || "Could not delete template"),
   });
+
+  const signatureSave = useMutation({
+    mutationFn: () => saveEmailSignature(editingSignature?.id ?? null, {
+      name: signatureName.trim(), text: signatureText, logo: signatureLogo, isDefault: signatureIsDefault,
+    }),
+    onSuccess: async (saved) => {
+      await qc.invalidateQueries({ queryKey: ["email-signatures"] });
+      setEditingSignature(null);
+      setSignatureName("");
+      setSignatureText("");
+      setSignatureLogo(undefined);
+      setSignatureIsDefault(false);
+      toast.success(saved.isDefault ? "Signature saved and set as default" : "Signature saved");
+    },
+    onError: (error: Error) => toast.error(error.message || "Could not save signature"),
+  });
+
+  const signatureRemove = useMutation({
+    mutationFn: (id: string) => deleteEmailSignature(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["email-signatures"] });
+      setSignatureToDelete(null);
+      toast.success("Signature deleted");
+    },
+    onError: (error: Error) => toast.error(error.message || "Could not delete signature"),
+  });
+
+  const startSignatureEdit = (signature?: EmailSignature) => {
+    setEditingSignature(signature ?? null);
+    setSignatureName(signature?.name ?? "");
+    setSignatureText(signature?.text ?? "");
+    setSignatureLogo(undefined);
+    setSignatureIsDefault(signature?.isDefault ?? signatures.length === 0);
+  };
 
   // --- Table columns (differ per tab) ---
   const columns: Column<MessageTemplate>[] = useMemo(() => {
@@ -174,6 +248,7 @@ function TemplatesPage() {
     if (tab === "email") {
       return [
         nameCol,
+        { key: "categoryName", header: "Category", cell: (t) => <span className="text-muted-foreground">{t.categoryName || "Uncategorized"}</span> },
         { key: "subject", header: "Subject", cell: (t) => <span className="text-muted-foreground">{t.subject}</span> },
         createdCol,
         actionsCol,
@@ -216,6 +291,18 @@ function TemplatesPage() {
         description: editing ? "Channel can't be changed after creation." : undefined,
       }),
       fieldPresets.text("name", "Name", { required: true, placeholder: "Follow Up Day 0", colSpan: 2 }),
+      {
+        ...fieldPresets.select("categoryId", "Category", [
+          { value: "none", label: "Uncategorized" },
+          ...categories.map((category) => ({ value: String(category.id), label: category.name })),
+        ]),
+        headerActions: (
+          <Button type="button" size="sm" variant="ghost" className="h-7 px-2" onClick={() => setCategoryCreateOpen(true)}>
+            <Plus className="size-3.5" /> Add
+          </Button>
+        ),
+        hidden: hideForWhatsApp,
+      },
 
       // Email only
       {
@@ -244,16 +331,21 @@ function TemplatesPage() {
 
       // Email only
       {
-        ...fieldPresets.textarea("signature", "Signature", {
-          rows: 3,
-          placeholder: "Best regards,\nThe Sales Team",
-        }),
-        hidden: hideForWhatsApp,
-      },
-      {
-        ...fieldPresets.file("logo", "Logo", {
-          description: editing?.logoName ? `Current: ${editing.logoName}` : undefined,
-        }),
+        ...fieldPresets.select("signatureId", "Signature", [
+          { value: "none", label: "No signature" },
+          ...signatures.map((signature) => ({
+            value: signature.id,
+            label: `${signature.name}${signature.isDefault ? " (Default)" : ""}`,
+          })),
+        ]),
+        headerActions: (
+          <Button type="button" size="sm" variant="ghost" className="h-7 px-2" onClick={() => {
+            startSignatureEdit();
+            setSignatureManagerOpen(true);
+          }}>
+            Manage
+          </Button>
+        ),
         hidden: hideForWhatsApp,
       },
 
@@ -262,7 +354,7 @@ function TemplatesPage() {
         description: editing?.attachmentName ? `Current: ${editing.attachmentName}` : undefined,
       }),
     ],
-    [editing, tab],
+    [categories, editing, signatures, tab],
   );
 
   const defaultValues = useMemo<Partial<TemplateFormValues>>(
@@ -271,24 +363,36 @@ function TemplatesPage() {
         ? {
             channel: editing.channel ?? "email",
             name: editing.name,
+            categoryId: editing.categoryId == null ? "none" : String(editing.categoryId),
             subject: editing.subject,
             body: editing.body,
             signature: editing.signature,
+            signatureId: editing.signatureProfileId ?? "none",
             waTemplateName: editing.waTemplateName,
             waLanguage: editing.waLanguage || "en",
           }
-        : { channel: tab, waLanguage: "en" },
-    [editing, tab],
+        : {
+            channel: tab,
+            categoryId: "none",
+            signatureId: signatures.find((signature) => signature.isDefault)?.id ?? "none",
+            waLanguage: "en",
+          },
+    [categories, editing, signatures, tab],
   );
 
   const tabLabel = tab === "email" ? "email" : "WhatsApp";
 
   return (
     <div className="space-y-6">
-      <div className="rise flex flex-wrap items-end justify-between gap-3">
+      <div className="rise flex flex-wrap items-end justify-between gap-3 rounded-xl border border-line bg-card/60 p-5 shadow-sm">
         <div>
-          <div className="font-mono text-[11px] tracking-wide text-muted-foreground">CONTENT</div>
+          <div className="font-mono text-[11px] tracking-[0.18em] text-muted-foreground">CONTENT LIBRARY</div>
           <h1 className="mt-1 font-display text-3xl font-bold tracking-tight">Message Templates</h1>
+          <p className="mt-2 max-w-xl text-sm text-muted-foreground">Create reusable messages for campaigns and keep every send consistent.</p>
+        </div>
+        <div className="rounded-lg border border-line bg-background/60 px-3 py-2 text-right">
+          <div className="font-mono text-lg font-semibold">{counts.email + counts.whatsapp}</div>
+          <div className="text-[11px] text-muted-foreground">saved templates</div>
         </div>
       </div>
 
@@ -317,11 +421,11 @@ function TemplatesPage() {
               ? "Loading templates…"
               : `No ${tabLabel} templates yet. Create your first one to build a sequence.`
           }
-          toolbarActions={
+          toolbarActions={(
             <Button size="sm" className="h-9 gap-1.5" onClick={openCreate}>
               <Plus className="size-4" /> Create Template
             </Button>
-          }
+          )}
         />
       </div>
 
@@ -338,6 +442,81 @@ function TemplatesPage() {
         size="lg"
         onSubmit={(values) => save.mutate(values)}
       />
+
+      <Modal
+        open={categoryCreateOpen}
+        onClose={() => setCategoryCreateOpen(false)}
+        title="Add category"
+        eyebrow="TEMPLATE CATEGORY"
+      >
+        <div className="space-y-4 p-5">
+          <p className="text-sm text-muted-foreground">The new category will also be available for leads, campaigns, and CSV imports.</p>
+          <form
+            className="flex gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (categoryNameDraft.trim()) addCategory.mutate();
+            }}
+          >
+            <input
+              value={categoryNameDraft}
+              onChange={(event) => setCategoryNameDraft(event.target.value)}
+              placeholder="e.g. Doctor"
+              className="h-10 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm"
+            />
+            <Button type="submit" disabled={!categoryNameDraft.trim() || addCategory.isPending}>
+              {addCategory.isPending ? "Adding…" : "Add category"}
+            </Button>
+          </form>
+        </div>
+      </Modal>
+
+      <Dialog
+        open={signatureManagerOpen}
+        onOpenChange={(open) => {
+          setSignatureManagerOpen(open);
+          if (!open) setEditingSignature(null);
+        }}
+      >
+        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Email signatures</DialogTitle>
+          </DialogHeader>
+        <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium">Saved signatures</div>
+              <Button size="sm" variant="outline" onClick={() => startSignatureEdit()}><Plus className="size-4" /> New signature</Button>
+            </div>
+            {signatures.length === 0 && <p className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">No saved signatures yet.</p>}
+            {signatures.map((signature) => (
+              <div key={signature.id} className="flex items-start gap-3 rounded-md border border-line p-3">
+                {signature.logoUrl && <img src={signature.logoUrl} alt="" className="size-12 rounded object-contain" />}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 font-medium">
+                    {signature.name}
+                    {signature.isDefault && <span className="rounded-full bg-brand/10 px-2 py-0.5 text-[10px] text-brand">Default</span>}
+                  </div>
+                  <div className="mt-1 line-clamp-2 whitespace-pre-wrap text-xs text-muted-foreground">{signature.text}</div>
+                </div>
+                <Button type="button" variant="ghost" size="icon" onClick={() => startSignatureEdit(signature)} aria-label="Edit signature"><Pencil className="size-4" /></Button>
+                <Button type="button" variant="ghost" size="icon" onClick={() => setSignatureToDelete(signature)} aria-label="Delete signature"><Trash2 className="size-4 text-bad" /></Button>
+              </div>
+            ))}
+          </div>
+          <form className="space-y-3 rounded-md border border-line p-4" onSubmit={(event) => { event.preventDefault(); if (signatureName.trim()) signatureSave.mutate(); }}>
+            <div className="font-medium">{editingSignature ? "Edit signature" : "Create signature"}</div>
+            <input className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm" value={signatureName} onChange={(e) => setSignatureName(e.target.value)} placeholder="Signature name" required />
+            <textarea className="min-h-28 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={signatureText} onChange={(e) => setSignatureText(e.target.value)} placeholder="Best regards,&#10;The Sales Team" />
+            <input className="w-full text-sm" type="file" accept="image/*" onChange={(e) => setSignatureLogo(e.target.files?.[0])} />
+            {editingSignature?.logoName && !signatureLogo && <div className="text-xs text-muted-foreground">Current logo: {editingSignature.logoName}</div>}
+            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={signatureIsDefault} onChange={(e) => setSignatureIsDefault(e.target.checked)} /> Use as default signature</label>
+            <Button type="submit" disabled={!signatureName.trim() || signatureSave.isPending} className="w-full">{signatureSave.isPending ? "Saving…" : "Save signature"}</Button>
+            {editingSignature && <Button type="button" variant="outline" className="w-full" onClick={() => startSignatureEdit()}>Cancel edit</Button>}
+          </form>
+        </div>
+        </DialogContent>
+      </Dialog>
 
       <Modal
         open={!!preview}
@@ -363,13 +542,24 @@ function TemplatesPage() {
               <div className="rounded-xl border border-line bg-background p-5">
                 <div className="font-display text-base font-semibold">{preview.subject}</div>
                 <div className="my-4 h-px bg-line" />
-                <div className="text-sm whitespace-pre-wrap">{preview.body}</div>
+                <div className="text-sm leading-6 whitespace-pre-wrap">
+                  {formatEmailBody(preview.body)}
+                </div>
                 <div className="mt-6 text-sm whitespace-pre-wrap text-muted-foreground">{preview.signature}</div>
               </div>
             )}
           </div>
         )}
       </Modal>
+
+      <ConfirmDialog
+        open={!!signatureToDelete}
+        onClose={() => setSignatureToDelete(null)}
+        onConfirm={() => signatureToDelete && signatureRemove.mutate(signatureToDelete.id)}
+        title="Delete signature"
+        message={`"${signatureToDelete?.name}" will be removed permanently. Templates already using it keep their saved signature.`}
+        loading={signatureRemove.isPending}
+      />
 
       <ConfirmDialog
         open={!!toDelete}

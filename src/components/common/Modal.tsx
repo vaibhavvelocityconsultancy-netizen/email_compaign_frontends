@@ -8,9 +8,10 @@ interface ModalProps {
   eyebrow?: string;
   children: ReactNode;
   wide?: boolean;
+  className?: string;
 }
 
-export function Modal({ open, onClose, title, eyebrow, children, wide }: ModalProps) {
+export function Modal({ open, onClose, title, eyebrow, children, wide, className }: ModalProps) {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -22,7 +23,7 @@ export function Modal({ open, onClose, title, eyebrow, children, wide }: ModalPr
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4"
+      className={`fixed inset-0 z-50 grid place-items-center bg-ink/40 p-4 ${className ?? ""}`}
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
     >
       <div

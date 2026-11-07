@@ -1,9 +1,11 @@
+import { ModuleHero } from "@/components/ModuleHero";
 import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Pencil, Plus, Trash2, Upload } from "lucide-react";
-import { deleteLead, getLeads, importLeads, type Lead } from "../../lib/api";
+import { ChevronDown, Download, Pencil, Plus, Trash2, Upload } from "lucide-react";
+import { bulkUpdateLeads, deleteLead, getLeads, importLeads, updateLeadStatus, type Lead, type LeadStatus, type LeadInput } from "../../lib/api";
+import { downloadLeadCsvTemplate } from "../../lib/lead-csv-template";
 import { DataTable, type Column } from "../../components/common/DataTable";
 import { Modal } from "../../components/common/Modal";
 import { ConfirmDialog } from "../../components/common/ConfirmDialog";
@@ -40,8 +42,56 @@ const LEAD_SOURCES = [
   ["EMAIL_MARKETING", "Email Marketing"],
   ["OTHER", "Other"],
 ] as const;
-const LEAD_STATUSES = ["NEW", "ACTIVE", "JUNK", "HOT", "COLD"] as const;
+const LEAD_STATUSES = ["NEW", "ACTIVE", "JUNK", "HOT", "COLD", "OTHER"] as const;
 const selectCls = "h-9 rounded-lg border border-line bg-surface px-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/20 focus:outline-none";
+
+function displayedLeadStatus(lead: Lead) {
+  return lead.unsubscribed ? "unsubscribed" : lead.status;
+}
+
+function statusLabel(value: string) {
+  return value ? value[0].toUpperCase() + value.slice(1).toLowerCase() : "";
+}
+
+function StatusSelect({
+  value,
+  onChange,
+  disabled,
+  label,
+}: {
+  value: string;
+  onChange: (next: LeadStatus) => void;
+  disabled?: boolean;
+  label: string;
+}) {
+  return (
+    <div
+      className={`relative inline-flex items-center gap-1 rounded-full focus-within:ring-2 focus-within:ring-brand/30 ${
+        disabled ? "opacity-60" : ""
+      }`}
+    >
+      {/* the visible colored badge */}
+      <StatusBadge status={statusLabel(value)} />
+      <ChevronDown className="pointer-events-none size-3.5 text-muted-foreground" />
+
+      {/* invisible select on top, handles the click and change */}
+      <select
+        aria-label={label}
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value as LeadStatus)}
+        className="absolute inset-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+      >
+        {LEAD_STATUSES.map((s) => (
+          <option key={s} value={s.toLowerCase()}>
+            {statusLabel(s)}
+          </option>
+        ))}
+        <option value="unsubscribed">Unsubscribed</option>
+      </select>
+    </div>
+  );
+}
 
 function LeadsPage() {
   const qc = useQueryClient();
@@ -52,12 +102,46 @@ function LeadsPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Lead | null>(null);
+  const [selectedLeads, setSelectedLeads] = useState<Lead[]>([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [bulkFields, setBulkFields] = useState<string[]>([]);
+  const [bulkValues, setBulkValues] = useState<Record<string, string>>({
+    company_name: "",
+    contact_name: "",
+    status: "NEW",
+    source: "OTHER",
+    enquiry_for: "LEAD",
+    enquiry_date: "",
+    followup_date: "",
+    followup_remarks: "",
+  });
+  const [selectionResetKey, setSelectionResetKey] = useState(0);
+
+  const handleSelectionChange = useCallback((selected: Lead[]) => {
+    setSelectedLeads(selected);
+  }, []);
+
+  const updateStatusMut = useMutation({
+    mutationFn: ({ lead, nextStatus }: { lead: Lead; nextStatus: LeadStatus }) =>
+      updateLeadStatus(lead.id, nextStatus),
+    onSuccess: (updatedLead) => {
+      qc.setQueryData<Lead[]>(["leads"], (current) =>
+        current?.map((lead) => lead.id === updatedLead.id ? updatedLead : lead),
+      );
+      toast.success("Lead status updated");
+    },
+    onError: (error: Error) => {
+      void qc.invalidateQueries({ queryKey: ["leads"] });
+      toast.error(error.message || "Unable to update lead status");
+    },
+  });
 
   const sources = useMemo(() => Array.from(new Set((data ?? []).map((l) => l.source))), [data]);
 
   const filtered = useMemo(
     () => (data ?? []).filter((lead) =>
-      (status === "all" || lead.status === status) &&
+      (status === "all" || displayedLeadStatus(lead) === status) &&
       (source === "all" || lead.source === source),
     ),
     [data, status, source],
@@ -69,7 +153,16 @@ function LeadsPage() {
       qc.invalidateQueries({ queryKey: ["leads"] });
       setImportOpen(false);
       setFile(null);
-      toast.success(`Imported ${res.imported} of ${res.total_rows} rows (${res.duplicates} duplicates, ${res.invalid} invalid)`);
+      const summary = `Imported ${res.imported} of ${res.total_rows} rows (${res.duplicates} duplicates, ${res.invalid} invalid)`;
+      const firstError = res.row_errors?.[0];
+      if (firstError) {
+        const details = Object.entries(firstError.errors)
+          .map(([field, messages]) => `${field}: ${messages.join(", ")}`)
+          .join("; ");
+        toast.error(`${summary}. Row ${firstError.row}: ${details}`);
+      } else {
+        toast.success(summary);
+      }
     },
     onError: (e: Error) => toast.error(e.message || "Import failed"),
   });
@@ -79,10 +172,61 @@ function LeadsPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["leads"] });
       setDeleteTarget(null);
+      setSelectedLeads([]);
+      setSelectionResetKey((key) => key + 1);
       toast.success("Lead removed");
     },
     onError: (e: Error) => toast.error(e.message || "Unable to remove lead"),
   });
+
+  const bulkDeleteMut = useMutation({
+    mutationFn: async (leads: Lead[]) =>
+      Promise.allSettled(leads.map((lead) => deleteLead(lead.id))),
+    onSuccess: (results) => {
+      const deleted = results.filter((result) => result.status === "fulfilled").length;
+      const failed = results.length - deleted;
+      void qc.invalidateQueries({ queryKey: ["leads"] });
+      setBulkDeleteOpen(false);
+      setSelectedLeads([]);
+      setSelectionResetKey((key) => key + 1);
+      if (failed) {
+        toast.error(`Deleted ${deleted} leads; ${failed} could not be deleted.`);
+      } else {
+        toast.success(`${deleted} leads permanently deleted.`);
+      }
+    },
+    onError: (error: Error) => toast.error(error.message || "Unable to delete selected leads"),
+  });
+
+  const bulkEditMut = useMutation({
+    mutationFn: (leads: Lead[]) => {
+      const updates: Partial<LeadInput> = {};
+      bulkFields.forEach((field) => {
+        const value = bulkValues[field];
+        if (field === "followup_date" || field === "enquiry_date") {
+          (updates as Record<string, unknown>)[field] = value || null;
+        } else {
+          (updates as Record<string, unknown>)[field] = value;
+        }
+      });
+      return bulkUpdateLeads(leads.map((lead) => lead.srNo), updates);
+    },
+    onSuccess: (result) => {
+      void qc.invalidateQueries({ queryKey: ["leads"] });
+      setBulkEditOpen(false);
+      setBulkFields([]);
+      setSelectedLeads([]);
+      setSelectionResetKey((key) => key + 1);
+      toast.success(`${result.updated} leads updated.`);
+    },
+    onError: (error: Error) => toast.error(error.message || "Unable to update selected leads"),
+  });
+
+  const toggleBulkField = (field: string) => {
+    setBulkFields((current) => current.includes(field)
+      ? current.filter((item) => item !== field)
+      : [...current, field]);
+  };
 
   const openCreate = () => navigate({ to: "/marketing/leads/form", search: { leadId: undefined } });
 
@@ -96,13 +240,33 @@ function LeadsPage() {
     {
       key: "contactName",
       header: "Contact",
-      filterValue: (lead) => lead.contactName,
+      filterValue: (lead) => [lead.contactName, lead.contactMobile].join(" "),
       cell: (lead) => (
         <div>
           <div>{lead.contactName || "—"}</div>
-          {lead.contactMobile && <div className="font-mono text-[11px] text-muted-foreground">{lead.contactMobile}</div>}
+          {lead.contactMobile && (
+            <div className="font-mono text-[11px] text-muted-foreground">
+              {lead.contactMobile}
+            </div>
+          )}
         </div>
       ),
+    },
+    {
+      key: "contactEmail",
+      header: "Email",
+      filterValue: (lead) => lead.contactEmail,
+      cell: (lead) => (
+        <span className="font-mono text-[11px] text-muted-foreground">
+          {lead.contactEmail || "No email"}
+        </span>
+      ),
+    },
+    {
+      key: "categoryName",
+      header: "Category",
+      filterValue: (lead) => lead.categoryName,
+      cell: (lead) => lead.categoryName || "—",
     },
     {
       key: "enquiryDate",
@@ -112,13 +276,6 @@ function LeadsPage() {
       cell: (lead) => <span className="whitespace-nowrap font-mono text-[11px] text-muted-foreground">{new Date(`${lead.enquiryDate}T00:00:00`).toLocaleDateString()}</span>,
     },
     {
-      key: "enquiryFor",
-      header: "Enquiry for",
-      filterValue: (lead) => lead.enquiryFor,
-      cell: (lead) => <span className="font-medium">{lead.enquiryFor}</span>,
-    },
-    
-    {
       key: "source",
       header: "Source",
       filterValue: (lead) => lead.source,
@@ -127,8 +284,17 @@ function LeadsPage() {
     {
       key: "status",
       header: "Status",
-      filterValue: (lead) => lead.status,
-      cell: (lead) => <StatusBadge status={lead.status} />,
+      filterValue: displayedLeadStatus,
+      cell: (lead) => lead.unsubscribed ? (
+        <StatusBadge status="Unsubscribed" />
+      ) : (
+        <StatusSelect
+          value={lead.status}
+          disabled={updateStatusMut.isPending}
+          label={`Change status for ${lead.contactName || lead.companyName}`}
+          onChange={(nextStatus) => updateStatusMut.mutate({ lead, nextStatus })}
+        />
+      ),
     },
     {
       key: "followupDate",
@@ -169,37 +335,47 @@ function LeadsPage() {
         </div>
       ),
     },
-  ], [navigate]);
+  ], [navigate, updateStatusMut]);
 
   return (
     <div className="space-y-6">
-      <div className="rise flex flex-wrap items-end justify-between gap-3">
+      <div className="rise flex flex-col gap-5 rounded-2xl border border-line bg-surface/70 p-5 shadow-sm sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <div className="font-mono text-[11px] tracking-wide text-muted-foreground">AUDIENCE</div>
-          <h1 className="mt-1 font-display text-3xl font-bold tracking-tight">Leads</h1>
+          <div className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-brand">Audience</div>
+          <ModuleHero eyebrow="Marketing pipeline" title="Leads" description="Capture, qualify, and move prospects through your sales pipeline with clarity." icon={<span aria-hidden="true">•</span>} />
+          <p className="mt-1 text-sm text-muted-foreground">Manage prospects, follow-ups, and campaign readiness in one place.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             type="button"
-            onClick={() => navigate({
-              to: "/tasks/form",
-              search: { taskId: undefined, module: "LEAD", companyId: undefined, referenceId: undefined },
-            })}
-            className="flex h-9 items-center gap-1.5 rounded-lg border border-line bg-surface px-4 text-sm font-medium transition-colors hover:bg-background"
+            onClick={() => {
+              void downloadLeadCsvTemplate()
+                .then(() => {
+                  toast.success("Lead import template downloaded.");
+                })
+                .catch((error: unknown) => {
+                  toast.error(
+                    error instanceof Error ? error.message : "Could not download template.",
+                  );
+                });
+            }}
+            className="flex h-10 items-center gap-2 rounded-lg border border-line bg-background px-3.5 text-sm font-medium transition-colors hover:border-brand/40 hover:bg-surface"
           >
-            <Plus className="size-4" /> New Task
+            <Download className="size-4 text-muted-foreground" /> Template
           </button>
           <button
+            type="button"
+            onClick={() => setImportOpen(true)}
+            className="flex h-10 items-center gap-2 rounded-lg border border-line bg-background px-3.5 text-sm font-medium transition-colors hover:border-brand/40 hover:bg-surface"
+          >
+            <Upload className="size-4 text-muted-foreground" /> Import
+          </button>
+          <button
+            type="button"
             onClick={openCreate}
-            className="flex h-9 items-center gap-1.5 rounded-lg bg-brand px-4 text-sm font-medium text-white transition-colors hover:bg-brand/90"
+            className="flex h-10 items-center gap-2 rounded-lg bg-brand px-4 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand/90"
           >
             <Plus className="size-4" /> Add lead
-          </button>
-          <button
-            onClick={() => setImportOpen(true)}
-            className="flex h-9 items-center gap-1.5 rounded-lg border border-line bg-surface px-4 text-sm font-medium transition-colors hover:bg-background"
-          >
-            <Upload className="size-4" /> Import CSV
           </button>
         </div>
       </div>
@@ -208,9 +384,34 @@ function LeadsPage() {
         <DataTable<Lead>
           data={filtered}
           columns={columns}
+          selectable
+          onSelectionChange={handleSelectionChange}
+          selectionResetKey={selectionResetKey}
+          selectionSummary={selectedLeads.length > 0 ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-surface px-4 py-3">
+              <span className="text-sm">{selectedLeads.length} leads selected</span>
+              <button
+                type="button"
+                onClick={() => setBulkEditOpen(true)}
+                disabled={bulkEditMut.isPending}
+                className="flex h-9 items-center gap-1.5 rounded-lg border border-brand px-4 text-sm font-medium text-brand transition-colors hover:bg-brand/10 disabled:opacity-50"
+              >
+                <Pencil className="size-4" />
+                Bulk edit
+              </button>
+              <button
+                type="button"
+                onClick={() => setBulkDeleteOpen(true)}
+                disabled={bulkDeleteMut.isPending || deleteLeadMut.isPending}
+                className="flex h-9 items-center gap-1.5 rounded-lg bg-destructive px-4 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 disabled:opacity-50"
+              >
+                <Trash2 className="size-4" />
+                Delete selected
+              </button>
+            </div>
+          ) : null}
           searchKeys={[
             "id",
-            "enquiryFor",
             "companyName",
             "contactName",
             "contactMobile",
@@ -231,7 +432,7 @@ function LeadsPage() {
                 <option value="all">All statuses</option>
                 {LEAD_STATUSES.map((value) => (
                   <option key={value} value={value.toLowerCase()}>
-                    {value[0] + value.slice(1).toLowerCase()}
+                    {statusLabel(value)}
                   </option>
                 ))}
               </select>
@@ -253,16 +454,17 @@ function LeadsPage() {
         />
       </div>
 
-      <Modal open={importOpen} onClose={() => setImportOpen(false)} title="Upload CSV" eyebrow="IMPORT LEADS">
+      <Modal open={importOpen} onClose={() => setImportOpen(false)} title="Upload Leads" eyebrow="IMPORT LEADS">
         <div className="space-y-3 p-5">
           <p className="text-xs text-muted-foreground">
-            Required columns: company_name, enquiry_for, enquiry_date, source. Optional columns: company_address, company_city, company_state, company_pincode, company_country, company_gst_number, contact_name, contact_designation, contact_mobile, contact_email, status, followup_date, followup_remarks, is_opportunity.
+            CSV files with commas or tabs and Excel files are supported. Company name is optional, but every row must have a valid contact email. Rows with a missing or invalid email are skipped.
+            Enquiry date defaults to today if blank or missing; source and status default to Other.
           </p>
           <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-line bg-background px-4 py-8 text-center transition-colors hover:border-brand">
             <Upload className="size-5 text-muted-foreground" />
             <span className="mt-2 text-sm font-medium">{file ? file.name : "Choose File"}</span>
-            <span className="mt-1 font-mono text-[11px] text-muted-foreground">CSV up to 5 MB</span>
-            <input type="file" accept=".csv,text/csv" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+            <span className="mt-1 font-mono text-[11px] text-muted-foreground">CSV, XLS, or XLSX up to 5 MB</span>
+            <input type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="hidden" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
           </label>
         </div>
         <div className="flex items-center justify-end gap-2 border-t border-line bg-background/50 px-5 py-4">
@@ -284,9 +486,68 @@ function LeadsPage() {
         onClose={() => setDeleteTarget(null)}
         onConfirm={() => deleteTarget && deleteLeadMut.mutate(deleteTarget)}
         title="Remove lead?"
-        message={`Remove enquiry #${deleteTarget?.srNo ?? ""} from the active leads list? Existing campaign history will be preserved.`}
+        message={`Permanently delete enquiry #${deleteTarget?.srNo ?? ""}? This action cannot be undone, and related campaign history may also be deleted.`}
         loading={deleteLeadMut.isPending}
       />
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        onConfirm={() => bulkDeleteMut.mutate(selectedLeads)}
+        title="Delete selected leads?"
+        message={`Permanently delete ${selectedLeads.length} selected leads? This action cannot be undone, and related campaign history may also be deleted.`}
+        confirmLabel={bulkDeleteMut.isPending ? "Deleting…" : `Delete ${selectedLeads.length} leads`}
+        loading={bulkDeleteMut.isPending}
+      />
+      <Modal open={bulkEditOpen} onClose={() => setBulkEditOpen(false)} title="Bulk Edit Leads" eyebrow={`${selectedLeads.length} SELECTED LEADS`}>
+        <div className="space-y-4 p-5">
+          <p className="text-xs text-muted-foreground">Only enabled fields will be changed for the selected leads.</p>
+          {[
+            ["company_name", "Company name", "text"],
+            ["contact_name", "Contact name", "text"],
+            ["status", "Status", "status"],
+            ["source", "Source", "source"],
+            ["enquiry_for", "Enquiry for", "enquiry"],
+            ["enquiry_date", "Enquiry date", "date"],
+            ["followup_date", "Follow-up date", "date"],
+            ["followup_remarks", "Follow-up remarks", "textarea"],
+          ].map(([field, label, type]) => (
+            <div key={field} className="rounded-lg border border-line p-3">
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <input type="checkbox" checked={bulkFields.includes(field)} onChange={() => toggleBulkField(field)} />
+                {label}
+              </label>
+              {bulkFields.includes(field) && (
+                <div className="mt-3">
+                  {type === "status" ? (
+                    <select className={`w-full ${selectCls}`} value={bulkValues[field]} onChange={(event) => setBulkValues((current) => ({ ...current, [field]: event.target.value }))}>
+                      {LEAD_STATUSES.map((value) => <option key={value} value={value}>{statusLabel(value)}</option>)}
+                    </select>
+                  ) : type === "source" ? (
+                    <select className={`w-full ${selectCls}`} value={bulkValues[field]} onChange={(event) => setBulkValues((current) => ({ ...current, [field]: event.target.value }))}>
+                      {LEAD_SOURCES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                    </select>
+                  ) : type === "enquiry" ? (
+                    <select className={`w-full ${selectCls}`} value={bulkValues[field]} onChange={(event) => setBulkValues((current) => ({ ...current, [field]: event.target.value }))}>
+                      <option value="LEAD">Lead</option>
+                      <option value="CLIENT">Client</option>
+                    </select>
+                  ) : type === "textarea" ? (
+                    <textarea className="min-h-20 w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm" value={bulkValues[field]} onChange={(event) => setBulkValues((current) => ({ ...current, [field]: event.target.value }))} />
+                  ) : (
+                    <input type={type} className={`w-full ${selectCls}`} value={bulkValues[field]} onChange={(event) => setBulkValues((current) => ({ ...current, [field]: event.target.value }))} />
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center justify-end gap-2 border-t border-line px-5 py-4">
+          <button type="button" onClick={() => setBulkEditOpen(false)} className="h-9 rounded-lg border border-line px-4 text-sm">Cancel</button>
+          <button type="button" disabled={!bulkFields.length || bulkEditMut.isPending} onClick={() => bulkEditMut.mutate(selectedLeads)} className="h-9 rounded-lg bg-brand px-4 text-sm font-medium text-white disabled:opacity-50">
+            {bulkEditMut.isPending ? "Updating…" : `Update ${selectedLeads.length} leads`}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

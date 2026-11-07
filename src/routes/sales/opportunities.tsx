@@ -353,10 +353,10 @@ function OpportunitiesPage() {
           {/* <button type="button" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground" aria-label={`Convert ${opportunity.companyName} to quotation`} title="Convert to quotation" onClick={() => openConvertDialog(opportunity)}>
             <FileText className="size-4" />
           </button> */}
-          <button type="button" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-background hover:text-foreground" aria-label={`Edit ${opportunity.companyName}`} title="Edit opportunity" onClick={() => { setEditing(opportunity); setFormOpen(true); }}>
+          <button type="button" className="grid size-8 place-items-center rounded-lg border border-transparent text-muted-foreground transition-colors hover:border-line hover:bg-background hover:text-foreground" aria-label={`Edit ${opportunity.companyName}`} title="Edit opportunity" onClick={() => { setEditing(opportunity); setFormOpen(true); }}>
             <Pencil className="size-4" />
           </button>
-          <button type="button" className="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive" aria-label={`Delete ${opportunity.companyName}`} title="Delete opportunity" onClick={() => setDeleteTarget(opportunity)}>
+          <button type="button" className="grid size-8 place-items-center rounded-lg border border-transparent text-muted-foreground transition-colors hover:border-destructive/20 hover:bg-destructive/10 hover:text-destructive" aria-label={`Delete ${opportunity.companyName}`} title="Delete opportunity" onClick={() => setDeleteTarget(opportunity)}>
             <Trash2 className="size-4" />
           </button>
         </div>

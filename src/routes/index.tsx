@@ -1,3 +1,4 @@
+import { ModuleHero } from "@/components/ModuleHero";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowUpRight, Briefcase, Megaphone } from "lucide-react";
@@ -27,7 +28,7 @@ function Dashboard() {
     <div className="space-y-8">
       <div className="rise">
         <div className="font-mono text-[11px] tracking-wide text-muted-foreground">OVERVIEW</div>
-        <h1 className="mt-1 font-display text-3xl font-bold">Dashboard</h1>
+        <ModuleHero eyebrow="Workspace overview" title="Dashboard" description="Track the health of your marketing, sales, and operations workspace in one place." icon={<span aria-hidden="true">•</span>} />
       </div>
 
       <section aria-labelledby="marketing-heading">

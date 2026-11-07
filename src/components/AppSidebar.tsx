@@ -1,4 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { useAuth } from "@/lib/auth";
 import {
   Briefcase,
   ChevronDown,
@@ -9,6 +10,8 @@ import {
   ListChecks,
   Megaphone,
   ShoppingCart,
+  Building2,
+  ScrollText,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -64,67 +67,67 @@ const MENU_ITEMS: MenuItem[] = [
     ],
   },
 
-  {
-    key: "sales",
-    label: "Sales",
-    icon: Briefcase,
-    items: [
-      {
-        to: "/sales",
-        label: "Sales Dashboard",
-      },
-      {
-        to: "/sales/opportunities",
-        label: "Opportunity",
-      },
-      {
-        to: "/sales/quotations",
-        label: "Quotation",
-      },
-    ],
-  },
-  {
-    key: "Order",
-    label: "Order",
-    icon: ClipboardList,
-    items: [
-      {
-        to: "/order-dashboard",
-        label: "Order Dashboard",
-      },
-      {
-        to: "/final-offer",
-        label: "Final Offer - FO",
-      },
-      {
-        to: "/customer-po",
-        label: "Customer PO - CPO",
-      },
-      {
-        to: "/sales/orders",
-        label: "Sales Order - SO",
-      },
-      // {
-      //   to: "/work-order",
-      //   label: "Works Order - WO"
-      // }
-    ],
-  },
-  {
-    key: "Tasks",
-    label: "Tasks",
-    icon: ListChecks,
-    items: [
-      {
-        to: "/tasks/dashboard",
-        label: "Task Dashboard",
-      },
-      {
-        to: "/tasks",
-        label: "Task List",
-      },
-    ],
-  },
+  // {
+  //   key: "sales",
+  //   label: "Sales",
+  //   icon: Briefcase,
+  //   items: [
+  //     {
+  //       to: "/sales",
+  //       label: "Sales Dashboard",
+  //     },
+  //     {
+  //       to: "/sales/opportunities",
+  //       label: "Opportunity",
+  //     },
+  //     {
+  //       to: "/sales/quotations",
+  //       label: "Quotation",
+  //     },
+  //   ],
+  // },
+  // {
+  //   key: "Order",
+  //   label: "Order",
+  //   icon: ClipboardList,
+  //   items: [
+  //     {
+  //       to: "/order-dashboard",
+  //       label: "Order Dashboard",
+  //     },
+  //     {
+  //       to: "/final-offer",
+  //       label: "Final Offer - FO",
+  //     },
+  //     {
+  //       to: "/customer-po",
+  //       label: "Customer PO - CPO",
+  //     },
+  //     {
+  //       to: "/sales/orders",
+  //       label: "Sales Order - SO",
+  //     },
+  //     // {
+  //     //   to: "/work-order",
+  //     //   label: "Works Order - WO"
+  //     // }
+  //   ],
+  // },
+  // {
+  //   key: "Tasks",
+  //   label: "Tasks",
+  //   icon: ListChecks,
+  //   items: [
+  //     {
+  //       to: "/tasks/dashboard",
+  //       label: "Task Dashboard",
+  //     },
+  //     {
+  //       to: "/tasks",
+  //       label: "Task List",
+  //     },
+  //   ],
+  // },
   {
     key: "Masters",
     label: "Masters",
@@ -138,33 +141,59 @@ const MENU_ITEMS: MenuItem[] = [
         to: "/location",
         label: "Location",
       },
-    ],
-  },
-  {
-    key: "User & Roles",
-    label: "User & Roles",
-    icon: ShieldCheck,
-    items: [
       {
-        to: "/user",
-        label: "User",
-      },
-      {
-        to: "/roles",
-        label: "Roles",
-      },
-      {
-        to: "/access-control",
-        label: "Access Control",
+        to: "/lead-categories",
+        label: "Lead Categories",
       },
     ],
   },
+  // {
+  //   key: "User & Roles",
+  //   label: "User & Roles",
+  //   icon: ShieldCheck,
+  //   items: [
+  //     {
+  //       to: "/user",
+  //       label: "User",
+  //     },
+  //     {
+  //       to: "/roles",
+  //       label: "Roles",
+  //     },
+  //     {
+  //       to: "/access-control",
+  //       label: "Access Control",
+  //     },
+  //   ],
+  // },
 ];
 
 export function AppSidebar() {
+  const { user } = useAuth();
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
+  const menuItems: MenuItem[] = [
+    ...MENU_ITEMS,
+    ...(user?.is_superuser ? [{
+      key: "tenants",
+      label: "Tenants",
+      icon: Building2,
+      to: "/tenants",
+    }] : []),
+    ...(user?.is_superuser ? [{
+      key: "logs",
+      label: "Logs",
+      icon: ScrollText,
+      to: "/logs",
+    }] : []),
+    {
+      key: "email-settings",
+      label: "Email settings",
+      icon: ShieldCheck,
+      to: "/email-settings",
+    },
+  ];
 
   const isActive = (to: string) => pathname === to || pathname.startsWith(`${to}/`);
 
@@ -191,7 +220,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {MENU_ITEMS.map((item) => {
+              {menuItems.map((item) => {
                 const hasChildren = !!item.items && item.items.length > 0;
 
                 // -------------------------

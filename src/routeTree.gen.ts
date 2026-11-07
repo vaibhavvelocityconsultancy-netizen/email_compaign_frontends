@@ -14,14 +14,18 @@ import { Route as AccessControlRouteImport } from './routes/access-control'
 import { Route as CompanyRouteImport } from './routes/company'
 import { Route as CountryRouteImport } from './routes/country'
 import { Route as CustomerPoRouteImport } from './routes/customer-po'
+import { Route as EmailSettingsRouteImport } from './routes/email-settings'
 import { Route as FinalOfferRouteImport } from './routes/final-offer'
+import { Route as LeadCategoriesRouteImport } from './routes/lead-categories'
 import { Route as LocationRouteImport } from './routes/location'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as LogsRouteImport } from './routes/logs'
 import { Route as MarketingRouteImport } from './routes/marketing'
 import { Route as OrderDashboardRouteImport } from './routes/order-dashboard'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as RolesRouteImport } from './routes/roles'
 import { Route as TasksRouteImport } from './routes/tasks'
+import { Route as TenantsRouteImport } from './routes/tenants'
 import { Route as UserRouteImport } from './routes/user'
 import { Route as MarketingEmailCampaignRouteImport } from './routes/marketing/email-campaign'
 import { Route as MarketingLeadsRouteImport } from './routes/marketing/leads'
@@ -35,6 +39,7 @@ import { Route as TasksFormRouteImport } from './routes/tasks/form'
 import { Route as MarketingEmailCampaignIndexRouteImport } from './routes/marketing/email-campaign.index'
 import { Route as MarketingEmailCampaignCampaignsRouteImport } from './routes/marketing/email-campaign.campaigns'
 import { Route as MarketingEmailCampaignLogsRouteImport } from './routes/marketing/email-campaign.logs'
+import { Route as MarketingEmailCampaignRepliesRouteImport } from './routes/marketing/email-campaign.replies'
 import { Route as MarketingEmailCampaignSequencesRouteImport } from './routes/marketing/email-campaign.sequences'
 import { Route as MarketingEmailCampaignTemplatesRouteImport } from './routes/marketing/email-campaign.templates'
 import { Route as MarketingLeadsFormRouteImport } from './routes/marketing/leads.form'
@@ -64,9 +69,19 @@ const CustomerPoRoute = CustomerPoRouteImport.update({
   path: '/customer-po',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EmailSettingsRoute = EmailSettingsRouteImport.update({
+  id: '/email-settings',
+  path: '/email-settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FinalOfferRoute = FinalOfferRouteImport.update({
   id: '/final-offer',
   path: '/final-offer',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LeadCategoriesRoute = LeadCategoriesRouteImport.update({
+  id: '/lead-categories',
+  path: '/lead-categories',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LocationRoute = LocationRouteImport.update({
@@ -77,6 +92,11 @@ const LocationRoute = LocationRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LogsRoute = LogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MarketingRoute = MarketingRouteImport.update({
@@ -102,6 +122,11 @@ const RolesRoute = RolesRouteImport.update({
 const TasksRoute = TasksRouteImport.update({
   id: '/tasks',
   path: '/tasks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TenantsRoute = TenantsRouteImport.update({
+  id: '/tenants',
+  path: '/tenants',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UserRoute = UserRouteImport.update({
@@ -172,6 +197,12 @@ const MarketingEmailCampaignLogsRoute =
     path: '/logs',
     getParentRoute: () => MarketingEmailCampaignRoute,
   } as any)
+const MarketingEmailCampaignRepliesRoute =
+  MarketingEmailCampaignRepliesRouteImport.update({
+    id: '/replies',
+    path: '/replies',
+    getParentRoute: () => MarketingEmailCampaignRoute,
+  } as any)
 const MarketingEmailCampaignSequencesRoute =
   MarketingEmailCampaignSequencesRouteImport.update({
     id: '/sequences',
@@ -196,14 +227,18 @@ export interface FileRoutesByFullPath {
   '/company': typeof CompanyRoute
   '/country': typeof CountryRoute
   '/customer-po': typeof CustomerPoRoute
+  '/email-settings': typeof EmailSettingsRoute
   '/final-offer': typeof FinalOfferRoute
+  '/lead-categories': typeof LeadCategoriesRoute
   '/location': typeof LocationRoute
   '/login': typeof LoginRoute
+  '/logs': typeof LogsRoute
   '/marketing': typeof MarketingRouteWithChildren
   '/order-dashboard': typeof OrderDashboardRoute
   '/register': typeof RegisterRoute
   '/roles': typeof RolesRoute
   '/tasks': typeof TasksRouteWithChildren
+  '/tenants': typeof TenantsRoute
   '/user': typeof UserRoute
   '/marketing/email-campaign': typeof MarketingEmailCampaignRouteWithChildren
   '/marketing/leads': typeof MarketingLeadsRouteWithChildren
@@ -216,6 +251,7 @@ export interface FileRoutesByFullPath {
   '/tasks/': typeof TasksIndexRoute
   '/marketing/email-campaign/campaigns': typeof MarketingEmailCampaignCampaignsRoute
   '/marketing/email-campaign/logs': typeof MarketingEmailCampaignLogsRoute
+  '/marketing/email-campaign/replies': typeof MarketingEmailCampaignRepliesRoute
   '/marketing/email-campaign/sequences': typeof MarketingEmailCampaignSequencesRoute
   '/marketing/email-campaign/templates': typeof MarketingEmailCampaignTemplatesRoute
   '/marketing/leads/form': typeof MarketingLeadsFormRoute
@@ -227,13 +263,17 @@ export interface FileRoutesByTo {
   '/company': typeof CompanyRoute
   '/country': typeof CountryRoute
   '/customer-po': typeof CustomerPoRoute
+  '/email-settings': typeof EmailSettingsRoute
   '/final-offer': typeof FinalOfferRoute
+  '/lead-categories': typeof LeadCategoriesRoute
   '/location': typeof LocationRoute
   '/login': typeof LoginRoute
+  '/logs': typeof LogsRoute
   '/marketing': typeof MarketingRouteWithChildren
   '/order-dashboard': typeof OrderDashboardRoute
   '/register': typeof RegisterRoute
   '/roles': typeof RolesRoute
+  '/tenants': typeof TenantsRoute
   '/user': typeof UserRoute
   '/marketing/leads': typeof MarketingLeadsRouteWithChildren
   '/sales/opportunities': typeof SalesOpportunitiesRoute
@@ -245,6 +285,7 @@ export interface FileRoutesByTo {
   '/tasks': typeof TasksIndexRoute
   '/marketing/email-campaign/campaigns': typeof MarketingEmailCampaignCampaignsRoute
   '/marketing/email-campaign/logs': typeof MarketingEmailCampaignLogsRoute
+  '/marketing/email-campaign/replies': typeof MarketingEmailCampaignRepliesRoute
   '/marketing/email-campaign/sequences': typeof MarketingEmailCampaignSequencesRoute
   '/marketing/email-campaign/templates': typeof MarketingEmailCampaignTemplatesRoute
   '/marketing/leads/form': typeof MarketingLeadsFormRoute
@@ -257,14 +298,18 @@ export interface FileRoutesById {
   '/company': typeof CompanyRoute
   '/country': typeof CountryRoute
   '/customer-po': typeof CustomerPoRoute
+  '/email-settings': typeof EmailSettingsRoute
   '/final-offer': typeof FinalOfferRoute
+  '/lead-categories': typeof LeadCategoriesRoute
   '/location': typeof LocationRoute
   '/login': typeof LoginRoute
+  '/logs': typeof LogsRoute
   '/marketing': typeof MarketingRouteWithChildren
   '/order-dashboard': typeof OrderDashboardRoute
   '/register': typeof RegisterRoute
   '/roles': typeof RolesRoute
   '/tasks': typeof TasksRouteWithChildren
+  '/tenants': typeof TenantsRoute
   '/user': typeof UserRoute
   '/marketing/email-campaign': typeof MarketingEmailCampaignRouteWithChildren
   '/marketing/leads': typeof MarketingLeadsRouteWithChildren
@@ -277,6 +322,7 @@ export interface FileRoutesById {
   '/tasks/': typeof TasksIndexRoute
   '/marketing/email-campaign/campaigns': typeof MarketingEmailCampaignCampaignsRoute
   '/marketing/email-campaign/logs': typeof MarketingEmailCampaignLogsRoute
+  '/marketing/email-campaign/replies': typeof MarketingEmailCampaignRepliesRoute
   '/marketing/email-campaign/sequences': typeof MarketingEmailCampaignSequencesRoute
   '/marketing/email-campaign/templates': typeof MarketingEmailCampaignTemplatesRoute
   '/marketing/leads/form': typeof MarketingLeadsFormRoute
@@ -290,14 +336,18 @@ export interface FileRouteTypes {
     | '/company'
     | '/country'
     | '/customer-po'
+    | '/email-settings'
     | '/final-offer'
+    | '/lead-categories'
     | '/location'
     | '/login'
+    | '/logs'
     | '/marketing'
     | '/order-dashboard'
     | '/register'
     | '/roles'
     | '/tasks'
+    | '/tenants'
     | '/user'
     | '/marketing/email-campaign'
     | '/marketing/leads'
@@ -310,6 +360,7 @@ export interface FileRouteTypes {
     | '/tasks/'
     | '/marketing/email-campaign/campaigns'
     | '/marketing/email-campaign/logs'
+    | '/marketing/email-campaign/replies'
     | '/marketing/email-campaign/sequences'
     | '/marketing/email-campaign/templates'
     | '/marketing/leads/form'
@@ -321,13 +372,17 @@ export interface FileRouteTypes {
     | '/company'
     | '/country'
     | '/customer-po'
+    | '/email-settings'
     | '/final-offer'
+    | '/lead-categories'
     | '/location'
     | '/login'
+    | '/logs'
     | '/marketing'
     | '/order-dashboard'
     | '/register'
     | '/roles'
+    | '/tenants'
     | '/user'
     | '/marketing/leads'
     | '/sales/opportunities'
@@ -339,6 +394,7 @@ export interface FileRouteTypes {
     | '/tasks'
     | '/marketing/email-campaign/campaigns'
     | '/marketing/email-campaign/logs'
+    | '/marketing/email-campaign/replies'
     | '/marketing/email-campaign/sequences'
     | '/marketing/email-campaign/templates'
     | '/marketing/leads/form'
@@ -350,14 +406,18 @@ export interface FileRouteTypes {
     | '/company'
     | '/country'
     | '/customer-po'
+    | '/email-settings'
     | '/final-offer'
+    | '/lead-categories'
     | '/location'
     | '/login'
+    | '/logs'
     | '/marketing'
     | '/order-dashboard'
     | '/register'
     | '/roles'
     | '/tasks'
+    | '/tenants'
     | '/user'
     | '/marketing/email-campaign'
     | '/marketing/leads'
@@ -370,6 +430,7 @@ export interface FileRouteTypes {
     | '/tasks/'
     | '/marketing/email-campaign/campaigns'
     | '/marketing/email-campaign/logs'
+    | '/marketing/email-campaign/replies'
     | '/marketing/email-campaign/sequences'
     | '/marketing/email-campaign/templates'
     | '/marketing/leads/form'
@@ -382,14 +443,18 @@ export interface RootRouteChildren {
   CompanyRoute: typeof CompanyRoute
   CountryRoute: typeof CountryRoute
   CustomerPoRoute: typeof CustomerPoRoute
+  EmailSettingsRoute: typeof EmailSettingsRoute
   FinalOfferRoute: typeof FinalOfferRoute
+  LeadCategoriesRoute: typeof LeadCategoriesRoute
   LocationRoute: typeof LocationRoute
   LoginRoute: typeof LoginRoute
+  LogsRoute: typeof LogsRoute
   MarketingRoute: typeof MarketingRouteWithChildren
   OrderDashboardRoute: typeof OrderDashboardRoute
   RegisterRoute: typeof RegisterRoute
   RolesRoute: typeof RolesRoute
   TasksRoute: typeof TasksRouteWithChildren
+  TenantsRoute: typeof TenantsRoute
   UserRoute: typeof UserRoute
   SalesOpportunitiesRoute: typeof SalesOpportunitiesRoute
   SalesOrdersRoute: typeof SalesOrdersRoute
@@ -434,11 +499,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CustomerPoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/email-settings': {
+      id: '/email-settings'
+      path: '/email-settings'
+      fullPath: '/email-settings'
+      preLoaderRoute: typeof EmailSettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/final-offer': {
       id: '/final-offer'
       path: '/final-offer'
       fullPath: '/final-offer'
       preLoaderRoute: typeof FinalOfferRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lead-categories': {
+      id: '/lead-categories'
+      path: '/lead-categories'
+      fullPath: '/lead-categories'
+      preLoaderRoute: typeof LeadCategoriesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/location': {
@@ -453,6 +532,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/logs': {
+      id: '/logs'
+      path: '/logs'
+      fullPath: '/logs'
+      preLoaderRoute: typeof LogsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/marketing': {
@@ -488,6 +574,13 @@ declare module '@tanstack/react-router' {
       path: '/tasks'
       fullPath: '/tasks'
       preLoaderRoute: typeof TasksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tenants': {
+      id: '/tenants'
+      path: '/tenants'
+      fullPath: '/tenants'
+      preLoaderRoute: typeof TenantsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/user': {
@@ -581,6 +674,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MarketingEmailCampaignLogsRouteImport
       parentRoute: typeof MarketingEmailCampaignRoute
     }
+    '/marketing/email-campaign/replies': {
+      id: '/marketing/email-campaign/replies'
+      path: '/replies'
+      fullPath: '/marketing/email-campaign/replies'
+      preLoaderRoute: typeof MarketingEmailCampaignRepliesRouteImport
+      parentRoute: typeof MarketingEmailCampaignRoute
+    }
     '/marketing/email-campaign/sequences': {
       id: '/marketing/email-campaign/sequences'
       path: '/sequences'
@@ -608,6 +708,7 @@ declare module '@tanstack/react-router' {
 interface MarketingEmailCampaignRouteChildren {
   MarketingEmailCampaignCampaignsRoute: typeof MarketingEmailCampaignCampaignsRoute
   MarketingEmailCampaignLogsRoute: typeof MarketingEmailCampaignLogsRoute
+  MarketingEmailCampaignRepliesRoute: typeof MarketingEmailCampaignRepliesRoute
   MarketingEmailCampaignSequencesRoute: typeof MarketingEmailCampaignSequencesRoute
   MarketingEmailCampaignTemplatesRoute: typeof MarketingEmailCampaignTemplatesRoute
   MarketingEmailCampaignIndexRoute: typeof MarketingEmailCampaignIndexRoute
@@ -617,6 +718,7 @@ const MarketingEmailCampaignRouteChildren: MarketingEmailCampaignRouteChildren =
   {
     MarketingEmailCampaignCampaignsRoute: MarketingEmailCampaignCampaignsRoute,
     MarketingEmailCampaignLogsRoute: MarketingEmailCampaignLogsRoute,
+    MarketingEmailCampaignRepliesRoute: MarketingEmailCampaignRepliesRoute,
     MarketingEmailCampaignSequencesRoute: MarketingEmailCampaignSequencesRoute,
     MarketingEmailCampaignTemplatesRoute: MarketingEmailCampaignTemplatesRoute,
     MarketingEmailCampaignIndexRoute: MarketingEmailCampaignIndexRoute,
@@ -673,14 +775,18 @@ const rootRouteChildren: RootRouteChildren = {
   CompanyRoute: CompanyRoute,
   CountryRoute: CountryRoute,
   CustomerPoRoute: CustomerPoRoute,
+  EmailSettingsRoute: EmailSettingsRoute,
   FinalOfferRoute: FinalOfferRoute,
+  LeadCategoriesRoute: LeadCategoriesRoute,
   LocationRoute: LocationRoute,
   LoginRoute: LoginRoute,
+  LogsRoute: LogsRoute,
   MarketingRoute: MarketingRouteWithChildren,
   OrderDashboardRoute: OrderDashboardRoute,
   RegisterRoute: RegisterRoute,
   RolesRoute: RolesRoute,
   TasksRoute: TasksRouteWithChildren,
+  TenantsRoute: TenantsRoute,
   UserRoute: UserRoute,
   SalesOpportunitiesRoute: SalesOpportunitiesRoute,
   SalesOrdersRoute: SalesOrdersRoute,

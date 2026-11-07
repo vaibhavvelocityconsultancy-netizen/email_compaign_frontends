@@ -1,11 +1,21 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowLeft, Save, Target } from "lucide-react";
+import { ArrowLeft, Download, Plus, Save } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { getLead, createLead, updateLead, getLeadOptions, type LeadChoiceOption, type LeadInput } from "@/lib/api";
+import {
+  getLead,
+  createLead,
+  updateLead,
+  getLeadOptions,
+  getLeadCategories,
+  createLeadCategory,
+  type LeadChoiceOption,
+  type LeadInput,
+} from "@/lib/api";
+import { downloadLeadCsvTemplate } from "@/lib/lead-csv-template";
 import {
   createCompany,
   createCompanyContact,
@@ -56,6 +66,7 @@ const FALLBACK_LEAD_OPTIONS = {
     { value: "HOT", label: "Hot", dot: "bg-red-500" },
     { value: "COLD", label: "Cold", dot: "bg-sky-300" },
     { value: "JUNK", label: "Junk", dot: "bg-zinc-400" },
+    { value: "OTHER", label: "Other", dot: "bg-zinc-400" },
   ],
 } as const;
 
@@ -96,13 +107,14 @@ function emptyLead(): LeadFormValues {
     status: "NEW",
     followup_date: null,
     followup_remarks: "",
-    is_opportunity: false,
+    category: null,
   };
 }
 
 const controlClass =
   "h-10 w-full rounded-md border border-input bg-background px-3 text-sm transition-colors " +
   "hover:border-foreground/30 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20 " +
+  "disabled:cursor-not-allowed disabled:opacity-60 " +
   "aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-destructive/20";
 
 function Field({
@@ -152,22 +164,44 @@ function Section({
   return (
     <section
       aria-labelledby={id}
-      className="space-y-6 border-b border-line py-8 first:pt-0"
+      className="rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-7"
     >
       <div>
         <h2 id={id} className="font-display text-xl font-semibold tracking-tight">{title}</h2>
         <p className="mt-1 text-sm text-muted-foreground">{description}</p>
       </div>
-      <div className="grid gap-6">{children}</div>
+      <div className="grid gap-7">{children}</div>
     </section>
   );
 }
 
-function Group({ title, children }: { title: string; children: ReactNode }) {
+/**
+ * A titled block of related fields inside a Section.
+ * cols = 2 (default) or 3 columns on desktop; use "full" on a child to span the whole row.
+ */
+function Group({
+  title,
+  cols = 2,
+  children,
+}: {
+  title: string;
+  cols?: 2 | 3;
+  children: ReactNode;
+}) {
   return (
-    <fieldset className="grid gap-5 sm:grid-cols-2 [&+&]:border-t [&+&]:border-line [&+&]:pt-5">
+    <fieldset
+      className={`grid gap-x-5 gap-y-5 ${cols === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}
+    >
       <legend className="sr-only">{title}</legend>
-      <h3 aria-hidden className="text-sm font-semibold text-foreground sm:col-span-2">{title}</h3>
+      <h3
+        aria-hidden
+        className={`flex items-center gap-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground ${
+          cols === 3 ? "sm:col-span-3" : "sm:col-span-2"
+        }`}
+      >
+        {title}
+        <span className="h-px flex-1 bg-line" />
+      </h3>
       {children}
     </fieldset>
   );
@@ -207,6 +241,8 @@ function LeadFormPage() {
   const [countryOptions, setCountryOptions] = useState<Array<{ id: number; name: string }>>([]);
   const [stateOptions, setStateOptions] = useState<Array<{ id: number; name: string; country: number }>>([]);
   const [cityOptions, setCityOptions] = useState<Array<{ id: number; name: string; state: number }>>([]);
+  const [categoryNameDraft, setCategoryNameDraft] = useState("");
+  const [categoryCreatorOpen, setCategoryCreatorOpen] = useState(false);
   // Snapshot of the last loaded values, used to show "Unsaved changes".
   const [baseline, setBaseline] = useState(() => JSON.stringify(emptyLead()));
 
@@ -219,11 +255,14 @@ function LeadFormPage() {
     queryKey: ["lead-options"],
     queryFn: getLeadOptions,
   });
+  const categoriesQuery = useQuery({
+    queryKey: ["lead-categories"],
+    queryFn: getLeadCategories,
+  });
 
   const leadOptions = leadOptionsQuery.data ?? FALLBACK_LEAD_OPTIONS;
   const sourceOptions = leadOptions.source as LeadChoiceOption[];
   const statusOptions = leadOptions.status as Array<LeadChoiceOption & { dot?: string }>;
-  const enquiryForOptions = leadOptions.enquiry_for as LeadChoiceOption[];
 
   useEffect(() => {
     let mounted = true;
@@ -282,7 +321,7 @@ function LeadFormPage() {
         status: lead.status.toUpperCase(),
         followup_date: lead.followupDate,
         followup_remarks: lead.followupRemarks,
-        is_opportunity: lead.isOpportunity,
+        category: lead.categoryId,
       };
       setForm(loaded);
       setCompanySearch(lead.companyName ?? "");
@@ -457,6 +496,18 @@ function LeadFormPage() {
     onError: (error: Error) => toast.error(error.message || "Unable to save lead"),
   });
 
+  const createCategoryMutation = useMutation({
+    mutationFn: () => createLeadCategory(categoryNameDraft.trim()),
+    onSuccess: async (category) => {
+      await queryClient.invalidateQueries({ queryKey: ["lead-categories"] });
+      setForm((current) => ({ ...current, category: category.id }));
+      setCategoryNameDraft("");
+      setCategoryCreatorOpen(false);
+      toast.success(`Category "${category.name}" is ready.`);
+    },
+    onError: (error: Error) => toast.error(error.message || "Could not create category"),
+  });
+
   const update = <K extends keyof LeadFormValues>(key: K, value: LeadFormValues[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
 
@@ -486,15 +537,47 @@ function LeadFormPage() {
     );
   }
 
+  const selectedCountry = countryOptions.find((country) => country.name === form.company_country);
+  const selectedState = stateOptions.find((state) => state.name === form.company_state);
+  const filteredStates = stateOptions.filter((state) => !selectedCountry || state.country === selectedCountry.id);
+  const filteredCities = cityOptions.filter((city) => !selectedState || city.state === selectedState.id);
+
   return (
-    <div className="mx-auto p-11 bg-white rounded-lg shadow-md max-w-4xl space-y-8">
-      <div className="mb-8">
-        <Button variant="ghost" size="sm" onClick={goBack} className="-ml-3 mb-3 text-muted-foreground">
-          <ArrowLeft /> Leads
+    <div className="mx-auto max-w-5xl space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-4 rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-7">
+        <div>
+          <Button variant="ghost" size="sm" onClick={goBack} className="-ml-3 mb-4 text-muted-foreground">
+            <ArrowLeft /> Leads
+          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="font-display text-3xl font-bold tracking-tight">
+              {leadId ? `Edit enquiry${leadQuery.data?.srNo ? ` #${leadQuery.data.srNo}` : ""}` : "New enquiry"}
+            </h1>
+            <span className="rounded-full border border-brand/20 bg-brand/10 px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-brand">
+              {leadId ? "Editing" : "New lead"}
+            </span>
+          </div>
+          <p className="mt-2 max-w-xl text-sm text-muted-foreground">
+            Capture the right context now so every follow-up is clear and actionable.
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            void downloadLeadCsvTemplate()
+              .then(() => {
+                toast.success("Lead import template downloaded.");
+              })
+              .catch((error: unknown) => {
+                toast.error(
+                  error instanceof Error ? error.message : "Could not download template.",
+                );
+              });
+          }}
+        >
+          <Download /> Download template
         </Button>
-        <h1 className="font-display text-3xl font-bold tracking-tight">
-          {leadId ? `Edit enquiry${leadQuery.data?.srNo ? ` #${leadQuery.data.srNo}` : ""}` : "New enquiry"}
-        </h1>
       </div>
 
       <form
@@ -503,13 +586,15 @@ function LeadFormPage() {
           if (canSubmit) saveMutation.mutate(form);
         }}
       >
+        {/* ============ 1. CONTACT DETAILS ============ */}
         <Section
           id="contact-details-heading"
           title="Contact details"
           description="The company first, then the person we'll be speaking to."
         >
+          {/* Company: name + GST */}
           <Group title="Company">
-            <Field label="Company name" required className="sm:col-span-2">
+            <Field label="Company name" required>
               <div className="relative">
                 <input
                   type="text"
@@ -517,6 +602,7 @@ function LeadFormPage() {
                   autoComplete="organization"
                   value={form.company_name}
                   onFocus={() => setCompanySuggestionsOpen(true)}
+                  onBlur={() => setTimeout(() => setCompanySuggestionsOpen(false), 150)}
                   onChange={(event) => {
                     update("company_name", event.target.value);
                     setCompanySearch(event.target.value);
@@ -540,18 +626,32 @@ function LeadFormPage() {
                     ))}
                   </div>
                 )}
-                <div className="mt-2 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => void saveCompanyToMaster()}
-                    className="inline-flex items-center rounded-md border border-brand/50 bg-brand/8 px-3 py-1.5 text-xs font-medium text-brand transition-colors hover:bg-brand/10 disabled:opacity-60"
-                    disabled={companyCreating || !form.company_name.trim()}
-                  >
-                    {companyCreating ? "Saving…" : selectedCompanyId ? "Update company" : "Add company"}
-                  </button>
-                </div>
               </div>
             </Field>
+
+            <Field label="GST number">
+              <input
+                type="text"
+                value={form.company_gst_number}
+                onChange={(event) => update("company_gst_number", event.target.value)}
+                className={controlClass}
+              />
+            </Field>
+
+            <div className="flex justify-end sm:col-span-2">
+              <button
+                type="button"
+                onClick={() => void saveCompanyToMaster()}
+                className="inline-flex items-center rounded-md border border-brand/50 bg-brand/10 px-3 py-1.5 text-xs font-medium text-brand transition-colors hover:bg-brand/15 disabled:opacity-60"
+                disabled={companyCreating || !form.company_name.trim()}
+              >
+                {companyCreating ? "Saving…" : selectedCompanyId ? "Update company" : "Add company"}
+              </button>
+            </div>
+          </Group>
+
+          {/* Address: street, then country → state → city → pincode */}
+          <Group title="Address">
             <Field label="Address" className="sm:col-span-2">
               <textarea
                 rows={3}
@@ -585,17 +685,12 @@ function LeadFormPage() {
                   update("company_city", "");
                 }}
                 className={controlClass}
-                disabled={!countryOptions.some((country) => country.name === form.company_country)}
+                disabled={!selectedCountry}
               >
                 <option value="">Select state</option>
-                {stateOptions
-                  .filter((state) => {
-                    const selectedCountry = countryOptions.find((country) => country.name === form.company_country);
-                    return !selectedCountry || state.country === selectedCountry.id;
-                  })
-                  .map((state) => (
-                    <option key={state.id} value={state.name}>{state.name}</option>
-                  ))}
+                {filteredStates.map((state) => (
+                  <option key={state.id} value={state.name}>{state.name}</option>
+                ))}
               </select>
             </Field>
             <Field label="City">
@@ -603,30 +698,27 @@ function LeadFormPage() {
                 value={form.company_city || ""}
                 onChange={(event) => update("company_city", event.target.value)}
                 className={controlClass}
-                disabled={!stateOptions.some((state) => state.name === form.company_state)}
+                disabled={!selectedState}
               >
                 <option value="">Select city</option>
-                {cityOptions
-                  .filter((city) => {
-                    const selectedState = stateOptions.find((state) => state.name === form.company_state);
-                    return !selectedState || city.state === selectedState.id;
-                  })
-                  .map((city) => (
-                    <option key={city.id} value={city.name}>{city.name}</option>
-                  ))}
+                {filteredCities.map((city) => (
+                  <option key={city.id} value={city.name}>{city.name}</option>
+                ))}
               </select>
             </Field>
             <Field label="Pincode">
-              <input type="text" inputMode="numeric" autoComplete="postal-code" value={form.company_pincode} onChange={(event) => update("company_pincode", event.target.value)} className={controlClass} />
-            </Field>
-            <Field label="Country name" className="hidden">
-              <input type="text" value={form.company_country} readOnly className="hidden" />
-            </Field>
-            <Field label="GST number" className="sm:col-span-2">
-              <input type="text" value={form.company_gst_number} onChange={(event) => update("company_gst_number", event.target.value)} className={controlClass} />
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="postal-code"
+                value={form.company_pincode}
+                onChange={(event) => update("company_pincode", event.target.value)}
+                className={controlClass}
+              />
             </Field>
           </Group>
 
+          {/* Contact person */}
           <Group title="Contact person">
             <Field label="Name" required>
               <input
@@ -658,9 +750,10 @@ function LeadFormPage() {
                 className={controlClass}
               />
             </Field>
-            <Field label="Email">
+            <Field label="Email" required>
               <input
                 type="email"
+                required
                 autoComplete="email"
                 value={form.contact_email}
                 onChange={(event) => update("contact_email", event.target.value)}
@@ -670,24 +763,14 @@ function LeadFormPage() {
           </Group>
         </Section>
 
+        {/* ============ 2. ENQUIRY ============ */}
         <Section
           id="enquiry-heading"
           title="Enquiry"
           description="What came in, where from, and when to follow up."
         >
-          <Group title="Enquiry details">
-            <Field label="Enquiry for" required>
-              <select
-                required
-                value={form.enquiry_for}
-                onChange={(event) => update("enquiry_for", event.target.value as LeadInput["enquiry_for"])}
-                className={controlClass}
-              >
-                {enquiryForOptions.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
-            </Field>
+          {/* Enquiry details */}
+          <Group title="Enquiry details" cols={3}>
             <Field label="Enquiry date" required>
               <input
                 type="date"
@@ -697,42 +780,62 @@ function LeadFormPage() {
                 className={controlClass}
               />
             </Field>
-            <Field label="Source" className="sm:col-span-2">
+            <Field label="Source">
               <select value={form.source} onChange={(event) => update("source", event.target.value)} className={controlClass}>
                 {sourceOptions.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
             </Field>
-            <fieldset className="sm:col-span-2">
-              <legend className="mb-1.5 text-sm font-medium text-foreground">Status</legend>
-              <div className="flex flex-wrap gap-2">
+            <Field label="Status">
+              <select
+                value={form.status}
+                onChange={(event) => update("status", event.target.value)}
+                className={controlClass}
+              >
                 {statusOptions.map((status) => (
-                  <label key={status.value} className="cursor-pointer">
-                    <input
-                      type="radio"
-                      name="status"
-                      value={status.value}
-                      checked={form.status === status.value}
-                      onChange={() => update("status", status.value)}
-                      className="peer sr-only"
-                    />
-                    <span
-                      className={
-                        "inline-flex h-9 items-center gap-2 rounded-full border border-input bg-background px-3.5 text-sm transition-colors " +
-                        "hover:border-foreground/30 peer-checked:border-brand peer-checked:bg-brand/10 peer-checked:font-medium " +
-                        "peer-focus-visible:ring-2 peer-focus-visible:ring-brand/40"
-                      }
-                    >
-                      <span aria-hidden className={`size-2 rounded-full ${status.dot ?? "bg-blue-500"}`} />
-                      {status.label}
-                    </span>
-                  </label>
+                  <option key={status.value} value={status.value}>{status.label}</option>
                 ))}
+              </select>
+            </Field>
+            <Field label="Category">
+              <div className="flex gap-2">
+                <select
+                  value={form.category ?? ""}
+                  onChange={(event) => update("category", event.target.value ? Number(event.target.value) : null)}
+                  className={controlClass}
+                >
+                  <option value="">No category</option>
+                  {(categoriesQuery.data ?? []).map((category) => (
+                    <option key={category.id} value={category.id}>{category.name}</option>
+                  ))}
+                </select>
+                <Button type="button" variant="outline" size="icon" aria-label="Add category" onClick={() => setCategoryCreatorOpen((open) => !open)}>
+                  <Plus className="size-4" />
+                </Button>
               </div>
-            </fieldset>
+              {categoryCreatorOpen && (
+                <div className="mt-2 flex gap-2">
+                  <input
+                    value={categoryNameDraft}
+                    onChange={(event) => setCategoryNameDraft(event.target.value)}
+                    placeholder="e.g. Doctor"
+                    className={controlClass}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={createCategoryMutation.isPending || !categoryNameDraft.trim()}
+                    onClick={() => createCategoryMutation.mutate()}
+                  >
+                    {createCategoryMutation.isPending ? "Adding…" : "Add"}
+                  </Button>
+                </div>
+              )}
+            </Field>
           </Group>
 
+          {/* Follow-up: date + shortcuts, then remarks */}
           <Group title="Follow-up">
             <div className="sm:col-span-2">
               <Field label="Follow-up date" error={followupError}>
@@ -778,23 +881,6 @@ function LeadFormPage() {
                 className={`${controlClass} h-auto resize-y py-2 leading-relaxed`}
               />
             </Field>
-
-            <button
-              type="button"
-              aria-pressed={form.is_opportunity}
-              onClick={() => update("is_opportunity", !form.is_opportunity)}
-              className={`flex w-full items-start gap-3 rounded-md border p-3.5 text-left transition-colors sm:col-span-2 ${
-                form.is_opportunity
-                  ? "border-brand bg-brand/10 text-foreground"
-                  : "border-line hover:bg-muted/40"
-              }`}
-            >
-              <Target className={`mt-0.5 size-5 shrink-0 ${form.is_opportunity ? "text-brand" : "text-muted-foreground"}`} />
-              <span className="grid gap-0.5 text-sm">
-                <span className="font-medium">Mark as opportunity</span>
-                <span className="text-xs text-muted-foreground">Use this once the enquiry looks like a real deal.</span>
-              </span>
-            </button>
           </Group>
         </Section>
 
@@ -802,7 +888,7 @@ function LeadFormPage() {
           <p className="text-sm text-muted-foreground" aria-live="polite">
             {isDirty ? "You have unsaved changes" : ""}
           </p>
-          <div className="flex gap-2 w-full justify-end sm:w-auto">
+          <div className="flex w-full justify-end gap-2 sm:w-auto">
             <Button type="button" variant="outline" onClick={goBack}>Cancel</Button>
             <Button type="submit" disabled={!canSubmit}>
               <Save /> {saveMutation.isPending ? "Saving…" : leadId ? "Save changes" : "Create lead"}
