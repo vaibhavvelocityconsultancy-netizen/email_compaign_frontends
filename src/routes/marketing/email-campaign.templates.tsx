@@ -338,14 +338,6 @@ function TemplatesPage() {
             label: `${signature.name}${signature.isDefault ? " (Default)" : ""}`,
           })),
         ]),
-        headerActions: (
-          <Button type="button" size="sm" variant="ghost" className="h-7 px-2" onClick={() => {
-            startSignatureEdit();
-            setSignatureManagerOpen(true);
-          }}>
-            Manage
-          </Button>
-        ),
         hidden: hideForWhatsApp,
       },
 
@@ -422,9 +414,25 @@ function TemplatesPage() {
               : `No ${tabLabel} templates yet. Create your first one to build a sequence.`
           }
           toolbarActions={(
-            <Button size="sm" className="h-9 gap-1.5" onClick={openCreate}>
-              <Plus className="size-4" /> Create Template
-            </Button>
+            <div className="flex items-center gap-2">
+              {tab === "email" && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-9 gap-1.5"
+                  onClick={() => {
+                    startSignatureEdit();
+                    setSignatureManagerOpen(true);
+                  }}
+                >
+                  Manage signatures
+                </Button>
+              )}
+              <Button size="sm" className="h-9 gap-1.5" onClick={openCreate}>
+                <Plus className="size-4" /> Create Template
+              </Button>
+            </div>
           )}
         />
       </div>

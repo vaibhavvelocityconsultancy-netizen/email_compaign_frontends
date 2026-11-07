@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { ChevronLeft, ChevronRight, Eye, Megaphone, Pause, Pencil, Play, Plus, RefreshCw, Send, Trash2 } from "lucide-react";
@@ -77,6 +77,9 @@ function CampaignsPage() {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [recipientFilter, setRecipientFilter] = useState<"all" | "subscribed" | "unsubscribed">("all");
   const [toDelete, setToDelete] = useState<Campaign | null>(null);
+  const [selectedCampaigns, setSelectedCampaigns] = useState<Campaign[]>([]);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [selectionResetKey, setSelectionResetKey] = useState(0);
   const [sendingCampaign, setSendingCampaign] = useState<Campaign | null>(null);
   const [sendTemplateId, setSendTemplateId] = useState("");
   const [draftCategoryId, setDraftCategoryId] = useState("");
@@ -90,6 +93,10 @@ function CampaignsPage() {
   const [newTemplateSignature, setNewTemplateSignature] = useState("");
   const [draftTemplateId, setDraftTemplateId] = useState("");
   const [syncingReplies, setSyncingReplies] = useState(false);
+
+  const handleCampaignSelectionChange = useCallback((selected: Campaign[]) => {
+    setSelectedCampaigns(selected);
+  }, []);
 
   async function syncCampaignReplies() {
     setSyncingReplies(true);
@@ -235,6 +242,25 @@ function CampaignsPage() {
       toast.success("Campaign deleted");
     },
     onError: (error: Error) => toast.error(error.message || "Could not delete campaign"),
+  });
+
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (campaigns: Campaign[]) =>
+      Promise.allSettled(campaigns.map((campaign) => deleteBatch(campaign.id))),
+    onSuccess: async (results) => {
+      await queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+      setBulkDeleteOpen(false);
+      setSelectedCampaigns([]);
+      setSelectionResetKey((key) => key + 1);
+      const deleted = results.filter((result) => result.status === "fulfilled").length;
+      const failed = results.length - deleted;
+      if (failed) {
+        toast.error(`Deleted ${deleted} campaigns; ${failed} could not be deleted.`);
+      } else {
+        toast.success(`${deleted} campaigns deleted.`);
+      }
+    },
+    onError: (error: Error) => toast.error(error.message || "Could not delete selected campaigns"),
   });
 
   const sendMutation = useMutation({
@@ -534,6 +560,24 @@ function CampaignsPage() {
         <DataTable<Campaign>
           data={campaignsQuery.data ?? []}
           columns={columns}
+          selectable
+          onSelectionChange={handleCampaignSelectionChange}
+          selectionResetKey={selectionResetKey}
+          selectionSummary={selectedCampaigns.length > 0 ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-background px-4 py-3">
+              <span className="text-sm">{selectedCampaigns.length} campaigns selected</span>
+              <Button
+                type="button"
+                size="sm"
+                variant="destructive"
+                disabled={bulkDeleteMutation.isPending || deleteMutation.isPending}
+                onClick={() => setBulkDeleteOpen(true)}
+              >
+                <Trash2 className="size-4" />
+                Delete selected
+              </Button>
+            </div>
+          ) : null}
           searchKeys={["name"]}
           searchPlaceholder="Search campaigns..."
           storageKey="campaigns"
@@ -1088,6 +1132,15 @@ function CampaignsPage() {
         title="Delete campaign"
         message={`Delete “${toDelete?.name ?? "this campaign"}” and its lead assignments?`}
         loading={deleteMutation.isPending}
+      />
+      <ConfirmDialog
+        open={bulkDeleteOpen}
+        onClose={() => setBulkDeleteOpen(false)}
+        onConfirm={() => bulkDeleteMutation.mutate(selectedCampaigns)}
+        title="Delete selected campaigns?"
+        message={`Permanently delete ${selectedCampaigns.length} selected campaigns and their lead assignments? This action cannot be undone.`}
+        confirmLabel={bulkDeleteMutation.isPending ? "Deleting…" : `Delete ${selectedCampaigns.length} campaigns`}
+        loading={bulkDeleteMutation.isPending}
       />
     </div>
   );
