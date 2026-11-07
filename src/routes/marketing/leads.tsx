@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ChevronDown, Download, Pencil, Plus, Trash2, Upload } from "lucide-react";
-import { bulkUpdateLeads, deleteLead, getLeads, importLeads, updateLeadStatus, type Lead, type LeadStatus, type LeadInput } from "../../lib/api";
+import { bulkUpdateLeads, deleteLead, getLeadCategories, getLeads, importLeads, updateLeadStatus, type Lead, type LeadStatus, type LeadInput } from "../../lib/api";
 import { downloadLeadCsvTemplate } from "../../lib/lead-csv-template";
 import { DataTable, type Column } from "../../components/common/DataTable";
 import { Modal } from "../../components/common/Modal";
@@ -105,10 +105,21 @@ function LeadsPage() {
   const [selectedLeads, setSelectedLeads] = useState<Lead[]>([]);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
+  const [bulkEditMoreOpen, setBulkEditMoreOpen] = useState(false);
   const [bulkFields, setBulkFields] = useState<string[]>([]);
   const [bulkValues, setBulkValues] = useState<Record<string, string>>({
     company_name: "",
     contact_name: "",
+    contact_designation: "",
+    contact_mobile: "",
+    contact_email: "",
+    category: "",
+    company_address: "",
+    company_city: "",
+    company_state: "",
+    company_pincode: "",
+    company_country: "India",
+    company_gst_number: "",
     status: "NEW",
     source: "OTHER",
     enquiry_for: "LEAD",
@@ -121,6 +132,7 @@ function LeadsPage() {
   const handleSelectionChange = useCallback((selected: Lead[]) => {
     setSelectedLeads(selected);
   }, []);
+  const categoriesQuery = useQuery({ queryKey: ["lead-categories"], queryFn: getLeadCategories });
 
   const updateStatusMut = useMutation({
     mutationFn: ({ lead, nextStatus }: { lead: Lead; nextStatus: LeadStatus }) =>
@@ -203,7 +215,9 @@ function LeadsPage() {
       const updates: Partial<LeadInput> = {};
       bulkFields.forEach((field) => {
         const value = bulkValues[field];
-        if (field === "followup_date" || field === "enquiry_date") {
+        if (field === "category") {
+          updates.category = value ? Number(value) : null;
+        } else if (field === "followup_date") {
           (updates as Record<string, unknown>)[field] = value || null;
         } else {
           (updates as Record<string, unknown>)[field] = value;
@@ -227,6 +241,29 @@ function LeadsPage() {
       ? current.filter((item) => item !== field)
       : [...current, field]);
   };
+
+  const primaryBulkFields = [
+    ["company_name", "Company name", "text"],
+    ["contact_name", "Contact name", "text"],
+    ["contact_designation", "Designation", "text"],
+    ["contact_mobile", "Mobile", "tel"],
+    ["contact_email", "Email", "email"],
+    ["category", "Category", "category"],
+  ];
+  const additionalBulkFields = [
+    ["company_address", "Company address", "text"],
+    ["company_city", "City", "text"],
+    ["company_state", "State", "text"],
+    ["company_pincode", "Pincode", "text"],
+    ["company_country", "Country", "text"],
+    ["company_gst_number", "GST number", "text"],
+    ["status", "Status", "status"],
+    ["source", "Source", "source"],
+    ["enquiry_for", "Enquiry for", "enquiry"],
+    ["enquiry_date", "Enquiry date", "date"],
+    ["followup_date", "Follow-up date", "date"],
+    ["followup_remarks", "Follow-up remarks", "textarea"],
+  ];
 
   const openCreate = () => navigate({ to: "/marketing/leads/form", search: { leadId: undefined } });
 
@@ -392,7 +429,10 @@ function LeadsPage() {
               <span className="text-sm">{selectedLeads.length} leads selected</span>
               <button
                 type="button"
-                onClick={() => setBulkEditOpen(true)}
+                onClick={() => {
+                  setBulkEditMoreOpen(false);
+                  setBulkEditOpen(true);
+                }}
                 disabled={bulkEditMut.isPending}
                 className="flex h-9 items-center gap-1.5 rounded-lg border border-brand px-4 text-sm font-medium text-brand transition-colors hover:bg-brand/10 disabled:opacity-50"
               >
@@ -501,16 +541,12 @@ function LeadsPage() {
       <Modal open={bulkEditOpen} onClose={() => setBulkEditOpen(false)} title="Bulk Edit Leads" eyebrow={`${selectedLeads.length} SELECTED LEADS`}>
         <div className="space-y-4 p-5">
           <p className="text-xs text-muted-foreground">Only enabled fields will be changed for the selected leads.</p>
-          {[
-            ["company_name", "Company name", "text"],
-            ["contact_name", "Contact name", "text"],
-            ["status", "Status", "status"],
-            ["source", "Source", "source"],
-            ["enquiry_for", "Enquiry for", "enquiry"],
-            ["enquiry_date", "Enquiry date", "date"],
-            ["followup_date", "Follow-up date", "date"],
-            ["followup_remarks", "Follow-up remarks", "textarea"],
-          ].map(([field, label, type]) => (
+          {categoriesQuery.isError && (
+            <p className="text-sm text-destructive">
+              Could not load categories: {categoriesQuery.error.message}
+            </p>
+          )}
+          {[...primaryBulkFields, ...(bulkEditMoreOpen ? additionalBulkFields : [])].map(([field, label, type]) => (
             <div key={field} className="rounded-lg border border-line p-3">
               <label className="flex items-center gap-2 text-sm font-medium">
                 <input type="checkbox" checked={bulkFields.includes(field)} onChange={() => toggleBulkField(field)} />
@@ -521,6 +557,11 @@ function LeadsPage() {
                   {type === "status" ? (
                     <select className={`w-full ${selectCls}`} value={bulkValues[field]} onChange={(event) => setBulkValues((current) => ({ ...current, [field]: event.target.value }))}>
                       {LEAD_STATUSES.map((value) => <option key={value} value={value}>{statusLabel(value)}</option>)}
+                    </select>
+                  ) : type === "category" ? (
+                    <select className={`w-full ${selectCls}`} value={bulkValues[field]} onChange={(event) => setBulkValues((current) => ({ ...current, [field]: event.target.value }))}>
+                      <option value="">No category</option>
+                      {(categoriesQuery.data ?? []).map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
                     </select>
                   ) : type === "source" ? (
                     <select className={`w-full ${selectCls}`} value={bulkValues[field]} onChange={(event) => setBulkValues((current) => ({ ...current, [field]: event.target.value }))}>
@@ -540,6 +581,13 @@ function LeadsPage() {
               )}
             </div>
           ))}
+          <button
+            type="button"
+            onClick={() => setBulkEditMoreOpen((open) => !open)}
+            className="text-sm font-medium text-brand hover:underline"
+          >
+            {bulkEditMoreOpen ? "Show fewer fields" : "Edit more"}
+          </button>
         </div>
         <div className="flex items-center justify-end gap-2 border-t border-line px-5 py-4">
           <button type="button" onClick={() => setBulkEditOpen(false)} className="h-9 rounded-lg border border-line px-4 text-sm">Cancel</button>
