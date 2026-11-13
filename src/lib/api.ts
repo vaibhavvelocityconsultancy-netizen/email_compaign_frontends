@@ -967,7 +967,10 @@ async function mapBatch(batch: ApiBatch): Promise<Campaign> {
 
 export async function getBatches(): Promise<Campaign[]> {
   const batches = await request<ApiBatch[]>("/batches/");
-  return Promise.all(batches.map(mapBatch));
+  const campaigns = await Promise.all(batches.map(mapBatch));
+  return campaigns.sort(
+    (left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt),
+  );
 }
 
 export async function createBatch(data: {
