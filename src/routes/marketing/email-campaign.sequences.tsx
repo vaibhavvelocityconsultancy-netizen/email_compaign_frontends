@@ -16,6 +16,7 @@ import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { DataTable, type Column } from "@/components/common/DataTable";
 import { EntityForm, fieldPresets, type FormFieldConfig } from "@/components/common/EntityForm";
 import { StatusBadge } from "@/components/common/StatusBadge";
+import { formatDate, formatDateTime } from "@/lib/date-format";
 import {
   createSequence,
   deleteSequence,
@@ -78,13 +79,37 @@ function parseLocalDate(value: string) {
 }
 
 function formatCalendarDate(value: string) {
-  const date = parseLocalDate(value);
-  return date ? date.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" }) : "Select date";
+  return value ? formatDate(value) : "Select date";
+}
+
+function estimatedStepExecution(steps: SequenceFormValues["steps"], stepIndex: number) {
+  const estimatedAt = new Date();
+
+  for (const step of steps.slice(0, stepIndex + 1)) {
+    const delayDays = Math.max(0, step.delayDays);
+    const delayMinutes = Math.max(0, step.delayMinutes);
+    if (step.sendTime) {
+      const baseTime = new Date(estimatedAt);
+      const [hours, minutes] = step.sendTime.split(":").map(Number);
+      estimatedAt.setDate(estimatedAt.getDate() + delayDays);
+      estimatedAt.setHours(hours, minutes, 0, 0);
+      if (delayDays === 0 && delayMinutes === 0 && estimatedAt <= baseTime) {
+        estimatedAt.setTime(baseTime.getTime());
+      }
+      estimatedAt.setMinutes(estimatedAt.getMinutes() + delayMinutes);
+    } else {
+      estimatedAt.setDate(estimatedAt.getDate() + delayDays);
+      estimatedAt.setMinutes(estimatedAt.getMinutes() + delayMinutes);
+    }
+  }
+
+  return estimatedAt;
 }
 
 function SequenceStepsEditor({ templates, disabled }: { templates: EmailTemplate[]; disabled: boolean }) {
   const { control, setValue, watch } = useFormContext<SequenceFormValues>();
   const { fields, append, remove } = useFieldArray({ control, name: "steps", keyName: "fieldKey" });
+  const steps = watch("steps") ?? [];
 
   return (
     <section className="col-span-full space-y-4 rounded-lg border border-line bg-background/60 p-3 sm:p-4">
@@ -115,6 +140,7 @@ function SequenceStepsEditor({ templates, disabled }: { templates: EmailTemplate
         {fields.map((item, index) => {
           const templateId = watch(`steps.${index}.templateId`);
           const chosenTemplate = templates.find((template) => template.id === String(templateId));
+          const estimatedAt = estimatedStepExecution(steps, index);
 
           return (
             <div key={item.fieldKey} className="rounded-md border border-line/50 bg-background/50">
@@ -231,9 +257,12 @@ function SequenceStepsEditor({ templates, disabled }: { templates: EmailTemplate
                   )}
                 />
               </div>
-
+              <p className="px-3 pb-3 text-xs text-muted-foreground sm:px-4">
+                Estimated execution: <span className="font-medium text-foreground">{formatDateTime(estimatedAt)}</span>
+                {index === 0 ? " after the campaign starts." : ` after Step ${index} is sent.`}
+                {" "}Actual timing depends on when the previous step is sent and the campaign scheduler runs.
+              </p>
               <input type="hidden" {...control.register(`steps.${index}.delayDays`)} />
-              <input type="hidden" {...control.register(`steps.${index}.sendTime`)} />
               <span className="sr-only" aria-live="polite">Step template: {chosenTemplate?.name ?? "not selected"}</span>
             </div>
           );

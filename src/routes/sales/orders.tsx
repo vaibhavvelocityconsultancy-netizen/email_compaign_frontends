@@ -5,6 +5,7 @@ import { Pencil, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { DataTable, type Column } from "@/components/common/DataTable";
+import { formatDate } from "@/lib/date-format";
 import { Modal } from "@/components/common/Modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,7 +43,7 @@ const money = (value: number) =>
 function dateLabel(value: string) {
   if (!value) return "—";
   const date = new Date(`${value.slice(0, 10)}T00:00:00`);
-  return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("en-GB").format(date);
+  return Number.isNaN(date.getTime()) ? value : formatDate(date);
 }
 
 function DocumentLinks({ order }: { order: SalesOrder }) {

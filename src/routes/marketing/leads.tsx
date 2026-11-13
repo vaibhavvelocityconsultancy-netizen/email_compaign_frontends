@@ -10,6 +10,7 @@ import { DataTable, type Column } from "../../components/common/DataTable";
 import { Modal } from "../../components/common/Modal";
 import { ConfirmDialog } from "../../components/common/ConfirmDialog";
 import { StatusBadge } from "../../components/common/StatusBadge";
+import { formatDate } from "@/lib/date-format";
 
 export const Route = createFileRoute("/marketing/leads")({
   head: () => ({
@@ -319,7 +320,7 @@ function LeadsPage() {
       header: "Enquiry date",
       filterType: "date",
       filterValue: (lead) => lead.enquiryDate,
-      cell: (lead) => <span className="whitespace-nowrap font-mono text-[11px] text-muted-foreground">{new Date(`${lead.enquiryDate}T00:00:00`).toLocaleDateString()}</span>,
+      cell: (lead) => <span className="whitespace-nowrap font-mono text-[11px] text-muted-foreground">{formatDate(lead.enquiryDate)}</span>,
     },
     {
       key: "source",
@@ -348,7 +349,7 @@ function LeadsPage() {
       filterType: "date",
       filterValue: (lead) => lead.followupDate,
       cell: (lead) => lead.followupDate
-        ? <span className="whitespace-nowrap font-mono text-[11px] text-muted-foreground">{new Date(`${lead.followupDate}T00:00:00`).toLocaleDateString()}</span>
+        ? <span className="whitespace-nowrap font-mono text-[11px] text-muted-foreground">{formatDate(lead.followupDate)}</span>
         : <span className="text-muted-foreground">—</span>,
     },
     {

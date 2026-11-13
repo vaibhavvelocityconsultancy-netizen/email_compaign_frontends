@@ -23,6 +23,7 @@ import { Modal } from "../../components/common/Modal";
 import { ConfirmDialog } from "../../components/common/ConfirmDialog";
 import { DataTable, type Column } from "../../components/common/DataTable";
 import { EntityForm, fieldPresets, type FormFieldConfig } from "../../components/common/EntityForm";
+import { formatDate } from "@/lib/date-format";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -236,7 +237,7 @@ function TemplatesPage() {
       filterValue: (t) => t.createdAt,
       cell: (t) => (
         <span className="font-mono text-[11px] text-muted-foreground">
-          {new Date(t.createdAt).toLocaleDateString()}
+          {formatDate(t.createdAt)}
         </span>
       ),
     };

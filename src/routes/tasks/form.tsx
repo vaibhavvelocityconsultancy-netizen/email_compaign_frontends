@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Modal } from "@/components/common/Modal";
+import { formatDate, formatDateTime } from "@/lib/date-format";
 import {
   toFormData,
   useCompanyOptions,
@@ -127,16 +128,11 @@ const fieldClassName =
 const labelClassName = "mb-1.5 block text-sm font-medium";
 
 function formatLeadDate(value?: string | null) {
-  if (!value) return "—";
-  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  return match ? `${match[3]}-${match[2]}-${match[1]}` : value;
+  return formatDate(value);
 }
 
 function formatFollowupHistoryDate(value?: string | null) {
-  if (!value) return "—";
-  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (match) return `${match[3]}-${match[2]}-${match[1]}`;
-  return value;
+  return formatDate(value);
 }
 
 function formatLeadLabel(value?: string | null) {
@@ -697,7 +693,7 @@ function TaskFormPage() {
                       </p>
                       <div className="text-xs text-muted-foreground">
                         {entry.updated_by && <span>{entry.updated_by}</span>}
-                        {entry.timestamp && <span className="ml-2">{entry.timestamp}</span>}
+                        {entry.timestamp && <span className="ml-2">{formatDateTime(entry.timestamp)}</span>}
                       </div>
                     </div>
                     {entry.remark && (

@@ -15,6 +15,7 @@ import {
   updateQuotationCpo,
   type Quotation,
 } from "@/lib/quotation-api";
+import { formatDate } from "@/lib/date-format";
 
 export const Route = createFileRoute("/customer-po")({
   head: () => ({
@@ -39,11 +40,9 @@ const money = (value: number) =>
 function displayDate(value: string | null) {
   if (!value) return "—";
   const match = value.match(/^(\d{2})-(\d{2})-(\d{4})$/);
-  if (match) return `${match[2]}/${match[1]}/${match[3]}`;
+  if (match) return formatDate(`${match[3]}-${match[1]}-${match[2]}`);
   const date = new Date(`${value.slice(0, 10)}T00:00:00`);
-  return Number.isNaN(date.getTime())
-    ? value
-    : new Intl.DateTimeFormat("en-GB").format(date);
+  return Number.isNaN(date.getTime()) ? value : formatDate(date);
 }
 
 function inputDate(value: string | null) {

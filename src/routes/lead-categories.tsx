@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/common/DataTable";
 import { Modal } from "@/components/common/Modal";
 import { createLeadCategory, getLeadCategories, updateLeadCategory, type LeadCategory } from "@/lib/api";
+import { formatDate } from "@/lib/date-format";
 
 export const Route = createFileRoute("/lead-categories")({
   head: () => ({
@@ -63,7 +64,7 @@ function LeadCategoriesPage() {
       key: "created_at",
       header: "Created",
       filterValue: (category) => category.created_at,
-      cell: (category) => <span className="font-mono text-xs text-muted-foreground">{new Date(category.created_at).toLocaleDateString()}</span>,
+      cell: (category) => <span className="font-mono text-xs text-muted-foreground">{formatDate(category.created_at)}</span>,
     },
   ];
 

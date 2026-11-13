@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { getInboundReplies, sendInboundReply } from "@/lib/api";
+import { formatDate, formatDateTime } from "@/lib/date-format";
 
 const PAGE_SIZE = 10;
 
@@ -102,7 +103,7 @@ function IncomingRepliesPage() {
                     <span className="flex items-start justify-between gap-3">
                       <span className="truncate text-sm font-medium">{reply.sender_email}</span>
                       <time className="shrink-0 font-mono text-[10px] text-muted-foreground">
-                        {new Date(reply.received_at).toLocaleDateString()}
+                        {formatDate(reply.received_at)}
                       </time>
                     </span>
                     <span className="mt-1 block truncate text-sm">
@@ -151,7 +152,7 @@ function IncomingRepliesPage() {
                   <dt className="text-muted-foreground">From</dt>
                   <dd className="break-all">{selectedReply.sender_email}</dd>
                   <dt className="text-muted-foreground">Received</dt>
-                  <dd>{new Date(selectedReply.received_at).toLocaleString()}</dd>
+                  <dd>{formatDateTime(selectedReply.received_at)}</dd>
                   <dt className="text-muted-foreground">Lead</dt>
                   <dd>
                     {selectedReply.lead
