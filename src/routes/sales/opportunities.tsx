@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/common/Modal";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { DataTable, type Column } from "@/components/common/DataTable";
+import { formatDate } from "@/lib/date-format";
 import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { EntityForm, fieldPresets, type FormFieldConfig } from "@/components/common/EntityForm";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -332,7 +333,7 @@ function OpportunitiesPage() {
       filterType: "date",
       filterValue: (opportunity) => opportunity.enquiryDate,
       cell: (opportunity) => opportunity.enquiryDate
-        ? <span className="font-mono text-xs text-muted-foreground">{toDisplayDate(opportunity.enquiryDate)}</span>
+        ? <span className="font-mono text-xs text-muted-foreground">{formatDate(opportunity.enquiryDate)}</span>
         : <span className="text-muted-foreground">—</span>,
     },
     {

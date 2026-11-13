@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/lib/auth";
 import { getRecentEmailLogs, request, type EmailLog } from "@/lib/api";
+import { formatDateTime } from "@/lib/date-format";
 
 interface CampaignNotification {
   id: string;
@@ -185,7 +186,7 @@ export function AppLayout() {
                         <span className="font-medium">{notification.title}</span>
                         <span className="text-xs text-muted-foreground">{notification.message}</span>
                         <span className="text-[10px] text-muted-foreground">
-                          {new Date(notification.sentAt).toLocaleString()}
+                          {formatDateTime(notification.sentAt)}
                         </span>
                       </span>
                     </DropdownMenuItem>

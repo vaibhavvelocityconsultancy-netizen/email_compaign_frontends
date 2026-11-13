@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { DataTable, type Column } from "@/components/common/DataTable";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { getBatches, getEmailLogs, getLeads, type LogStatus } from "@/lib/api";
+import { formatDateTime } from "@/lib/date-format";
 
 export const Route = createFileRoute("/marketing/email-campaign/logs")({
   head: () => ({
@@ -91,7 +92,7 @@ function EmailLogsPage() {
         filterValue: (row) => row.sentAt,
         cell: (row) => (
           <span className="font-mono text-[11px] text-muted-foreground">
-            {new Date(row.sentAt).toLocaleString()}
+            {formatDateTime(row.sentAt)}
           </span>
         ),
       },

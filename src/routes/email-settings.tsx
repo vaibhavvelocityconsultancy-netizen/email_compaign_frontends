@@ -21,6 +21,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { MailgunWebhookHelper } from "@/components/MailgunWebhookHelper";
 import { useAuth } from "@/lib/auth";
+import { formatDateTime } from "@/lib/date-format";
 import { request } from "@/lib/api";
 import {
   getOwnTenantMailgunSettings,
@@ -695,7 +696,7 @@ function EmailSettingsPage() {
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 {gmailConnection.connected
-                  ? `Connected for this tenant${gmailConnection.last_sync_at ? ` · Last sync ${new Date(gmailConnection.last_sync_at).toLocaleString()}` : " · Not synced yet"}`
+                  ? `Connected for this tenant${gmailConnection.last_sync_at ? ` · Last sync ${formatDateTime(gmailConnection.last_sync_at)}` : " · Not synced yet"}`
                   : "Each tenant connects its own Gmail account."}
               </p>
             </div>
@@ -737,7 +738,7 @@ function EmailSettingsPage() {
                 <p className="mt-1 text-xs text-muted-foreground">
                   Last successful sync:{" "}
                   {ionosConnection.last_sync_at
-                    ? new Date(ionosConnection.last_sync_at).toLocaleString()
+                    ? formatDateTime(ionosConnection.last_sync_at)
                     : "Not synced yet"}
                 </p>
               </div>

@@ -20,6 +20,7 @@ import {
   type OrderDashboardFilters,
   type OrderDashboardPeriod,
 } from "@/lib/order-dashboard-api";
+import { formatDate } from "@/lib/date-format";
 
 export const Route = createFileRoute("/order-dashboard")({
   head: () => ({
@@ -108,7 +109,7 @@ function OrderDashboardPage() {
           <h1 className="mt-1 font-display text-3xl font-bold tracking-tight">Order Dashboard</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             {data
-              ? `${data.period} · ${data.start_date} to ${data.end_date}`
+              ? `${data.period} · ${formatDate(data.start_date)} to ${formatDate(data.end_date)}`
               : "Quotation through sales order"}
           </p>
         </div>

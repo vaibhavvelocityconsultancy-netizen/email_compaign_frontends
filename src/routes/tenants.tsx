@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { DataTable, type Column } from "@/components/common/DataTable";
 import { useAuth } from "@/lib/auth";
+import { formatDateTime } from "@/lib/date-format";
 import {
   deleteAdminTenant,
   listAdminTenants,
@@ -82,7 +83,7 @@ function TenantsPage() {
     {
       key: "created_at",
       header: "Created",
-      cell: (tenant) => <span className="text-muted-foreground">{new Date(tenant.created_at).toLocaleString()}</span>,
+      cell: (tenant) => <span className="text-muted-foreground">{formatDateTime(tenant.created_at)}</span>,
     },
     {
       key: "actions",

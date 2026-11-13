@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { DataTable, type Column } from "@/components/common/DataTable";
 import { useDeleteTask, useTasks, type Task } from "@/lib/task-api";
+import { formatDate } from "@/lib/date-format";
 
 export const Route = createFileRoute("/tasks/")({
   component: TasksPage,
@@ -44,11 +45,6 @@ const STATUS_OPTIONS = [
 
 const label = (opts: { value: string; label: string }[], v?: string | null) =>
   opts.find((o) => o.value === v)?.label ?? v ?? "-";
-
-const formatTaskDate = (value: string) => {
-  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  return match ? `${match[3]}-${match[2]}-${match[1]}` : value;
-};
 
 // Local date (not UTC) so "Today" is correct in IST early morning
 const localToday = () => {
@@ -133,7 +129,7 @@ export default function TasksPage() {
       key: "followup_date",
       header: "Date",
       filterType: "date",
-      cell: (r) => formatTaskDate(r.followup_date),
+      cell: (r) => formatDate(r.followup_date),
       filterValue: (r) => r.followup_date,
     },
     { key: "module", header: "Module", cell: (r) => label(MODULE_OPTIONS, r.module) },

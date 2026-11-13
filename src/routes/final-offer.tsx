@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/drawer";
 import { Modal } from "@/components/common/Modal";
 import { DataTable, type Column } from "@/components/common/DataTable";
+import { formatDate } from "@/lib/date-format";
 import {
   getQuotations,
   generateFinalOffer,
@@ -36,11 +37,7 @@ const dateLabel = (value: string | null | undefined) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
 
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
+  return formatDate(date);
 };
 
 export const Route = createFileRoute("/final-offer")({

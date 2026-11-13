@@ -35,6 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { formatDate } from "@/lib/date-format";
 import { cn } from "@/lib/utils";
 
 export interface Column<T> {
@@ -96,9 +97,6 @@ function DateRangeFilterDropdown({
   React.useEffect(() => {
     if (open) setRange(activeDateRange);
   }, [open, activeDateRange.from, activeDateRange.to]);
-
-  const formatDate = (date?: Date) =>
-    date?.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) ?? "";
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -397,10 +395,6 @@ function sortValue(value: unknown): number | string {
   if (date) return date.getTime();
   if (typeof value === "number") return value;
   return String(value ?? "").toLocaleLowerCase();
-}
-
-function formatDate(date: Date): string {
-  return date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 }
 
 function pageNumbers(currentPage: number, totalPages: number): (number | "ellipsis")[] {

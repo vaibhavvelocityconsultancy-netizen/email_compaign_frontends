@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth";
 import { request } from "@/lib/api";
+import { formatDateTime } from "@/lib/date-format";
 
 export const Route = createFileRoute("/logs")({ component: LogsPage });
 
@@ -272,7 +273,7 @@ function LogsPage() {
                           {!log.is_read && (
                             <span className="mr-1.5 inline-block size-2 rounded-full bg-destructive" />
                           )}
-                          {new Date(log.created_at).toLocaleString()}
+                          {formatDateTime(log.created_at)}
                         </td>
                         <td className="whitespace-nowrap px-3 py-2">
                           {isRequest ? (fields.method ?? "API") : log.level}

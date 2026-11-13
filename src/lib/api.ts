@@ -271,6 +271,7 @@ export interface CampaignLead {
   leadId: string;
   email: string;
   currentStep: number;
+  lastEmailSentAt: string | null;
   lastEmailStatus: "sent" | "pending" | "completed" | "failed";
   replied: boolean;
   unsubscribed: boolean;
@@ -1014,6 +1015,7 @@ export async function getBatchLeads(id: string): Promise<CampaignLead[]> {
     leadId: String(lead.lead),
     email: lead.email,
     currentStep: lead.current_step,
+    lastEmailSentAt: lead.last_email_sent_at,
     lastEmailStatus: lead.completed ? "completed" : "pending",
     replied: lead.replied,
     unsubscribed: lead.unsubscribed,

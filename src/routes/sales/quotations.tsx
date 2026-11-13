@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 import { DataTable, type Column } from "@/components/common/DataTable";
+import { formatDate } from "@/lib/date-format";
 import { EntityForm, fieldPresets, type FormFieldConfig } from "@/components/common/EntityForm";
 import { Modal } from "@/components/common/Modal";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -244,7 +245,7 @@ function QuotationsPage() {
         filterType: "date",
         filterValue: (q) => q.quotationDate,
         cell: (q) => (
-          <span className="font-mono text-xs text-muted-foreground">{q.quotationDate ?? "—"}</span>
+          <span className="font-mono text-xs text-muted-foreground">{formatDate(q.quotationDate)}</span>
         ),
       },
       {

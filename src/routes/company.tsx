@@ -8,15 +8,13 @@ import { CompanyContactsDialog } from "@/components/companies/CompanyContactsDia
 import { CompanyFormDialog } from "@/components/companies/CompanyFormDialog";
 import { Button } from "@/components/ui/button";
 import { listCompanies, type Company } from "@/lib/company-api";
+import { formatDate } from "@/lib/date-format";
 
 export const Route = createFileRoute("/company")({
   component: CompaniesPage,
 });
 
 const SEARCH_KEYS: (keyof Company)[] = ["name", "city", "state", "gst_number", "pincode"];
-
-const formatDate = (value: string) =>
-  new Date(value).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
 
 function CompaniesPage() {
   const [companies, setCompanies] = React.useState<Company[]>([]);
