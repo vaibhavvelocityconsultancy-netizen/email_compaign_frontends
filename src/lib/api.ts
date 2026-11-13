@@ -228,6 +228,7 @@ export interface SequenceStep {
   templateId: string;
   delayDays: number;
   delayMinutes: number;
+  sendDate: string | null;
   sendTime: string;
 }
 
@@ -246,6 +247,7 @@ export interface SequenceInput {
     templateId: string;
     delayDays: number;
     delayMinutes: number;
+    sendDate: string;
     sendTime: string;
   }>;
 }
@@ -363,6 +365,7 @@ interface ApiSequenceStep {
   template: number;
   delay_days: number;
   delay_minutes: number;
+  send_date: string | null;
   send_time: string | null;
 }
 
@@ -883,10 +886,16 @@ export async function getSequences(): Promise<Sequence[]> {
           templateId: String(step.template),
           delayDays: step.delay_days,
           delayMinutes: step.delay_minutes,
+          sendDate: step.send_date,
           sendTime: step.send_time ?? "",
         })),
     }))
     .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+}
+
+export async function getSequence(id: string): Promise<Sequence> {
+  const sequence = await request<ApiSequence & { steps?: ApiSequenceStep[] }>(`/email-sequences/${id}/`);
+  return mapSequence(sequence);
 }
 
 function mapSequence(sequence: ApiSequence & { steps?: ApiSequenceStep[] }): Sequence {
@@ -900,6 +909,7 @@ function mapSequence(sequence: ApiSequence & { steps?: ApiSequenceStep[] }): Seq
       templateId: String(step.template),
       delayDays: step.delay_days,
       delayMinutes: step.delay_minutes,
+      sendDate: step.send_date,
       sendTime: step.send_time ?? "",
     })),
   };
@@ -914,6 +924,7 @@ function sequencePayload(data: SequenceInput) {
       template: Number(step.templateId),
       delay_days: step.delayDays,
       delay_minutes: step.delayMinutes,
+      send_date: step.sendDate,
       send_time: step.sendTime || null,
     })),
   };

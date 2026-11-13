@@ -21,6 +21,7 @@ import {
   createSequence,
   deleteSequence,
   getBatches,
+  getSequence,
   getSequences,
   getTemplates,
   updateSequence,
@@ -60,8 +61,8 @@ function toLocalDateInput(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-function dateAfterDays(days: number) {
-  const date = new Date();
+function dateAfterDays(days: number, baseDate = new Date()) {
+  const date = new Date(baseDate);
   date.setHours(12, 0, 0, 0);
   date.setDate(date.getDate() + Math.max(0, days));
   return toLocalDateInput(date);
@@ -69,9 +70,10 @@ function dateAfterDays(days: number) {
 
 function daysFromToday(value: string) {
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const selected = new Date(`${value}T00:00:00`);
-  return Math.max(0, Math.round((selected.getTime() - today.getTime()) / 86400000));
+  const todayTimestamp = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  const [year, month, day] = value.split("-").map(Number);
+  const selectedTimestamp = Date.UTC(year, month - 1, day);
+  return Math.max(0, Math.round((selectedTimestamp - todayTimestamp) / 86400000));
 }
 
 function parseLocalDate(value: string) {
@@ -86,19 +88,19 @@ function estimatedStepExecution(steps: SequenceFormValues["steps"], stepIndex: n
   const estimatedAt = new Date();
 
   for (const step of steps.slice(0, stepIndex + 1)) {
-    const delayDays = Math.max(0, step.delayDays);
     const delayMinutes = Math.max(0, step.delayMinutes);
-    if (step.sendTime) {
+    const scheduledAt = parseLocalDate(step.sendDate);
+    if (scheduledAt) {
       const baseTime = new Date(estimatedAt);
-      const [hours, minutes] = step.sendTime.split(":").map(Number);
-      estimatedAt.setDate(estimatedAt.getDate() + delayDays);
-      estimatedAt.setHours(hours, minutes, 0, 0);
-      if (delayDays === 0 && delayMinutes === 0 && estimatedAt <= baseTime) {
-        estimatedAt.setTime(baseTime.getTime());
+      scheduledAt.setHours(baseTime.getHours(), baseTime.getMinutes(), 0, 0);
+      if (step.sendTime) {
+        const [hours, minutes] = step.sendTime.split(":").map(Number);
+        scheduledAt.setHours(hours, minutes, 0, 0);
       }
-      estimatedAt.setMinutes(estimatedAt.getMinutes() + delayMinutes);
+      scheduledAt.setMinutes(scheduledAt.getMinutes() + delayMinutes);
+      if (scheduledAt > baseTime) estimatedAt.setTime(scheduledAt.getTime());
     } else {
-      estimatedAt.setDate(estimatedAt.getDate() + delayDays);
+      estimatedAt.setDate(estimatedAt.getDate() + Math.max(0, step.delayDays));
       estimatedAt.setMinutes(estimatedAt.getMinutes() + delayMinutes);
     }
   }
@@ -116,7 +118,7 @@ function SequenceStepsEditor({ templates, disabled }: { templates: EmailTemplate
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold">Sequence steps</h3>
-          <p className="mt-0.5 text-xs text-muted-foreground">Today sends immediately; future dates schedule the step.</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">Today sends immediately; past dates are due as soon as the campaign reaches the step.</p>
         </div>
         <Button
           type="button"
@@ -225,7 +227,6 @@ function SequenceStepsEditor({ templates, disabled }: { templates: EmailTemplate
                               setValue(`steps.${index}.delayDays`, delayDays, { shouldDirty: true, shouldValidate: true });
                               if (!delayDays) setValue(`steps.${index}.delayMinutes`, 0, { shouldDirty: true });
                             }}
-                            disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
                             initialFocus
                           />
                         </PopoverContent>
@@ -260,7 +261,7 @@ function SequenceStepsEditor({ templates, disabled }: { templates: EmailTemplate
               <p className="px-3 pb-3 text-xs text-muted-foreground sm:px-4">
                 Estimated execution: <span className="font-medium text-foreground">{formatDateTime(estimatedAt)}</span>
                 {index === 0 ? " after the campaign starts." : ` after Step ${index} is sent.`}
-                {" "}Actual timing depends on when the previous step is sent and the campaign scheduler runs.
+                {" "}If this date has passed when the step becomes due, it sends as soon as the previous step is sent and the scheduler runs.
               </p>
               <input type="hidden" {...control.register(`steps.${index}.delayDays`)} />
               <span className="sr-only" aria-live="polite">Step template: {chosenTemplate?.name ?? "not selected"}</span>
@@ -291,11 +292,6 @@ function SequencesPage() {
     setFormOpen(true);
   };
 
-  const openEdit = useCallback((sequence: Sequence) => {
-    setEditing(sequence);
-    setFormOpen(true);
-  }, []);
-
   const saveMutation = useMutation({
     mutationFn: (values: SequenceFormValues) => {
       const payload: SequenceInput = {
@@ -305,6 +301,7 @@ function SequencesPage() {
           templateId: String(step.templateId),
           delayDays: step.delayDays,
           delayMinutes: step.delayMinutes,
+          sendDate: step.sendDate,
           sendTime: step.sendTime,
         })),
       };
@@ -317,6 +314,19 @@ function SequencesPage() {
     },
     onError: (error: Error) => toast.error(error.message || "Could not save sequence"),
   });
+
+  const editMutation = useMutation({
+    mutationFn: getSequence,
+    onSuccess: (sequence) => {
+      setEditing(sequence);
+      setFormOpen(true);
+    },
+    onError: (error: Error) => toast.error(error.message || "Could not load sequence"),
+  });
+
+  const openEdit = useCallback((sequence: Sequence) => {
+    editMutation.mutate(sequence.id);
+  }, [editMutation]);
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => {
@@ -341,6 +351,7 @@ function SequencesPage() {
         <button
           type="button"
           onClick={() => openEdit(sequence)}
+          disabled={editMutation.isPending}
           className="text-left font-medium hover:text-brand hover:underline"
           aria-label={`Edit sequence ${sequence.name}`}
         >
@@ -390,7 +401,14 @@ function SequencesPage() {
         const inUse = campaignSequenceIds.has(sequence.id);
         return (
           <div className="flex justify-end gap-3 text-xs font-medium">
-            <button type="button" onClick={() => openEdit(sequence)} className="text-brand hover:underline">Edit</button>
+            <button
+              type="button"
+              onClick={() => openEdit(sequence)}
+              disabled={editMutation.isPending}
+              className="text-brand hover:underline disabled:opacity-50"
+            >
+              Edit
+            </button>
             <button
               type="button"
               onClick={() => setToDelete(sequence)}
@@ -414,13 +432,19 @@ function SequencesPage() {
   const defaultValues = useMemo<Partial<SequenceFormValues>>(() => editing ? {
     name: editing.name,
     description: editing.description,
-    steps: editing.steps.map((step) => ({
-      templateId: Number(step.templateId),
-      delayDays: step.delayDays,
-      delayMinutes: step.delayMinutes,
-      sendDate: dateAfterDays(step.delayDays),
-      sendTime: step.sendTime,
-    })),
+    steps: (() => {
+      let cumulativeDelayDays = 0;
+      return editing.steps.map((step) => {
+        cumulativeDelayDays += step.delayDays;
+        return {
+          templateId: Number(step.templateId),
+          delayDays: step.delayDays,
+          delayMinutes: step.delayMinutes,
+          sendDate: step.sendDate ?? dateAfterDays(cumulativeDelayDays, new Date(editing.createdAt)),
+          sendTime: step.sendTime,
+        };
+      });
+    })(),
   } : {
     name: "",
     description: "",

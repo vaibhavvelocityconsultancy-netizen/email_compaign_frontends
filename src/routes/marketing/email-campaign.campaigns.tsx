@@ -97,6 +97,21 @@ function getNextStepDueAt(
   const dueAt = new Date(baseTimeValue);
   if (Number.isNaN(dueAt.getTime())) return null;
 
+  if (step.sendDate) {
+    const [year, month, day] = step.sendDate.split("-").map(Number);
+    if (![year, month, day].every(Number.isInteger)) return null;
+
+    const baseTime = new Date(dueAt);
+    dueAt.setUTCFullYear(year, month - 1, day);
+    if (step.sendTime) {
+      const [hours, minutes] = step.sendTime.split(":").map(Number);
+      if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return null;
+      dueAt.setUTCHours(hours, minutes, 0, 0);
+    }
+    dueAt.setUTCMinutes(dueAt.getUTCMinutes() + step.delayMinutes);
+    return dueAt > baseTime ? dueAt : baseTime;
+  }
+
   if (step.sendTime) {
     const [hours, minutes] = step.sendTime.split(":").map(Number);
     if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return null;
