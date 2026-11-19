@@ -175,21 +175,30 @@ function CampaignsPage() {
     ]);
     setSyncingReplies(false);
 
-    const providers = ["Gmail", "IONOS"];
-    const summary = results.map((result, index) => {
+    const providers = ["Gmail", "IONOS"] as const;
+    const completed: string[] = [];
+    const failed: string[] = [];
+    const skipped: string[] = [];
+    results.forEach((result, index) => {
       const provider = providers[index];
       if (result.status === "fulfilled") {
         const count = result.value.processed_count;
-        return `${provider}: ${count} new repl${count === 1 ? "y" : "ies"}`;
+        completed.push(`${provider}: ${count} new repl${count === 1 ? "y" : "ies"}`);
+        return;
       }
       const message = result.reason instanceof Error ? result.reason.message : "sync failed";
-      return `${provider}: ${message}`;
+      if (provider === "Gmail" && /connect a gmail mailbox/i.test(message)) {
+        skipped.push("Gmail: not connected, skipped");
+      } else {
+        failed.push(`${provider}: ${message}`);
+      }
     });
 
-    if (results.every((result) => result.status === "fulfilled")) {
-      toast.success(`Reply sync complete. ${summary.join("; ")}.`);
+    if (completed.length) {
+      toast.success(`Reply sync complete. ${[...completed, ...skipped].join("; ")}.`);
+      if (failed.length) toast.warning(`Some reply syncs failed: ${failed.join("; ")}.`);
     } else {
-      toast.error(summary.join("; "));
+      toast.error([...failed, ...skipped].join("; ") || "Reply synchronization failed.");
     }
   }
 
