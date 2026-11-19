@@ -673,7 +673,11 @@ function TemplatesPage() {
               <div className="rounded-xl border border-line bg-background p-5">
                 <div className="font-display text-base font-semibold">{preview.subject}</div>
                 <div className="my-4 h-px bg-line" />
-                <div className="text-sm leading-6 [&_img]:my-2 [&_img]:h-auto [&_img]:max-w-full" dangerouslySetInnerHTML={{ __html: safeEmailBodyHtml(preview.body) }} />
+                <div
+                  className="text-sm leading-6 [&_img]:my-2 [&_img]:h-auto [&_img]:max-w-full"
+                  style={{ fontFamily: 'Arial, "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif' }}
+                  dangerouslySetInnerHTML={{ __html: safeEmailBodyHtml(preview.body) }}
+                />
                 <div className="mt-6 text-sm whitespace-pre-wrap text-muted-foreground">{preview.signature}</div>
               </div>
             )}
