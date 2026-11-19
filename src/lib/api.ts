@@ -763,7 +763,9 @@ export async function createSampleLeads(): Promise<{ created: number; existing: 
 }
 
 export async function getTemplates(): Promise<MessageTemplate[]> {
-  const templates = await request<ApiTemplate[]>("/email-templates/");
+  // Template bodies can contain Unicode and inline image data; always read the
+  // latest saved content instead of a cached API response.
+  const templates = await request<ApiTemplate[]>("/email-templates/", { cache: "no-store" });
   return templates
     .map(mapTemplate)
     .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
