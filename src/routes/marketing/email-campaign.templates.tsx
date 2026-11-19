@@ -45,6 +45,45 @@ const CHANNEL_OPTIONS = [
   { value: "whatsapp", label: "WhatsApp" },
 ];
 
+const EMAIL_VARIABLES = ["name", "First Name", "company_name", "city", "enquiry_for", "enquiry_date", "product_name", "your_name"];
+const WHATSAPP_VARIABLES = ["name", "first name", "company_name", "city", "enquiry_for", "product_name", "your_name", "1", "2", "3", "4"];
+
+const normalizeVariableName = (name: string) => name.trim().toLowerCase().replace(/[\s_-]+/g, "");
+
+function editDistance(left: string, right: string): number {
+  const row = Array.from({ length: right.length + 1 }, (_, index) => index);
+  for (let i = 1; i <= left.length; i += 1) {
+    let previous = row[0];
+    row[0] = i;
+    for (let j = 1; j <= right.length; j += 1) {
+      const old = row[j];
+      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, previous + (left[i - 1] === right[j - 1] ? 0 : 1));
+      previous = old;
+    }
+  }
+  return row[right.length];
+}
+
+function correctedVariable(name: string, channel: Channel): string | undefined {
+  const variables = channel === "email" ? EMAIL_VARIABLES : WHATSAPP_VARIABLES;
+  const normalized = normalizeVariableName(name);
+  const exact = variables.find((variable) => normalizeVariableName(variable) === normalized);
+  if (exact) return exact;
+  const closeMatches = variables
+    .map((variable) => ({ variable, distance: editDistance(normalized, normalizeVariableName(variable)) }))
+    .filter(({ variable, distance }) => distance <= 2 && normalizeVariableName(variable).length > 2)
+    .sort((a, b) => a.distance - b.distance);
+  if (!closeMatches.length || (closeMatches[1] && closeMatches[1].distance === closeMatches[0].distance)) return undefined;
+  return closeMatches[0].variable;
+}
+
+function normalizeTemplateVariables(body: string, channel: Channel): string {
+  return body.replace(/{{\s*([^{}]+?)\s*}}/g, (placeholder, variable: string) => {
+    const corrected = correctedVariable(variable, channel);
+    return corrected ? `{{${corrected}}}` : placeholder;
+  });
+}
+
 const templateSchema = z
   .object({
     channel: z.enum(["email", "whatsapp"]),
@@ -66,6 +105,19 @@ const templateSchema = z
     if (v.channel === "whatsapp" && !v.waTemplateName?.trim()) {
       ctx.addIssue({ code: "custom", path: ["waTemplateName"], message: "Meta template name is required" });
     }
+    const unknownVariables = Array.from(v.body.matchAll(/{{\s*([^{}]+?)\s*}}/g))
+      .map((match) => match[1].trim())
+      .filter((variable) => !correctedVariable(variable, v.channel));
+    if (unknownVariables.length) {
+      const supported = (v.channel === "email" ? EMAIL_VARIABLES : WHATSAPP_VARIABLES)
+        .map((variable) => `{{${variable}}}`)
+        .join(", ");
+      ctx.addIssue({
+        code: "custom",
+        path: ["body"],
+        message: `Unknown variable${unknownVariables.length > 1 ? "s" : ""}: ${Array.from(new Set(unknownVariables)).map((name) => `{{${name}}}`).join(", ")}. Supported: ${supported}`,
+      });
+    }
   });
 
 type TemplateFormValues = z.infer<typeof templateSchema>;
@@ -83,6 +135,31 @@ const formatEmailBody = (body: string) =>
     .map((line) => line.replace(/^\s*>\s?/, ""))
     .join("\n")
     .trim();
+
+function safeEmailBodyHtml(body: string): string {
+  const hasMarkup = /<(p|br|div|strong|b|em|i|u|ul|ol|li|a|img)\b/i.test(body);
+  const source = hasMarkup
+    ? body
+    : formatEmailBody(body).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
+  if (typeof DOMParser === "undefined") return source;
+  const parsed = new DOMParser().parseFromString(source, "text/html");
+  const allowed = new Set(["P", "BR", "STRONG", "B", "EM", "I", "U", "UL", "OL", "LI", "A", "IMG"]);
+  parsed.body.querySelectorAll("*").forEach((element) => {
+    if (!allowed.has(element.tagName)) {
+      element.replaceWith(...Array.from(element.childNodes));
+      return;
+    }
+    for (const attribute of Array.from(element.attributes)) {
+      const name = attribute.name.toLowerCase();
+      const value = attribute.value;
+      const safeImage = element.tagName === "IMG" && name === "src" && /^data:image\/(png|jpe?g|gif|webp);base64,/i.test(value);
+      const safeAlt = element.tagName === "IMG" && name === "alt";
+      const safeHref = element.tagName === "A" && name === "href" && /^(https?:|mailto:)/i.test(value);
+      if (!safeImage && !safeAlt && !safeHref) element.removeAttribute(attribute.name);
+    }
+  });
+  return parsed.body.innerHTML;
+}
 
 // `hidden` receives the form; read the live channel value from it
 type HiddenForm = UseFormReturn<Record<string, unknown>>;
@@ -337,7 +414,15 @@ function TemplatesPage() {
         hidden: hideForEmail,
       },
 
-      fieldPresets.textarea("body", "Body", { required: true, rows: 7, placeholder: "Hi {{name}}, …" }),
+      {
+        ...fieldPresets.textarea("body", "Body", { required: true, rows: 7, placeholder: "Hi {{name}}, …", description: "Supported variables: {{name}}, {{First Name}}, {{company_name}}, {{city}}, {{enquiry_for}}, {{enquiry_date}}, {{product_name}}, {{your_name}}. Common spelling, case, spaces, and underscores are corrected automatically." }),
+        type: "rich-text",
+        hidden: hideForWhatsApp,
+      },
+      {
+        ...fieldPresets.textarea("body", "Body", { required: true, rows: 7, placeholder: "Hi {{name}}, …", description: "Supported variables: {{name}}, {{first name}}, {{company_name}}, {{city}}, {{enquiry_for}}, {{product_name}}, {{your_name}}, and {{1}}–{{4}}. Common spelling, case, spaces, and underscores are corrected automatically." }),
+        hidden: hideForEmail,
+      },
 
       // Email only
       {
@@ -351,10 +436,20 @@ function TemplatesPage() {
         hidden: hideForWhatsApp,
       },
 
-      // Both channels
-      fieldPresets.file("attachment", "Attachment", {
-        description: editing?.attachmentName ? `Current: ${editing.attachmentName}` : undefined,
-      }),
+      // WhatsApp approved templates place optional header media above the body.
+      {
+        ...fieldPresets.file("attachment", "Header media", {
+          description: `Optional image, video, or PDF shown above the message body.${editing?.attachmentName ? ` Current: ${editing.attachmentName}` : ""}`,
+        }),
+        accept: "image/*,video/*,application/pdf",
+        hidden: hideForEmail,
+      },
+      {
+        ...fieldPresets.file("attachment", "Attachment", {
+          description: editing?.attachmentName ? `Current: ${editing.attachmentName}` : undefined,
+        }),
+        hidden: hideForWhatsApp,
+      },
     ],
     [categories, editing, signatures, tab],
   );
@@ -458,7 +553,7 @@ function TemplatesPage() {
         isLoading={save.isPending}
         submitLabel="Save Template"
         size="lg"
-        onSubmit={(values) => save.mutate(values)}
+        onSubmit={(values) => save.mutate({ ...values, body: normalizeTemplateVariables(values.body, values.channel) })}
       />
 
       <Modal
@@ -555,6 +650,17 @@ function TemplatesPage() {
             {preview.channel === "whatsapp" ? (
               <div className="rounded-xl border border-line bg-background p-5">
                 <div className="ml-auto max-w-sm rounded-lg rounded-tr-none bg-emerald-100 p-3 text-sm whitespace-pre-wrap text-emerald-950 shadow-sm dark:bg-emerald-900 dark:text-emerald-50">
+                  {preview.attachmentName && (
+                    <div className="mb-2 rounded-md border border-emerald-900/10 bg-white/60 px-3 py-2 text-xs text-emerald-900 dark:bg-black/20 dark:text-emerald-50">
+                      {preview.attachmentUrl && /\.(jpe?g|png|gif|webp)(\?|$)/i.test(preview.attachmentUrl) && (
+                        <img src={preview.attachmentUrl} alt="WhatsApp template header media" className="mb-2 max-h-48 max-w-full rounded object-contain" />
+                      )}
+                      {preview.attachmentUrl && /\.(mp4|3gp)(\?|$)/i.test(preview.attachmentUrl) && (
+                        <video src={preview.attachmentUrl} controls className="mb-2 max-h-48 max-w-full rounded" />
+                      )}
+                      Header media: {preview.attachmentName}
+                    </div>
+                  )}
                   {preview.body}
                 </div>
                 {preview.waTemplateName && (
@@ -567,9 +673,7 @@ function TemplatesPage() {
               <div className="rounded-xl border border-line bg-background p-5">
                 <div className="font-display text-base font-semibold">{preview.subject}</div>
                 <div className="my-4 h-px bg-line" />
-                <div className="text-sm leading-6 whitespace-pre-wrap">
-                  {formatEmailBody(preview.body)}
-                </div>
+                <div className="text-sm leading-6 [&_img]:my-2 [&_img]:h-auto [&_img]:max-w-full" dangerouslySetInnerHTML={{ __html: safeEmailBodyHtml(preview.body) }} />
                 <div className="mt-6 text-sm whitespace-pre-wrap text-muted-foreground">{preview.signature}</div>
               </div>
             )}

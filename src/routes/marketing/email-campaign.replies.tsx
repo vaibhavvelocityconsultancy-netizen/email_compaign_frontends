@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { StatusBadge } from "@/components/common/StatusBadge";
 import { getInboundReplies, sendInboundReply } from "@/lib/api";
 import { formatDate, formatDateTime } from "@/lib/date-format";
 
@@ -106,9 +107,7 @@ function IncomingRepliesPage() {
                         {formatDate(reply.received_at)}
                       </time>
                     </span>
-                    <span className="mt-1 block truncate text-sm">
-                      {reply.status === "replied" ? "Replied" : reply.status}
-                    </span>
+                    <span className="mt-2 block"><StatusBadge status={reply.status} /></span>
                     <span className="mt-1 block truncate text-xs text-muted-foreground">
                       {reply.lead?.name ?? "Unmatched sender"}
                       {reply.campaign ? ` · ${reply.campaign.name}` : ""}
@@ -148,6 +147,7 @@ function IncomingRepliesPage() {
                 <h2 className="break-words text-xl font-semibold">
                   {selectedReply.status === "unmatched" ? "Unmatched message" : "Replied"}
                 </h2>
+                <div className="mt-2"><StatusBadge status={selectedReply.status} /></div>
                 <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-[5rem_minmax(0,1fr)]">
                   <dt className="text-muted-foreground">From</dt>
                   <dd className="break-all">{selectedReply.sender_email}</dd>

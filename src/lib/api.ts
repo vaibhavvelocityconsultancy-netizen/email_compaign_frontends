@@ -214,6 +214,7 @@ export interface MessageTemplate {
   signatureProfileId?: string | null;
   logoName?: string;
   attachmentName?: string;
+  attachmentUrl?: string;
   waTemplateName?: string;
   waLanguage?: string;
   waStatus?: string; // pending / approved / rejected, read-only
@@ -595,6 +596,7 @@ function mapTemplate(template: ApiTemplate): MessageTemplate {
     signatureProfileId: template.signature_profile == null ? null : String(template.signature_profile),
     ...(logoName ? { logoName } : {}),
     ...(attachmentName ? { attachmentName } : {}),
+    ...(template.attachment ? { attachmentUrl: template.attachment } : {}),
     waTemplateName: template.wa_template_name,
     waLanguage: template.wa_language,
     waStatus: template.wa_status,

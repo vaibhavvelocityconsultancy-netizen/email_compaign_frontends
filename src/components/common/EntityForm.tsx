@@ -43,6 +43,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { RichEmailBodyEditor } from "@/components/common/RichEmailBodyEditor";
 
 export type FieldType =
   | "text"
@@ -50,6 +51,7 @@ export type FieldType =
   | "tel"
   | "number"
   | "textarea"
+  | "rich-text"
   | "select"
   | "searchable-select"
   | "multi-select"
@@ -86,6 +88,7 @@ export interface FormFieldConfig {
   defaultToToday?: boolean;
   readonly?: boolean;
   multiple?: boolean;
+  accept?: string;
   key?: string;
   headerActions?: React.ReactNode;
   defaultValue?: string | number | boolean | unknown[];
@@ -385,6 +388,7 @@ export function EntityForm<T extends Record<string, any>>({
           id={`entity-file-${config.name}`}
           type="file"
           multiple={config.multiple}
+          accept={config.accept}
           disabled={disabled || isLoading}
           className="sr-only"
           onClick={(event) => {
@@ -519,6 +523,14 @@ export function EntityForm<T extends Record<string, any>>({
                       rows={rows ?? 3}
                       value={String(value ?? "")}
                       onChange={(event) => update(event.target.value)}
+                    />
+                  )}
+                  {type === "rich-text" && (
+                    <RichEmailBodyEditor
+                      value={String(value ?? "")}
+                      onChange={(next) => update(next)}
+                      disabled={fieldDisabled}
+                      placeholder={placeholder}
                     />
                   )}
                   {type === "file" && renderFileField(config, value, update, disabled)}
