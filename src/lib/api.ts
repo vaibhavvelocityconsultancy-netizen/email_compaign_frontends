@@ -295,6 +295,23 @@ export interface EmailLog {
   error?: string;
 }
 
+export interface BackupEntry {
+  id: number;
+  module: string;
+  record_name: string;
+  model: string;
+  object_id: string;
+  tenant: string | null;
+  deleted_by: string | null;
+  deleted_at: string;
+  expires_at: string;
+}
+
+export interface BackupResponse {
+  modules: string[];
+  results: BackupEntry[];
+}
+
 export interface InboundReply {
   id: number;
   status: LogStatus | "unmatched";
@@ -1047,6 +1064,18 @@ export async function getBatchLeads(id: string): Promise<CampaignLead[]> {
 
 export async function deleteBatch(id: string): Promise<void> {
   await request<void>(`/batches/${id}/`, { method: "DELETE" });
+}
+
+export async function getBackups(module?: string): Promise<BackupResponse> {
+  const params = module ? `?module=${encodeURIComponent(module)}` : "";
+  return request<BackupResponse>(`/backups/${params}`);
+}
+
+export async function restoreBackup(id: number): Promise<{ restored: number }> {
+  return request<{ restored: number }>(`/backups/${id}/restore/`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
 }
 
 export async function getEmailLogs(): Promise<EmailLog[]> {

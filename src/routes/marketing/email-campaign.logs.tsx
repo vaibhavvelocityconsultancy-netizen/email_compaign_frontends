@@ -6,6 +6,7 @@ import { DataTable, type Column } from "@/components/common/DataTable";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { getBatches, getEmailLogs, getLeads, type LogStatus } from "@/lib/api";
 import { formatDateTime } from "@/lib/date-format";
+import { formatEmailFailureReason } from "@/lib/email-error";
 
 export const Route = createFileRoute("/marketing/email-campaign/logs")({
   head: () => ({
@@ -28,6 +29,7 @@ type LogRow = {
   step: number;
   sentAt: string;
   templateName: string;
+  error?: string;
 };
 
 function EmailLogsPage() {
@@ -50,6 +52,7 @@ function EmailLogsPage() {
       step: log.step,
       sentAt: log.sentAt,
       templateName: log.templateName || "—",
+      error: log.error,
     }));
   }, [campaignsQuery.data, leadsQuery.data, logsQuery.data]);
 
@@ -86,6 +89,22 @@ function EmailLogsPage() {
         cell: (row) => <StatusBadge status={row.status} />,
       },
       {
+        key: "error",
+        header: "Failure reason",
+        className: "max-w-[280px]",
+        cell: (row) =>
+          row.status === "failed" ? (
+            <span
+              className="block max-w-[260px] truncate text-xs text-destructive"
+              title={formatEmailFailureReason(row.error, 1000)}
+            >
+              {formatEmailFailureReason(row.error)}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          ),
+      },
+      {
         key: "sentAt",
         header: "Sent At",
         filterType: "date",
@@ -118,7 +137,7 @@ function EmailLogsPage() {
         <DataTable<LogRow>
           data={rows}
           columns={columns}
-          searchKeys={["batchName", "leadName", "subject", "templateName"]}
+          searchKeys={["batchName", "leadName", "subject", "templateName", "error"]}
           searchPlaceholder="Search logs..."
           storageKey="email-logs"
           emptyMessage={logsQuery.isLoading ? "Loading email logs…" : "No emails have been sent yet."}

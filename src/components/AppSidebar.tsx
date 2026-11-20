@@ -12,6 +12,7 @@ import {
   ShoppingCart,
   Building2,
   ScrollText,
+  ArchiveRestore,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
@@ -186,6 +187,12 @@ export function AppSidebar() {
       label: "Logs",
       icon: ScrollText,
       to: "/logs",
+    }] : []),
+    ...(user?.is_superuser ? [{
+      key: "backups",
+      label: "Backups",
+      icon: ArchiveRestore,
+      to: "/backups",
     }] : []),
     {
       key: "email-settings",

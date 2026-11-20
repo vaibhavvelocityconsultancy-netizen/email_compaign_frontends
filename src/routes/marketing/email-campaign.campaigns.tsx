@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { Modal } from "@/components/common/Modal";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { formatDate, formatDateTime } from "@/lib/date-format";
+import { formatEmailFailureReason } from "@/lib/email-error";
 import {
   createBatch,
   createTemplate,
@@ -1244,6 +1245,7 @@ function CampaignsPage() {
                       <TableHead>Subject</TableHead>
                       <TableHead>Step</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Failure reason</TableHead>
                       <TableHead>Sent At</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1259,6 +1261,18 @@ function CampaignsPage() {
                           <TableCell className="max-w-[220px] truncate text-muted-foreground">{log.subject}</TableCell>
                           <TableCell className="font-mono text-xs">#{log.step}</TableCell>
                           <TableCell><StatusBadge status={log.status} /></TableCell>
+                          <TableCell className="max-w-[280px]">
+                            {log.status === "failed" ? (
+                              <span
+                                className="block max-w-[260px] truncate text-xs text-destructive"
+                                title={formatEmailFailureReason(log.error, 1000)}
+                              >
+                                {formatEmailFailureReason(log.error)}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
                           <TableCell className="whitespace-nowrap font-mono text-[11px] text-muted-foreground">
                             {formatDateTime(log.sentAt)}
                           </TableCell>

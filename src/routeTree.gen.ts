@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccessControlRouteImport } from './routes/access-control'
+import { Route as BackupsRouteImport } from './routes/backups'
 import { Route as CompanyRouteImport } from './routes/company'
 import { Route as CountryRouteImport } from './routes/country'
 import { Route as CustomerPoRouteImport } from './routes/customer-po'
@@ -52,6 +53,11 @@ const IndexRoute = IndexRouteImport.update({
 const AccessControlRoute = AccessControlRouteImport.update({
   id: '/access-control',
   path: '/access-control',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BackupsRoute = BackupsRouteImport.update({
+  id: '/backups',
+  path: '/backups',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CompanyRoute = CompanyRouteImport.update({
@@ -224,6 +230,7 @@ const MarketingLeadsFormRoute = MarketingLeadsFormRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/access-control': typeof AccessControlRoute
+  '/backups': typeof BackupsRoute
   '/company': typeof CompanyRoute
   '/country': typeof CountryRoute
   '/customer-po': typeof CustomerPoRoute
@@ -260,6 +267,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/access-control': typeof AccessControlRoute
+  '/backups': typeof BackupsRoute
   '/company': typeof CompanyRoute
   '/country': typeof CountryRoute
   '/customer-po': typeof CustomerPoRoute
@@ -295,6 +303,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/access-control': typeof AccessControlRoute
+  '/backups': typeof BackupsRoute
   '/company': typeof CompanyRoute
   '/country': typeof CountryRoute
   '/customer-po': typeof CustomerPoRoute
@@ -333,6 +342,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/access-control'
+    | '/backups'
     | '/company'
     | '/country'
     | '/customer-po'
@@ -369,6 +379,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/access-control'
+    | '/backups'
     | '/company'
     | '/country'
     | '/customer-po'
@@ -403,6 +414,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/access-control'
+    | '/backups'
     | '/company'
     | '/country'
     | '/customer-po'
@@ -440,6 +452,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccessControlRoute: typeof AccessControlRoute
+  BackupsRoute: typeof BackupsRoute
   CompanyRoute: typeof CompanyRoute
   CountryRoute: typeof CountryRoute
   CustomerPoRoute: typeof CustomerPoRoute
@@ -476,6 +489,13 @@ declare module '@tanstack/react-router' {
       path: '/access-control'
       fullPath: '/access-control'
       preLoaderRoute: typeof AccessControlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/backups': {
+      id: '/backups'
+      path: '/backups'
+      fullPath: '/backups'
+      preLoaderRoute: typeof BackupsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/company': {
@@ -772,6 +792,7 @@ const TasksRouteWithChildren = TasksRoute._addFileChildren(TasksRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccessControlRoute: AccessControlRoute,
+  BackupsRoute: BackupsRoute,
   CompanyRoute: CompanyRoute,
   CountryRoute: CountryRoute,
   CustomerPoRoute: CustomerPoRoute,
