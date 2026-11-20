@@ -62,7 +62,7 @@ export function clearAuthTokens(): void {
   window.sessionStorage.removeItem(refreshTokenKey);
 }
 
-export type LeadStatus = "new" | "active" | "junk" | "hot" | "cold";
+export type LeadStatus = "new" | "active" | "junk" | "hot" | "cold" | "other" | "completed" | "failed";
 export interface LeadChoiceOption {
   value: string;
   label: string;

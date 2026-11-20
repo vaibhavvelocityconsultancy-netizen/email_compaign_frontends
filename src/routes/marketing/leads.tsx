@@ -43,7 +43,7 @@ const LEAD_SOURCES = [
   ["EMAIL_MARKETING", "Email Marketing"],
   ["OTHER", "Other"],
 ] as const;
-const LEAD_STATUSES = ["NEW", "ACTIVE", "JUNK", "HOT", "COLD", "OTHER"] as const;
+const LEAD_STATUSES = ["NEW", "ACTIVE", "JUNK", "HOT", "COLD", "OTHER", "COMPLETED", "FAILED"] as const;
 const selectCls = "h-9 rounded-lg border border-line bg-surface px-3 text-sm focus:border-brand focus:ring-2 focus:ring-brand/20 focus:outline-none";
 
 function displayedLeadStatus(lead: Lead) {
@@ -97,7 +97,11 @@ function StatusSelect({
 function LeadsPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
-  const { data, isLoading } = useQuery({ queryKey: ["leads"], queryFn: getLeads });
+  const { data, isLoading } = useQuery({
+    queryKey: ["leads"],
+    queryFn: getLeads,
+    refetchInterval: 30_000,
+  });
   const [status, setStatus] = useState("all");
   const [source, setSource] = useState("all");
   const [importOpen, setImportOpen] = useState(false);
